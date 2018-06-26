@@ -115,6 +115,24 @@ instance Universe Maybe where
       SNothing -> pure $ All $ \case {}
       SJust x  -> (\p -> All $ \case IsJust -> p) <$> f IsJust x
 
+instance Universe (Either j) where
+    decideAny f = \case
+      SLeft  _ -> Disproved $ \case Any i _ -> case i of {}
+      SRight x -> case f IsRight x of
+        Proved p    -> Proved $ Any IsRight p
+        Disproved v -> Disproved $ \case
+          Any IsRight p -> v p
+
+    decideAll f = \case
+      SLeft  _ -> Proved $ All $ \case {}
+      SRight x -> case f IsRight x of
+        Proved p    -> Proved $ All $ \case IsRight -> p
+        Disproved v -> Disproved $ \a -> v $ runAll a IsRight
+
+    genAllA f = \case
+      SLeft  _ -> pure $ All $ \case {}
+      SRight x -> (\p -> All $ \case IsRight -> p) <$> f IsRight x
+
 instance Universe NonEmpty where
     decideAny
         :: forall k (p :: k ~> Type) (as :: NonEmpty k). ()

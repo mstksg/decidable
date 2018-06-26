@@ -7,6 +7,7 @@ module Data.Type.Elem (
     Elem
   , Index(..)
   , IsJust(..)
+  , IsRight(..)
   , NEIndex(..)
   , Snd(..)
   ) where
@@ -30,6 +31,11 @@ data IsJust :: Maybe k -> k -> Type where
     IsJust :: IsJust ('Just a) a
 
 type instance Elem Maybe = IsJust
+
+data IsRight :: Either j k -> k -> Type where
+    IsRight :: IsRight ('Right a) a
+
+type instance Elem (Either j) = IsRight
 
 -- | Witness an item in a type-level 'NonEmpty' by either indicating that
 -- it is the "head", or by providing an index in the "tail".
