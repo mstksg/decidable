@@ -32,7 +32,7 @@ class Universe (f :: Type -> Type)
 --   predicate of kind <tt>f k ~&gt; Type</tt>.
 --   
 --   Essentially tests existential quantification.
-decideAny :: forall k (p :: k ~> Type) (as :: f k). Universe f => (forall a. Elem f as a -> Sing a -> Decision (p @@ a)) -> Sing as -> Decision (Any p as)
+decideAny :: forall k (p :: k ~> Type) (as :: f k). Universe f => (forall a. Elem f as a -> Sing a -> Decision (p @@ a)) -> (Sing as -> Decision (Any p as))
 
 -- | You should read this type as:
 --   
