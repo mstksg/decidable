@@ -1,23 +1,22 @@
 {-# LANGUAGE EmptyCase           #-}
+{-# LANGUAGE FlexibleInstances   #-}
 {-# LANGUAGE GADTs               #-}
 {-# LANGUAGE InstanceSigs        #-}
 {-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE RankNTypes          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving  #-}
 {-# LANGUAGE TypeApplications    #-}
+{-# LANGUAGE TypeFamilies        #-}
 {-# LANGUAGE TypeInType          #-}
 {-# LANGUAGE TypeOperators       #-}
 {-# OPTIONS_GHC -Wno-orphans     #-}
 
 module Data.Type.Universe (
-    Universe(..), genAll, select, splitSing
+    Universe(..), Elem(..), genAll, select, splitSing
   , decideAny', decideAll', genAllA', genAll'
+  , pickElem
   -- * Membership witnesses
-  , Elem
-  , Index(..)
-  , IsJust(..)
-  , NEIndex(..)
-  , Snd(..)
   ) where
 
 import           Data.Functor.Identity
@@ -26,7 +25,6 @@ import           Data.List.NonEmpty                    (NonEmpty(..))
 import           Data.Singletons
 import           Data.Singletons.Decide
 import           Data.Singletons.Prelude hiding        (Any, All, Snd, Elem, ElemSym0, ElemSym1, ElemSym2)
-import           Data.Type.Elem
 import           Data.Type.Elem.Internal
 import           Prelude hiding                        (any, all)
 import qualified Data.Singletons.Prelude.List.NonEmpty as NE
@@ -82,10 +80,27 @@ genAll'
     -> (Sing as -> All p as)                   -- ^ always-true predicate on collection
 genAll' f = genAll (const f)
 
+-- | Automatically generate a witness for a member, if possible
+pickElem :: forall f k (as :: f k) a. (Universe f, SingI as, SingI a, SDecide k)
+     => Decision (Elem f as a)
+pickElem = case decideAny' @f @_ @(TyCon1 ((:~:) a)) go (sing @_ @as) of
+    Proved (Any i Refl) -> Proved i
+    Disproved v         -> Disproved $ \i -> v $ Any i Refl
+  where
+    go :: Sing b -> Decision (a :~: b)
+    go = (sing %~)
+
+-- | Witness an item in a type-level list by providing its index.
+data instance Elem []  :: [k] -> k -> Type where
+    IZ :: Elem [] (a ': as) a
+    IS :: Elem [] bs a -> Elem [] (b ': bs) a
+
+deriving instance Show (Elem [] as a)
+
 instance Universe [] where
     decideAny
         :: forall k (p :: k ~> Type) (as :: [k]). ()
-        => (forall a. Index as a -> Sing a -> Decision (p @@ a))
+        => (forall a. Elem [] as a -> Sing a -> Decision (p @@ a))
         -> Sing as
         -> Decision (Any p as)
     decideAny f = \case
@@ -101,7 +116,7 @@ instance Universe [] where
 
     decideAll
         :: forall k (p :: k ~> Type) (as :: [k]). ()
-        => (forall a. Index as a -> Sing a -> Decision (p @@ a))
+        => (forall a. Elem [] as a -> Sing a -> Decision (p @@ a))
         -> Sing as
         -> Decision (All p as)
     decideAll f = \case
@@ -128,6 +143,13 @@ instance Universe [] where
           IZ   -> p
           IS i -> runAll a i
 
+-- | Witness an item in a type-level 'Maybe' by proving the 'Maybe' is
+-- 'Just'.
+data instance Elem Maybe :: Maybe k -> k -> Type where
+    IsJust :: Elem Maybe ('Just a) a
+
+deriving instance Show (Elem Maybe as a)
+
 instance Universe Maybe where
     decideAny f = \case
       SNothing -> Disproved $ \case Any i _ -> case i of {}
@@ -145,6 +167,13 @@ instance Universe Maybe where
     genAllA f = \case
       SNothing -> pure $ All $ \case {}
       SJust x  -> (\p -> All $ \case IsJust -> p) <$> f IsJust x
+
+-- | Witness an item in a type-level @'Either' j@ by proving the 'Either'
+-- is 'Right'.
+data instance Elem (Either j) :: Either j k -> k -> Type where
+    IsRight :: Elem (Either j) ('Right a) a
+
+deriving instance Show (Elem (Either j) as a)
 
 instance Universe (Either j) where
     decideAny f = \case
@@ -164,10 +193,18 @@ instance Universe (Either j) where
       SLeft  _ -> pure $ All $ \case {}
       SRight x -> (\p -> All $ \case IsRight -> p) <$> f IsRight x
 
+-- | Witness an item in a type-level 'NonEmpty' by either indicating that
+-- it is the "head", or by providing an index in the "tail".
+data instance Elem NonEmpty :: NonEmpty k -> k -> Type where
+    NEHead :: Elem NonEmpty (a ':| as) a
+    NETail :: Elem [] as a -> Elem NonEmpty (b ':| as) a
+
+deriving instance Show (Elem NonEmpty as a)
+
 instance Universe NonEmpty where
     decideAny
         :: forall k (p :: k ~> Type) (as :: NonEmpty k). ()
-        => (forall a. NEIndex as a -> Sing a -> Decision (p @@ a))
+        => (forall a. Elem NonEmpty as a -> Sing a -> Decision (p @@ a))
         -> Sing as
         -> Decision (Any p as)
     decideAny f (x NE.:%| xs) = case f NEHead x of
@@ -181,7 +218,7 @@ instance Universe NonEmpty where
 
     decideAll
         :: forall k (p :: k ~> Type) (as :: NonEmpty k). ()
-        => (forall a. NEIndex as a -> Sing a -> Decision (p @@ a))
+        => (forall a. Elem NonEmpty as a -> Sing a -> Decision (p @@ a))
         -> Sing as
         -> Decision (All p as)
     decideAll f (x NE.:%| xs) = case f NEHead x of
@@ -203,6 +240,12 @@ instance Universe NonEmpty where
         go p ps = All $ \case
           NEHead   -> p
           NETail i -> runAll ps i
+
+-- | Trivially witness an item in the second field of a type-level tuple.
+data instance Elem ((,) j) :: (j, k) -> k -> Type where
+    Snd :: Elem ((,) j) '(a, b) b
+
+deriving instance Show (Elem ((,) j) as a)
 
 instance Universe ((,) j) where
     decideAny f (STuple2 _ x) = case f Snd x of

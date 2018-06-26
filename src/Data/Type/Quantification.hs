@@ -19,6 +19,8 @@ import           Data.Singletons
 import           Data.Singletons.Decide
 import           Data.Type.Elem.Internal
 
+newtype Subset p (as :: f k) = Subset { runSubset :: forall a. Elem f as a -> Decision (p @@ a) }
+
 -- | If there exists an @a@ s.t. @p a@, and if @p@ implies @q@, then there
 -- must exist an @a@ s.t. @q a@.
 entailAny

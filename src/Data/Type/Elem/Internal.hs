@@ -15,7 +15,7 @@ import           Data.Singletons.Decide
 import           Prelude hiding         (any, all)
 
 -- | A witness for membership of a given item in a type-level collection
-type family Elem (f :: Type -> Type) :: f k -> k -> Type
+data family Elem (f :: Type -> Type) :: f k -> k -> Type
 
 -- | An @'Any' p as@ is a witness that, for at least one item @a@ in the
 -- type-level collection @as@, the predicate @p a@ is true.
