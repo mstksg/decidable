@@ -37,7 +37,7 @@ decideAny :: forall k (p :: k ~> Type) (as :: f k). Universe f => (forall a. Ele
 -- | You should read this type as:
 --   
 --   <pre>
---   decideAll :: (<a>Sing</a> a  -&gt; <a>Decision</a> (p a)    )
+--   <a>decideAll</a> :: (<a>Sing</a> a  -&gt; <a>Decision</a> (p a)    )
 --             -&gt; (<a>Sing</a> as -&gt; <a>Decision</a> (All p as)
 --   </pre>
 --   
