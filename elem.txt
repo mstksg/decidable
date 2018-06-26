@@ -10,15 +10,17 @@
 @version 0.1.0.0
 
 module Data.Type.Elem
-data Any p as
+class Universe (f :: Type -> Type)
+any :: forall k (p :: k ~> Type) (as :: f k). Universe f => (forall a. Sing a -> Decision (p @@ a)) -> Sing as -> Decision (Any p as)
+all :: forall k (p :: k ~> Type) (as :: f k). Universe f => (forall a. Sing a -> Decision (p @@ a)) -> Sing as -> Decision (All p as)
+select :: Universe f => Elem f as a -> Sing as -> Sing a
+data Any :: (k ~> Type) -> f k -> Type
 [Any] :: Elem f as a -> p @@ a -> Any p as
-class Search f
-search :: forall k (p :: k ~> Type) (as :: f k). Search f => (forall a. Sing a -> Decision (p @@ a)) -> Sing as -> Decision (Any p as)
 newtype All p (as :: f k)
 All :: forall a. Elem f as a -> p @@ a -> All p
 [runAll] :: All p -> forall a. Elem f as a -> p @@ a
-class Verify f
-verify :: forall k (p :: k ~> Type) (as :: f k). Verify f => (forall a. Sing a -> Decision (p @@ a)) -> Sing as -> Decision (All p as)
+entailAny :: forall p q as. () => (forall a. p @@ a -> q @@ a) -> Any p as -> Any q as
+entailAll :: forall p q as. () => (forall a. p @@ a -> q @@ a) -> All p as -> All q as
 data Index :: [k] -> k -> Type
 [IZ] :: Index (a : as) a
 [IS] :: Index bs a -> Index (b : bs) a
@@ -29,14 +31,7 @@ data NEIndex :: NonEmpty k -> k -> Type
 [NETail] :: Index as a -> NEIndex (b :| as) a
 data Snd :: (j, k) -> k -> Type
 [Snd] :: Snd '(a, b) b
-instance Data.Type.Elem.Search ((,) j)
-instance Data.Type.Elem.Verify ((,) j)
-instance Data.Type.Elem.Search GHC.Base.NonEmpty
-instance Data.Type.Elem.Verify GHC.Base.NonEmpty
-instance Data.Type.Elem.Search GHC.Base.Maybe
-instance Data.Type.Elem.Verify GHC.Base.Maybe
-instance Data.Type.Elem.Search []
-instance Data.Type.Elem.Verify []
-
-module Lib
-someFunc :: IO ()
+instance Data.Type.Elem.Universe ((,) j)
+instance Data.Type.Elem.Universe GHC.Base.NonEmpty
+instance Data.Type.Elem.Universe GHC.Base.Maybe
+instance Data.Type.Elem.Universe []
