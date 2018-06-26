@@ -11,6 +11,8 @@
 
 module Data.Type.Elem
 
+-- | A witness for membership of a given item in a type-level collection
+
 -- | Typeclass for a type-level container that you can quantify or lift
 --   type-level predicates over.
 class Universe (f :: Type -> Type)
