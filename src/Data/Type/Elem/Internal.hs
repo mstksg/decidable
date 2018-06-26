@@ -33,8 +33,8 @@ class Universe (f :: Type -> Type) where
     -- | You should read this type as:
     --
     -- @
-    -- 'decideAny' :: ('Sing' a  -> 'Decision' (p a)    )
-    --           -> (Sing as -> Decision (Any p as)
+    -- 'decideAny'' :: ('Sing' a  -> 'Decision' (p a)    )
+    --            -> (Sing as -> Decision (Any p as)
     -- @
     --
     -- It lifts a predicate @p@ on an individual @a@ into a predicate that
@@ -53,8 +53,8 @@ class Universe (f :: Type -> Type) where
     -- | You should read this type as:
     --
     -- @
-    -- 'decideAll' :: ('Sing' a  -> 'Decision' (p a)    )
-    --           -> ('Sing' as -> 'Decision' (All p as)
+    -- 'decideAll'' :: ('Sing' a  -> 'Decision' (p a)    )
+    --            -> ('Sing' as -> 'Decision' (All p as)
     -- @
     --
     -- It lifts a predicate @p@ on an individual @a@ into a predicate that

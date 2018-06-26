@@ -11,6 +11,9 @@
 
 module Data.Type.Universe (
     Universe(..), genAll, select, splitSing
+  , decideAny', decideAll', genAllA', genAll'
+  -- * Membership witnesses
+  , Elem
   , Index(..)
   , IsJust(..)
   , NEIndex(..)
@@ -50,6 +53,34 @@ splitSing
     => Sing as
     -> All (TyCon1 Sing) as
 splitSing = genAll @f @_ @(TyCon1 Sing) (\_ x -> x)
+
+-- | 'decideAny', but without the membership witness.
+decideAny'
+    :: forall f k (p :: k ~> Type) (as :: f k). Universe f
+    => (forall a. Sing a -> Decision (p @@ a))   -- ^ predicate on value
+    -> (Sing as -> Decision (Any p as))          -- ^ predicate on collection
+decideAny' f = decideAny (const f)
+
+-- | 'decideAll', but without the membership witness.
+decideAll'
+    :: forall f k (p :: k ~> Type) (as :: f k). Universe f
+    => (forall a. Sing a -> Decision (p @@ a))   -- ^ predicate on value
+    -> (Sing as -> Decision (All p as))          -- ^ predicate on collection
+decideAll' f = decideAll (const f)
+
+-- | 'genAllA', but without the membership witness.
+genAllA'
+    :: forall k (p :: k ~> Type) (as :: f k) h. (Universe f, Applicative h)
+    => (forall a. Sing a -> h (p @@ a))        -- ^ predicate on value in context
+    -> (Sing as -> h (All p as))               -- ^ predicate on collection in context
+genAllA' f = genAllA (const f)
+
+-- | 'genAll', but without the membership witness.
+genAll'
+    :: forall f k (p :: k ~> Type) (as :: f k). Universe f
+    => (forall a. Sing a -> p @@ a)            -- ^ always-true predicate on value
+    -> (Sing as -> All p as)                   -- ^ always-true predicate on collection
+genAll' f = genAll (const f)
 
 instance Universe [] where
     decideAny
