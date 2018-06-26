@@ -35,8 +35,6 @@ data Snd :: (j, k) -> k -> Type
 
 module Data.Type.Quantification
 
--- | A witness for membership of a given item in a type-level collection
-
 -- | An <tt><a>Any</a> p as</tt> is a witness that, for at least one item
 --   <tt>a</tt> in the type-level collection <tt>as</tt>, the predicate
 --   <tt>p a</tt> is true.
