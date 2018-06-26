@@ -27,6 +27,8 @@ ghc-options:
 
 library:
   source-dirs: src
+  other-modules:
+  - Data.Type.Elem.Internal
 
 # executables:
 #   elem-exe:
