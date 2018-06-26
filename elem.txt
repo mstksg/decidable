@@ -13,6 +13,80 @@ module Data.Type.Elem
 
 -- | A witness for membership of a given item in a type-level collection
 
+-- | Witness an item in a type-level list by providing its index.
+data Index :: [k] -> k -> Type
+[IZ] :: Index (a : as) a
+[IS] :: Index bs a -> Index (b : bs) a
+
+-- | Witness an item in a type-level <a>Maybe</a> by proving the
+--   <a>Maybe</a> is <a>Just</a>.
+data IsJust :: Maybe k -> k -> Type
+[IsJust] :: IsJust ( 'Just a) a
+
+-- | Witness an item in a type-level <a>NonEmpty</a> by either indicating
+--   that it is the "head", or by providing an index in the "tail".
+data NEIndex :: NonEmpty k -> k -> Type
+[NEHead] :: NEIndex (a :| as) a
+[NETail] :: Index as a -> NEIndex (b :| as) a
+
+-- | Trivially witness an item in the second field of a type-level tuple.
+data Snd :: (j, k) -> k -> Type
+[Snd] :: Snd '(a, b) b
+
+module Data.Type.Quantification
+
+-- | A witness for membership of a given item in a type-level collection
+
+-- | An <tt><a>Any</a> p as</tt> is a witness that, for at least one item
+--   <tt>a</tt> in the type-level collection <tt>as</tt>, the predicate
+--   <tt>p a</tt> is true.
+data Any :: (k ~> Type) -> f k -> Type
+[Any] :: Elem f as a -> p @@ a -> Any p as
+
+-- | If there exists an <tt>a</tt> s.t. <tt>p a</tt>, and if <tt>p</tt>
+--   implies <tt>q</tt>, then there must exist an <tt>a</tt> s.t. <tt>q
+--   a</tt>.
+entailAny :: forall f p q (as :: f k). () => (forall a. Elem f as a -> p @@ a -> q @@ a) -> Any p as -> Any q as
+
+-- | If <tt>p</tt> implies <tt>q</tt> under some context <tt>h</tt>, and if
+--   there exists some <tt>a</tt> such that <tt>p a</tt>, then there must
+--   exist some <tt>a</tt> such that <tt>p q</tt> under that context
+--   <tt>h</tt>.
+--   
+--   <tt>h</tt> might be something like, say, <a>Maybe</a>, to give
+--   predicate that is either provably true or unprovably false.
+--   
+--   Note that it is not possible to do this with <tt>p a -&gt;
+--   <a>Decision</a> (q a)</tt>. This is if the <tt>p a -&gt;
+--   <a>Decision</a> (q a)</tt> implication is false, there it doesn't mean
+--   that there is <i>no</i> <tt>a</tt> such that <tt>q a</tt>,
+--   necessarily. There could have been an <tt>a</tt> where <tt>p</tt> does
+--   not hold, but <tt>q</tt> does.
+entailAnyF :: forall h f p q as. Functor h => (forall a. Elem f as a -> p @@ a -> h (q @@ a)) -> Any p as -> h (Any q as)
+
+-- | An <tt><a>All</a> p as</tt> is a witness that, the predicate <tt>p
+--   a</tt> is true for all items <tt>a</tt> in the type-level collection
+--   <tt>as</tt>.
+newtype All p (as :: f k)
+All :: forall a. Elem f as a -> p @@ a -> All p
+[runAll] :: All p -> forall a. Elem f as a -> p @@ a
+
+-- | If for all <tt>a</tt> we have <tt>p a</tt>, and if <tt>p</tt> implies
+--   <tt>q</tt>, then for all <tt>a</tt> we must also have <tt>p a</tt>.
+entailAll :: forall f p q (as :: f k). () => (forall a. Elem f as a -> p @@ a -> q @@ a) -> All p as -> All q as
+
+-- | If <tt>p</tt> implies <tt>q</tt> under some context <tt>h</tt>, and if
+--   we have <tt>p a</tt> for all <tt>a</tt>, then we must have <tt>q
+--   a</tt> for all <tt>a</tt> under context <tt>h</tt>.
+entailAllF :: forall h f p q as. (Universe f, Applicative h, SingI as) => (forall a. Elem f as a -> p @@ a -> h (q @@ a)) -> All p as -> h (All q as)
+
+-- | If we have <tt>p a</tt> for all <tt>a</tt>, and <tt>p a</tt> can be
+--   used to test for <tt>q a</tt>, then we can test all <tt>a</tt>s for
+--   <tt>q a</tt>.
+decideEntailAll :: forall f p q (as :: f k). (Universe f, SingI as) => (forall a. Elem f as a -> p @@ a -> Decision (q @@ a)) -> All p as -> Decision (All q as)
+
+module Data.Type.Universe
+
 -- | Typeclass for a type-level container that you can quantify or lift
 --   type-level predicates over.
 class Universe (f :: Type -> Type)
@@ -55,8 +129,8 @@ decideAll :: forall k (p :: k ~> Type) (as :: f k). Universe f => (forall a. Ele
 --   some (Applicative) context <tt>h</tt>, then you can create an
 --   <tt><a>All</a> p as</tt> under that Applicative context <tt>h</tt>.
 --   
---   Can be useful with <a>Identity</a> (which is basically unwrapping and
---   wrapping <a>All</a>), or with <a>Maybe</a> (which can express
+--   Can be useful with <tt>Identity</tt> (which is basically unwrapping
+--   and wrapping <a>All</a>), or with <a>Maybe</a> (which can express
 --   predicates that are either provably true or not provably false).
 genAllA :: forall k (p :: k ~> Type) (as :: f k) h. (Universe f, Applicative h) => (forall a. Elem f as a -> Sing a -> h (p @@ a)) -> (Sing as -> h (All p as))
 
@@ -68,53 +142,9 @@ genAll :: forall f k (p :: k ~> Type) (as :: f k). Universe f => (forall a. Elem
 -- | Extract the item from the container witnessed by the <a>Elem</a>
 select :: forall f as a. Universe f => Elem f as a -> Sing as -> Sing a
 
--- | An <tt><a>Any</a> p as</tt> is a witness that, for at least one item
---   <tt>a</tt> in the type-level collection <tt>as</tt>, the predicate
---   <tt>p a</tt> is true.
-data Any :: (k ~> Type) -> f k -> Type
-[Any] :: Elem f as a -> p @@ a -> Any p as
-
--- | An <tt><a>All</a> p as</tt> is a witness that, the predicate <tt>p
---   a</tt> is true for all items <tt>a</tt> in the type-level collection
---   <tt>as</tt>.
-newtype All p (as :: f k)
-All :: forall a. Elem f as a -> p @@ a -> All p
-[runAll] :: All p -> forall a. Elem f as a -> p @@ a
-
--- | If there exists an <tt>a</tt> s.t. <tt>p a</tt>, and if <tt>p</tt>
---   implies <tt>q</tt>, then there must exist an <tt>a</tt> s.t. <tt>q
---   a</tt>.
-entailAny :: forall f p q (as :: f k). () => (forall a. Elem f as a -> p @@ a -> q @@ a) -> Any p as -> Any q as
-
--- | If <tt>p</tt> implies <tt>q</tt> under some context <tt>h</tt>, and if
---   there exists some <tt>a</tt> such that <tt>p a</tt>, then there must
---   exist some <tt>a</tt> such that <tt>p q</tt> under that context
---   <tt>h</tt>.
---   
---   <tt>h</tt> might be something like, say, <a>Maybe</a>, to give
---   predicate that is either provably true or unprovably false.
---   
---   Note that it is not possible to do this with <tt>p a -&gt;
---   <a>Decision</a> (q a)</tt>. This is if the <tt>p a -&gt;
---   <a>Decision</a> (q a)</tt> implication is false, there it doesn't mean
---   that there is <i>no</i> <tt>a</tt> such that <tt>q a</tt>,
---   necessarily. There could have been an <tt>a</tt> where <tt>p</tt> does
---   not hold, but <tt>q</tt> does.
-entailAnyF :: forall h f p q as. Functor h => (forall a. Elem f as a -> p @@ a -> h (q @@ a)) -> Any p as -> h (Any q as)
-
--- | If for all <tt>a</tt> we have <tt>p a</tt>, and if <tt>p</tt> implies
---   <tt>q</tt>, then for all <tt>a</tt> we must also have <tt>p a</tt>.
-entailAll :: forall f p q (as :: f k). () => (forall a. Elem f as a -> p @@ a -> q @@ a) -> All p as -> All q as
-
--- | If <tt>p</tt> implies <tt>q</tt> under some context <tt>h</tt>, and if
---   we have <tt>p a</tt> for all <tt>a</tt>, then we must have <tt>q
---   a</tt> for all <tt>a</tt> under context <tt>h</tt>.
-entailAllF :: forall h f p q as. (Universe f, Applicative h, SingI as) => (forall a. Elem f as a -> p @@ a -> h (q @@ a)) -> All p as -> h (All q as)
-
--- | If we have <tt>p a</tt> for all <tt>a</tt>, and <tt>p a</tt> can be
---   used to test for <tt>q a</tt>, then we can test all <tt>a</tt>s for
---   <tt>q a</tt>.
-decideEntailAll :: forall f p q (as :: f k). (Universe f, SingI as) => (forall a. Elem f as a -> p @@ a -> Decision (q @@ a)) -> All p as -> Decision (All q as)
+-- | Split a <tt><a>Sing</a> as</tt> into a proof that all <tt>a</tt> in
+--   <tt>as</tt> exist.
+splitSing :: forall f (as :: f k). Universe f => Sing as -> All (TyCon1 Sing) as
 
 -- | Witness an item in a type-level list by providing its index.
 data Index :: [k] -> k -> Type
@@ -135,7 +165,7 @@ data NEIndex :: NonEmpty k -> k -> Type
 -- | Trivially witness an item in the second field of a type-level tuple.
 data Snd :: (j, k) -> k -> Type
 [Snd] :: Snd '(a, b) b
-instance Data.Type.Elem.Universe ((,) j)
-instance Data.Type.Elem.Universe GHC.Base.NonEmpty
-instance Data.Type.Elem.Universe GHC.Base.Maybe
-instance Data.Type.Elem.Universe []
+instance Data.Type.Elem.Internal.Universe []
+instance Data.Type.Elem.Internal.Universe GHC.Base.Maybe
+instance Data.Type.Elem.Internal.Universe GHC.Base.NonEmpty
+instance Data.Type.Elem.Internal.Universe ((,) j)
