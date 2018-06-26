@@ -22,6 +22,8 @@ data Index :: [k] -> k -> Type
 --   <a>Maybe</a> is <a>Just</a>.
 data IsJust :: Maybe k -> k -> Type
 [IsJust] :: IsJust ( 'Just a) a
+data IsRight :: Either j k -> k -> Type
+[IsRight] :: IsRight ( 'Right a) a
 
 -- | Witness an item in a type-level <a>NonEmpty</a> by either indicating
 --   that it is the "head", or by providing an index in the "tail".
@@ -165,5 +167,6 @@ data Snd :: (j, k) -> k -> Type
 [Snd] :: Snd '(a, b) b
 instance Data.Type.Elem.Internal.Universe []
 instance Data.Type.Elem.Internal.Universe GHC.Base.Maybe
+instance Data.Type.Elem.Internal.Universe (Data.Either.Either j)
 instance Data.Type.Elem.Internal.Universe GHC.Base.NonEmpty
 instance Data.Type.Elem.Internal.Universe ((,) j)
