@@ -65,9 +65,8 @@ class Universe (f :: Type -> Type) where
     -- Essentially tests existential quantification.
     decideAny
         :: forall k (p :: k ~> Type) (as :: f k). ()
-        => (forall a. Elem f as a -> Sing a -> Decision (p @@ a))
-        -> Sing as
-        -> Decision (Any p as)
+        => (forall a. Elem f as a -> Sing a -> Decision (p @@ a))   -- ^ predicate on value
+        -> (Sing as -> Decision (Any p as))                         -- ^ predicate on collection
 
     -- | You should read this type as:
     --
@@ -86,9 +85,8 @@ class Universe (f :: Type -> Type) where
     -- Essentially tests universal quantification.
     decideAll
         :: forall k (p :: k ~> Type) (as :: f k). ()
-        => (forall a. Elem f as a -> Sing a -> Decision (p @@ a))
-        -> Sing as
-        -> Decision (All p as)
+        => (forall a. Elem f as a -> Sing a -> Decision (p @@ a))   -- ^ predicate on value
+        -> (Sing as -> Decision (All p as))                         -- ^ predicate on collection
 
     -- | If @p a@ is true for all values @a@ in @as@ under some
     -- (Applicative) context @h@, then you can create an @'All' p as@ under
@@ -99,24 +97,22 @@ class Universe (f :: Type -> Type) where
     -- are either provably true or not provably false).
     genAllA
         :: forall k (p :: k ~> Type) (as :: f k) h. Applicative h
-        => (forall a. Elem f as a -> Sing a -> h (p @@ a))
-        -> Sing as
-        -> h (All p as)
+        => (forall a. Elem f as a -> Sing a -> h (p @@ a))        -- ^ predicate on value in context
+        -> (Sing as -> h (All p as))                              -- ^ predicate on collection in context
 
 -- | If @p a@ is true for all values @a@ in @as@, then we have @'All'
 -- p as@.  Basically witnesses the definition of 'All'.
 genAll
     :: forall f k (p :: k ~> Type) (as :: f k). Universe f
-    => (forall a. Elem f as a -> Sing a -> p @@ a)
-    -> Sing as
-    -> All p as
+    => (forall a. Elem f as a -> Sing a -> p @@ a)            -- ^ always-true predicate on value
+    -> (Sing as -> All p as)                                  -- ^ always-true predicate on collection
 genAll f = runIdentity . genAllA (\i -> Identity . f i)
 
 -- | Extract the item from the container witnessed by the 'Elem'
 select
     :: forall f as a. Universe f
-    => Elem f as a
-    -> Sing as
+    => Elem f as a        -- ^ Witness
+    -> Sing as            -- ^ Collection
     -> Sing a
 select i = (`runAll` i) . genAll @f @_ @(TyCon1 Sing) (\_ x -> x)
 
@@ -124,7 +120,7 @@ select i = (`runAll` i) . genAll @f @_ @(TyCon1 Sing) (\_ x -> x)
 -- must exist an @a@ s.t. @q a@.
 entailAny
     :: forall f p q (as :: f k). ()
-    => (forall a. Elem f as a -> p @@ a -> q @@ a)
+    => (forall a. Elem f as a -> p @@ a -> q @@ a)        -- ^ implication
     -> Any p as
     -> Any q as
 entailAny f (Any i x) = Any i (f i x)
@@ -133,7 +129,7 @@ entailAny f (Any i x) = Any i (f i x)
 -- we must also have @p a@.
 entailAll
     :: forall f p q (as ::  f k). ()
-    => (forall a. Elem f as a -> p @@ a -> q @@ a)
+    => (forall a. Elem f as a -> p @@ a -> q @@ a)      -- ^ implication
     -> All p as
     -> All q as
 entailAll f a = All $ \i -> f i (runAll a i)
@@ -151,7 +147,7 @@ entailAll f a = All $ \i -> f i (runAll a i)
 -- There could have been an @a@ where @p@ does not hold, but @q@ does.
 entailAnyF
     :: forall h f p q as. Functor h
-    => (forall a. Elem f as a -> p @@ a -> h (q @@ a))
+    => (forall a. Elem f as a -> p @@ a -> h (q @@ a))      -- ^ implication in context
     -> Any p as
     -> h (Any q as)
 entailAnyF f = \case
@@ -161,7 +157,7 @@ entailAnyF f = \case
 -- all @a@, then we must have @q a@ for all @a@ under context @h@.
 entailAllF
     :: forall h f p q as. (Universe f, Applicative h, SingI as)
-    => (forall a. Elem f as a -> p @@ a -> h (q @@ a))
+    => (forall a. Elem f as a -> p @@ a -> h (q @@ a))    -- ^ implication in context
     -> All p as
     -> h (All q as)
 entailAllF f a = genAllA (\i _ -> f i (runAll a i)) sing
@@ -170,7 +166,7 @@ entailAllF f a = genAllA (\i _ -> f i (runAll a i)) sing
 -- then we can test all @a@s for @q a@.
 decideEntailAll
     :: forall f p q (as ::  f k). (Universe f, SingI as)
-    => (forall a. Elem f as a -> p @@ a -> Decision (q @@ a))
+    => (forall a. Elem f as a -> p @@ a -> Decision (q @@ a))     -- ^ decidable implication
     -> All p as
     -> Decision (All q as)
 decideEntailAll f a = decideAll (\i _ -> f i (runAll a i)) sing
