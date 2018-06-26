@@ -8,7 +8,6 @@
 {-# LANGUAGE PolyKinds             #-}
 {-# LANGUAGE RankNTypes            #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
-{-# LANGUAGE TemplateHaskell       #-}
 {-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE TypeInType            #-}
@@ -16,7 +15,7 @@
 {-# LANGUAGE UndecidableInstances  #-}
 
 module Data.Type.Elem (
-    Universe(..), genAll, select
+    Elem, Universe(..), genAll, select
   , Any(..), All(..), entailAny, entailAnyF, entailAll, entailAllF, decideEntailAll
   , Index(..)
   , IsJust(..)
@@ -30,39 +29,82 @@ import           Data.List.NonEmpty                    (NonEmpty(..))
 import           Data.Singletons
 import           Data.Singletons.Decide
 import           Data.Singletons.Prelude hiding        (Any, All, Snd, Elem, ElemSym0, ElemSym1, ElemSym2)
-import           Data.Singletons.Prelude.Functor
-import           Data.Singletons.Sigma
-import           Data.Singletons.TH hiding             (Elem)
 import           Prelude hiding                        (any, all)
 import qualified Data.Singletons.Prelude.List.NonEmpty as NE
 
+-- | A witness for membership of a given item in a type-level collection
 type family Elem (f :: Type -> Type) :: f k -> k -> Type
 
+-- | An @'Any' p as@ is a witness that, for at least one item @a@ in the
+-- type-level collection @as@, the predicate @p a@ is true.
 data Any :: (k ~> Type) -> f k -> Type where
     Any :: Elem f as a -> p @@ a -> Any p as
 
+-- | An @'All' p as@ is a witness that, the predicate @p a@ is true for all
+-- items @a@ in the type-level collection @as@.
 newtype All p (as :: f k) = All { runAll :: forall a. Elem f as a -> p @@ a }
 
+-- | Typeclass for a type-level container that you can quantify or lift
+-- type-level predicates over.
 class Universe (f :: Type -> Type) where
 
+    -- | You should read this type as:
+    --
+    -- @
+    -- 'decideAny' :: ('Sing' a  -> 'Decision' (p a)    )
+    --           -> (Sing as -> Decision (Any p as)
+    -- @
+    --
+    -- It lifts a predicate @p@ on an individual @a@ into a predicate that
+    -- on a collection @as@ that is true if and only if /any/ item in @as@
+    -- satisfies the original predicate.
+    --
+    -- That is, it turns a predicate of kind @k ~> Type@ into a predicate
+    -- of kind @f k ~> Type@.
+    --
+    -- Essentially tests existential quantification.
     decideAny
         :: forall k (p :: k ~> Type) (as :: f k). ()
         => (forall a. Elem f as a -> Sing a -> Decision (p @@ a))
         -> Sing as
         -> Decision (Any p as)
 
+    -- | You should read this type as:
+    --
+    -- @
+    -- 'decideAll' :: ('Sing' a  -> 'Decision' (p a)    )
+    --           -> ('Sing' as -> 'Decision' (All p as)
+    -- @
+    --
+    -- It lifts a predicate @p@ on an individual @a@ into a predicate that
+    -- on a collection @as@ that is true if and only if /all/ items in @as@
+    -- satisfies the original predicate.
+    --
+    -- That is, it turns a predicate of kind @k ~> Type@ into a predicate
+    -- of kind @f k ~> Type@.
+    --
+    -- Essentially tests universal quantification.
     decideAll
         :: forall k (p :: k ~> Type) (as :: f k). ()
         => (forall a. Elem f as a -> Sing a -> Decision (p @@ a))
         -> Sing as
         -> Decision (All p as)
 
+    -- | If @p a@ is true for all values @a@ in @as@ under some
+    -- (Applicative) context @h@, then you can create an @'All' p as@ under
+    -- that Applicative context @h@.
+    --
+    -- Can be useful with 'Identity' (which is basically unwrapping and
+    -- wrapping 'All'), or with 'Maybe' (which can express predicates that
+    -- are either provably true or not provably false).
     genAllA
         :: forall k (p :: k ~> Type) (as :: f k) h. Applicative h
         => (forall a. Elem f as a -> Sing a -> h (p @@ a))
         -> Sing as
         -> h (All p as)
 
+-- | If @p a@ is true for all values @a@ in @as@, then we have @'All'
+-- p as@.  Basically witnesses the definition of 'All'.
 genAll
     :: forall f k (p :: k ~> Type) (as :: f k). Universe f
     => (forall a. Elem f as a -> Sing a -> p @@ a)
@@ -70,6 +112,7 @@ genAll
     -> All p as
 genAll f = runIdentity . genAllA (\i -> Identity . f i)
 
+-- | Extract the item from the container witnessed by the 'Elem'
 select
     :: forall f as a. Universe f
     => Elem f as a
@@ -99,8 +142,8 @@ entailAll f a = All $ \i -> f i (runAll a i)
 -- @a@ such that @p a@, then there must exist some @a@ such that @p q@
 -- under that context @h@.
 --
--- @h@ might be something like, say, 'Maybe', to give a "potentially
--- failing" @p a -> 'Maybe' (q a)@ relationship.
+-- @h@ might be something like, say, 'Maybe', to give predicate that is
+-- either provably true or unprovably false.
 --
 -- Note that it is not possible to do this with @p a -> 'Decision' (q a)@.
 -- This is if the @p a -> 'Decision' (q a)@ implication is false, there
@@ -132,6 +175,7 @@ decideEntailAll
     -> Decision (All q as)
 decideEntailAll f a = decideAll (\i _ -> f i (runAll a i)) sing
 
+-- | Witness an item in a type-level list by providing its index.
 data Index :: [k] -> k -> Type where
     IZ :: Index (a ': as) a
     IS :: Index bs a -> Index (b ': bs) a
@@ -184,6 +228,8 @@ instance Universe [] where
           IZ   -> p
           IS i -> runAll a i
 
+-- | Witness an item in a type-level 'Maybe' by proving the 'Maybe' is
+-- 'Just'.
 data IsJust :: Maybe k -> k -> Type where
     IsJust :: IsJust ('Just a) a
 
@@ -207,6 +253,8 @@ instance Universe Maybe where
       SNothing -> pure $ All $ \case {}
       SJust x  -> (\p -> All $ \case IsJust -> p) <$> f IsJust x
 
+-- | Witness an item in a type-level 'NonEmpty' by either indicating that
+-- it is the "head", or by providing an index in the "tail".
 data NEIndex :: NonEmpty k -> k -> Type where
     NEHead :: NEIndex (a ':| as) a
     NETail :: Index as a -> NEIndex (b ':| as) a
@@ -253,6 +301,7 @@ instance Universe NonEmpty where
           NEHead   -> p
           NETail i -> runAll ps i
       
+-- | Trivially witness an item in the second field of a type-level tuple.
 data Snd :: (j, k) -> k -> Type where
     Snd :: Snd '(a, b) b
 
