@@ -49,7 +49,7 @@ decideAny :: forall k (p :: k ~> Type) (as :: f k). Universe f => (forall a. Ele
 --   predicate of kind <tt>f k ~&gt; Type</tt>.
 --   
 --   Essentially tests universal quantification.
-decideAll :: forall k (p :: k ~> Type) (as :: f k). Universe f => (forall a. Elem f as a -> Sing a -> Decision (p @@ a)) -> Sing as -> Decision (All p as)
+decideAll :: forall k (p :: k ~> Type) (as :: f k). Universe f => (forall a. Elem f as a -> Sing a -> Decision (p @@ a)) -> (Sing as -> Decision (All p as))
 
 -- | If <tt>p a</tt> is true for all values <tt>a</tt> in <tt>as</tt> under
 --   some (Applicative) context <tt>h</tt>, then you can create an
@@ -58,12 +58,12 @@ decideAll :: forall k (p :: k ~> Type) (as :: f k). Universe f => (forall a. Ele
 --   Can be useful with <a>Identity</a> (which is basically unwrapping and
 --   wrapping <a>All</a>), or with <a>Maybe</a> (which can express
 --   predicates that are either provably true or not provably false).
-genAllA :: forall k (p :: k ~> Type) (as :: f k) h. (Universe f, Applicative h) => (forall a. Elem f as a -> Sing a -> h (p @@ a)) -> Sing as -> h (All p as)
+genAllA :: forall k (p :: k ~> Type) (as :: f k) h. (Universe f, Applicative h) => (forall a. Elem f as a -> Sing a -> h (p @@ a)) -> (Sing as -> h (All p as))
 
 -- | If <tt>p a</tt> is true for all values <tt>a</tt> in <tt>as</tt>, then
 --   we have <tt><a>All</a> p as</tt>. Basically witnesses the definition
 --   of <a>All</a>.
-genAll :: forall f k (p :: k ~> Type) (as :: f k). Universe f => (forall a. Elem f as a -> Sing a -> p @@ a) -> Sing as -> All p as
+genAll :: forall f k (p :: k ~> Type) (as :: f k). Universe f => (forall a. Elem f as a -> Sing a -> p @@ a) -> (Sing as -> All p as)
 
 -- | Extract the item from the container witnessed by the <a>Elem</a>
 select :: forall f as a. Universe f => Elem f as a -> Sing as -> Sing a
