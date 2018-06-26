@@ -46,7 +46,7 @@ data Any :: (k ~> Type) -> f k -> Type
 -- | If there exists an <tt>a</tt> s.t. <tt>p a</tt>, and if <tt>p</tt>
 --   implies <tt>q</tt>, then there must exist an <tt>a</tt> s.t. <tt>q
 --   a</tt>.
-entailAny :: forall f p q (as :: f k). () => (forall a. Elem f as a -> p @@ a -> q @@ a) -> Any p as -> Any q as
+entailAny :: forall f p q as. () => (forall a. Elem f as a -> p @@ a -> q @@ a) -> Any p as -> Any q as
 
 -- | If <tt>p</tt> implies <tt>q</tt> under some context <tt>h</tt>, and if
 --   there exists some <tt>a</tt> such that <tt>p a</tt>, then there must
@@ -62,7 +62,13 @@ entailAny :: forall f p q (as :: f k). () => (forall a. Elem f as a -> p @@ a ->
 --   that there is <i>no</i> <tt>a</tt> such that <tt>q a</tt>,
 --   necessarily. There could have been an <tt>a</tt> where <tt>p</tt> does
 --   not hold, but <tt>q</tt> does.
-entailAnyF :: forall h f p q as. Functor h => (forall a. Elem f as a -> p @@ a -> h (q @@ a)) -> Any p as -> h (Any q as)
+entailAnyF :: forall f p q as h. Functor h => (forall a. Elem f as a -> p @@ a -> h (q @@ a)) -> Any p as -> h (Any q as)
+
+-- | <a>entailAny</a>, but without the membership witness.
+entailAny' :: forall f p q (as :: f k). () => (forall a. p @@ a -> q @@ a) -> Any p as -> Any q as
+
+-- | <a>entailAnyF</a>, but without the membership witness.
+entailAnyF' :: forall f p q (as :: f k) h. Functor h => (forall a. p @@ a -> h (q @@ a)) -> Any p as -> h (Any q as)
 
 -- | An <tt><a>All</a> p as</tt> is a witness that, the predicate <tt>p
 --   a</tt> is true for all items <tt>a</tt> in the type-level collection
@@ -73,17 +79,26 @@ All :: forall a. Elem f as a -> p @@ a -> All p
 
 -- | If for all <tt>a</tt> we have <tt>p a</tt>, and if <tt>p</tt> implies
 --   <tt>q</tt>, then for all <tt>a</tt> we must also have <tt>p a</tt>.
-entailAll :: forall f p q (as :: f k). () => (forall a. Elem f as a -> p @@ a -> q @@ a) -> All p as -> All q as
+entailAll :: forall f p q as. () => (forall a. Elem f as a -> p @@ a -> q @@ a) -> All p as -> All q as
 
 -- | If <tt>p</tt> implies <tt>q</tt> under some context <tt>h</tt>, and if
 --   we have <tt>p a</tt> for all <tt>a</tt>, then we must have <tt>q
 --   a</tt> for all <tt>a</tt> under context <tt>h</tt>.
-entailAllF :: forall h f p q as. (Universe f, Applicative h, SingI as) => (forall a. Elem f as a -> p @@ a -> h (q @@ a)) -> All p as -> h (All q as)
+entailAllF :: forall f p q as h. (Universe f, Applicative h, SingI as) => (forall a. Elem f as a -> p @@ a -> h (q @@ a)) -> All p as -> h (All q as)
 
 -- | If we have <tt>p a</tt> for all <tt>a</tt>, and <tt>p a</tt> can be
 --   used to test for <tt>q a</tt>, then we can test all <tt>a</tt>s for
 --   <tt>q a</tt>.
-decideEntailAll :: forall f p q (as :: f k). (Universe f, SingI as) => (forall a. Elem f as a -> p @@ a -> Decision (q @@ a)) -> All p as -> Decision (All q as)
+decideEntailAll :: forall f p q as. (Universe f, SingI as) => (forall a. Elem f as a -> p @@ a -> Decision (q @@ a)) -> All p as -> Decision (All q as)
+
+-- | <a>entailAll</a>, but without the membership witness.
+entailAll' :: forall f p q (as :: f k). () => (forall a. p @@ a -> q @@ a) -> All p as -> All q as
+
+-- | <a>entailAllF</a>, but without the membership witness.
+entailAllF' :: forall f p q (as :: f k) h. (Universe f, Applicative h, SingI as) => (forall a. p @@ a -> h (q @@ a)) -> All p as -> h (All q as)
+
+-- | <a>decideEntailAll</a>, but without the membeship witness.
+decideEntailAll' :: forall f p q (as :: f k). (Universe f, SingI as) => (forall a. p @@ a -> Decision (q @@ a)) -> All p as -> Decision (All q as)
 
 module Data.Type.Universe
 
@@ -94,8 +109,8 @@ class Universe (f :: Type -> Type)
 -- | You should read this type as:
 --   
 --   <pre>
---   <a>decideAny</a> :: (<a>Sing</a> a  -&gt; <a>Decision</a> (p a)    )
---             -&gt; (Sing as -&gt; Decision (Any p as)
+--   <tt>decideAny'</tt> :: (<a>Sing</a> a  -&gt; <a>Decision</a> (p a)    )
+--              -&gt; (Sing as -&gt; Decision (Any p as)
 --   </pre>
 --   
 --   It lifts a predicate <tt>p</tt> on an individual <tt>a</tt> into a
@@ -111,8 +126,8 @@ decideAny :: forall k (p :: k ~> Type) (as :: f k). Universe f => (forall a. Ele
 -- | You should read this type as:
 --   
 --   <pre>
---   <a>decideAll</a> :: (<a>Sing</a> a  -&gt; <a>Decision</a> (p a)    )
---             -&gt; (<a>Sing</a> as -&gt; <a>Decision</a> (All p as)
+--   <tt>decideAll'</tt> :: (<a>Sing</a> a  -&gt; <a>Decision</a> (p a)    )
+--              -&gt; (<a>Sing</a> as -&gt; <a>Decision</a> (All p as)
 --   </pre>
 --   
 --   It lifts a predicate <tt>p</tt> on an individual <tt>a</tt> into a
@@ -145,6 +160,20 @@ select :: forall f as a. Universe f => Elem f as a -> Sing as -> Sing a
 -- | Split a <tt><a>Sing</a> as</tt> into a proof that all <tt>a</tt> in
 --   <tt>as</tt> exist.
 splitSing :: forall f (as :: f k). Universe f => Sing as -> All (TyCon1 Sing) as
+
+-- | <a>decideAny</a>, but without the membership witness.
+decideAny' :: forall f k (p :: k ~> Type) (as :: f k). Universe f => (forall a. Sing a -> Decision (p @@ a)) -> (Sing as -> Decision (Any p as))
+
+-- | <a>decideAll</a>, but without the membership witness.
+decideAll' :: forall f k (p :: k ~> Type) (as :: f k). Universe f => (forall a. Sing a -> Decision (p @@ a)) -> (Sing as -> Decision (All p as))
+
+-- | <a>genAllA</a>, but without the membership witness.
+genAllA' :: forall k (p :: k ~> Type) (as :: f k) h. (Universe f, Applicative h) => (forall a. Sing a -> h (p @@ a)) -> (Sing as -> h (All p as))
+
+-- | <a>genAll</a>, but without the membership witness.
+genAll' :: forall f k (p :: k ~> Type) (as :: f k). Universe f => (forall a. Sing a -> p @@ a) -> (Sing as -> All p as)
+
+-- | A witness for membership of a given item in a type-level collection
 
 -- | Witness an item in a type-level list by providing its index.
 data Index :: [k] -> k -> Type
