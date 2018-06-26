@@ -35,6 +35,14 @@ resolver: nightly-2018-06-25
 #  - wai
 packages:
 - .
+- location:
+    git: https://github.com/goldfirere/singletons.git
+    commit: c776637d11055ac1c47ddf7e96c7ed9067687041
+  extra-dep: true
+- location:
+    git: https://github.com/goldfirere/th-desugar.git
+    commit: 6dfdb7aa076b79d2595e4338c5e8192b1782de87
+  extra-dep: true
 # Dependency packages to be pulled from upstream that are not in the resolver
 # using the same syntax as the packages field.
 # (e.g., acme-missiles-0.3)
