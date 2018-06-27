@@ -9,7 +9,7 @@
 {-# LANGUAGE TypeOperators       #-}
 
 module Data.Type.Predicate (
-    Test
+    type (-?>)
   , type (&&&), decideAnd
   , type (|||), decideOr
   , type (-->)
@@ -19,7 +19,9 @@ import           Data.Kind
 import           Data.Singletons
 import           Data.Singletons.TH
 
-type Test p = forall a. Sing a -> Decision (p @@ a)
+-- type Test p = forall a. Sing a -> Decision (p @@ a)
+
+type f -?> p = forall a. f a -> Decision (p @@ a)
 
 data (&&&) :: (k ~> Type) -> (k ~> Type) -> (k ~> Type)
 

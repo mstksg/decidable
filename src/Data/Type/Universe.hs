@@ -35,7 +35,7 @@ import qualified Data.Singletons.Prelude.List.NonEmpty as NE
 genAll
     :: forall f k (p :: k ~> Type) (as :: f k). Universe f
     => (forall a. Elem f as a -> Sing a -> p @@ a)            -- ^ always-true predicate on value
-    -> (Sing as -> All p as)                                  -- ^ always-true predicate on collection
+    -> (Sing as -> All f p as)                                  -- ^ always-true predicate on collection
 genAll f = runIdentity . genAllA (\i -> Identity . f i)
 
 -- | Extract the item from the container witnessed by the 'Elem'
@@ -50,35 +50,35 @@ select i = (`runAll` i) . splitSing
 splitSing
     :: forall f (as :: f k). Universe f
     => Sing as
-    -> All (TyCon1 Sing) as
+    -> All f (TyCon1 Sing) as
 splitSing = genAll @f @_ @(TyCon1 Sing) (\_ x -> x)
 
 -- | 'decideAny', but without the membership witness.
 decideAny'
     :: forall f k (p :: k ~> Type) (as :: f k). Universe f
     => (forall a. Sing a -> Decision (p @@ a))   -- ^ predicate on value
-    -> (Sing as -> Decision (Any p as))          -- ^ predicate on collection
+    -> (Sing as -> Decision (Any f p as))          -- ^ predicate on collection
 decideAny' f = decideAny (const f)
 
 -- | 'decideAll', but without the membership witness.
 decideAll'
     :: forall f k (p :: k ~> Type) (as :: f k). Universe f
     => (forall a. Sing a -> Decision (p @@ a))   -- ^ predicate on value
-    -> (Sing as -> Decision (All p as))          -- ^ predicate on collection
+    -> (Sing as -> Decision (All f p as))          -- ^ predicate on collection
 decideAll' f = decideAll (const f)
 
 -- | 'genAllA', but without the membership witness.
 genAllA'
     :: forall k (p :: k ~> Type) (as :: f k) h. (Universe f, Applicative h)
     => (forall a. Sing a -> h (p @@ a))        -- ^ predicate on value in context
-    -> (Sing as -> h (All p as))               -- ^ predicate on collection in context
+    -> (Sing as -> h (All f p as))               -- ^ predicate on collection in context
 genAllA' f = genAllA (const f)
 
 -- | 'genAll', but without the membership witness.
 genAll'
     :: forall f k (p :: k ~> Type) (as :: f k). Universe f
     => (forall a. Sing a -> p @@ a)            -- ^ always-true predicate on value
-    -> (Sing as -> All p as)                   -- ^ always-true predicate on collection
+    -> (Sing as -> All f p as)                   -- ^ always-true predicate on collection
 genAll' f = genAll (const f)
 
 -- | Automatically generate a witness for a member, if possible
@@ -121,7 +121,7 @@ instance Universe [] where
         :: forall k (p :: k ~> Type) (as :: [k]). ()
         => (forall a. Elem [] as a -> Sing a -> Decision (p @@ a))
         -> Sing as
-        -> Decision (Any p as)
+        -> Decision (Any [] p as)
     decideAny f = \case
       SNil -> Disproved $ \case
         Any i _ -> case i of {}
@@ -137,7 +137,7 @@ instance Universe [] where
         :: forall k (p :: k ~> Type) (as :: [k]). ()
         => (forall a. Elem [] as a -> Sing a -> Decision (p @@ a))
         -> Sing as
-        -> Decision (All p as)
+        -> Decision (All [] p as)
     decideAll f = \case
       SNil -> Proved $ All $ \case {}
       x `SCons` xs -> case f IZ x of
@@ -152,12 +152,12 @@ instance Universe [] where
         :: forall (p :: k ~> Type) (as :: [k]) h. Applicative h
         => (forall a. Elem [] as a -> Sing a -> h (p @@ a))
         -> Sing as
-        -> h (All p as)
+        -> h (All [] p as)
     genAllA f = \case
         SNil         -> pure $ All $ \case {}
         x `SCons` xs -> go <$> f IZ x <*> genAllA (f . IS) xs
       where
-        go :: p @@ b -> All p bs -> All p (b ': bs)
+        go :: p @@ b -> All [] p bs -> All [] p (b ': bs)
         go p a = All $ \case
           IZ   -> p
           IS i -> runAll a i
@@ -225,7 +225,7 @@ instance Universe NonEmpty where
         :: forall k (p :: k ~> Type) (as :: NonEmpty k). ()
         => (forall a. Elem NonEmpty as a -> Sing a -> Decision (p @@ a))
         -> Sing as
-        -> Decision (Any p as)
+        -> Decision (Any NonEmpty p as)
     decideAny f (x NE.:%| xs) = case f NEHead x of
       Proved p    -> Proved $ Any NEHead p
       Disproved v -> case decideAny @[] @_ @p (f . NETail) xs of
@@ -239,7 +239,7 @@ instance Universe NonEmpty where
         :: forall k (p :: k ~> Type) (as :: NonEmpty k). ()
         => (forall a. Elem NonEmpty as a -> Sing a -> Decision (p @@ a))
         -> Sing as
-        -> Decision (All p as)
+        -> Decision (All NonEmpty p as)
     decideAll f (x NE.:%| xs) = case f NEHead x of
       Proved p -> case decideAll @[] @_ @p (f . NETail) xs of
         Proved ps -> Proved $ All $ \case
@@ -252,10 +252,10 @@ instance Universe NonEmpty where
         :: forall (p :: k ~> Type) (as :: NonEmpty k) h. Applicative h
         => (forall a. Elem NonEmpty as a -> Sing a -> h (p @@ a))
         -> Sing as
-        -> h (All p as)
+        -> h (All NonEmpty p as)
     genAllA f (x NE.:%| xs) = go <$> f NEHead x <*> genAllA @[] @_ @p (f . NETail) xs
       where
-        go :: p @@ b -> All p bs -> All p (b ':| bs)
+        go :: p @@ b -> All [] p bs -> All NonEmpty p (b ':| bs)
         go p ps = All $ \case
           NEHead   -> p
           NETail i -> runAll ps i

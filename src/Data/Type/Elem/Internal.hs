@@ -12,6 +12,7 @@ module Data.Type.Elem.Internal (
 import           Data.Kind
 import           Data.Singletons
 import           Data.Singletons.Decide
+import           Data.Type.Predicate
 import           Prelude hiding         (any, all)
 
 -- | A witness for membership of a given item in a type-level collection
@@ -19,12 +20,12 @@ data family Elem (f :: Type -> Type) :: f k -> k -> Type
 
 -- | An @'Any' p as@ is a witness that, for at least one item @a@ in the
 -- type-level collection @as@, the predicate @p a@ is true.
-data Any :: (k ~> Type) -> f k -> Type where
-    Any :: Elem f as a -> p @@ a -> Any p as
+data Any f :: (k ~> Type) -> f k -> Type where
+    Any :: Elem f as a -> p @@ a -> Any f p as
 
 -- | An @'All' p as@ is a witness that, the predicate @p a@ is true for all
 -- items @a@ in the type-level collection @as@.
-newtype All p (as :: f k) = All { runAll :: forall a. Elem f as a -> p @@ a }
+newtype All f p (as :: f k) = All { runAll :: forall a. Elem f as a -> p @@ a }
 
 -- | Typeclass for a type-level container that you can quantify or lift
 -- type-level predicates over.
@@ -48,7 +49,7 @@ class Universe (f :: Type -> Type) where
     decideAny
         :: forall k (p :: k ~> Type) (as :: f k). ()
         => (forall a. Elem f as a -> Sing a -> Decision (p @@ a))   -- ^ predicate on value
-        -> (Sing as -> Decision (Any p as))                         -- ^ predicate on collection
+        -> (Sing as -> Decision (Any f p as))                         -- ^ predicate on collection
 
     -- | You should read this type as:
     --
@@ -68,7 +69,7 @@ class Universe (f :: Type -> Type) where
     decideAll
         :: forall k (p :: k ~> Type) (as :: f k). ()
         => (forall a. Elem f as a -> Sing a -> Decision (p @@ a))   -- ^ predicate on value
-        -> (Sing as -> Decision (All p as))                         -- ^ predicate on collection
+        -> (Sing as -> Decision (All f p as))                         -- ^ predicate on collection
 
     -- | If @p a@ is true for all values @a@ in @as@ under some
     -- (Applicative) context @h@, then you can create an @'All' p as@ under
@@ -80,4 +81,4 @@ class Universe (f :: Type -> Type) where
     genAllA
         :: forall k (p :: k ~> Type) (as :: f k) h. Applicative h
         => (forall a. Elem f as a -> Sing a -> h (p @@ a))        -- ^ predicate on value in context
-        -> (Sing as -> h (All p as))                              -- ^ predicate on collection in context
+        -> (Sing as -> h (All f p as))                              -- ^ predicate on collection in context
