@@ -21,6 +21,7 @@ module Data.Type.Quantification (
 import           Data.Singletons
 import           Data.Singletons.Decide
 import           Data.Type.Elem.Internal
+import           Data.Type.Predicate
 import           Data.Type.Universe
 
 -- | A @'Subset' p as@ describes a subset of type-level collection @as@.
@@ -65,7 +66,7 @@ subsetToAll s = decideAll (\i _ -> runSubset s i) sing
 -- must exist an @a@ s.t. @q a@.
 entailAny
     :: forall f p q as. ()
-    => (forall a. Elem f as a -> p @@ a -> q @@ a)        -- ^ implication
+    => (forall a. Elem f as a -> (p --> q) @@ a)        -- ^ implication
     -> Any p as
     -> Any q as
 entailAny f (Any i x) = Any i (f i x)
@@ -73,7 +74,7 @@ entailAny f (Any i x) = Any i (f i x)
 -- | 'entailAny', but without the membership witness.
 entailAny'
     :: forall f p q (as :: f k). ()
-    => (forall a. p @@ a -> q @@ a)        -- ^ implication
+    => (forall a. (p --> q) @@ a)        -- ^ implication
     -> Any p as
     -> Any q as
 entailAny' f = entailAny @f @p @q (\(_ :: Elem f as a) -> f @a)
@@ -82,7 +83,7 @@ entailAny' f = entailAny @f @p @q (\(_ :: Elem f as a) -> f @a)
 -- we must also have @p a@.
 entailAll
     :: forall f p q as. ()
-    => (forall a. Elem f as a -> p @@ a -> q @@ a)      -- ^ implication
+    => (forall a. Elem f as a -> (p --> q) @@ a)      -- ^ implication
     -> All p as
     -> All q as
 entailAll f a = All $ \i -> f i (runAll a i)
@@ -90,7 +91,7 @@ entailAll f a = All $ \i -> f i (runAll a i)
 -- | 'entailAll', but without the membership witness.
 entailAll'
     :: forall f p q (as :: f k). ()
-    => (forall a. p @@ a -> q @@ a)        -- ^ implication
+    => (forall a. (p --> q) @@ a)        -- ^ implication
     -> All p as
     -> All q as
 entailAll' f = entailAll @f @p @q (\(_ :: Elem f as a) -> f @a)
