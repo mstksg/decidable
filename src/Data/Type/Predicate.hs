@@ -26,26 +26,28 @@ data (&&&) :: (k ~> Type) -> (k ~> Type) -> (k ~> Type)
 type instance Apply (p &&& q) a = (p @@ a, q @@ a)
 
 decideAnd
-    :: Test p
-    -> Test q
-    -> Test (p &&& q)
-decideAnd f g x = case f x of
-    Proved p -> case g x of
+    :: forall p q a. ()
+    => Decision (p @@ a)
+    -> Decision (q @@ a)
+    -> Decision ((p &&& q) @@ a)
+decideAnd = \case
+    Proved p -> \case
       Proved q -> Proved (p, q)
       Disproved v -> Disproved $ \(_, q) -> v q
-    Disproved v -> Disproved $ \(p, _) -> v p
+    Disproved v -> \_ -> Disproved $ \(p, _) -> v p
 
 data (|||) :: (k ~> Type) -> (k ~> Type) -> (k ~> Type)
 
 type instance Apply (p ||| q) a = Either (p @@ a) (q @@ a)
 
 decideOr
-    :: Test p
-    -> Test q
-    -> Test (p ||| q)
-decideOr f g x = case f x of
-    Proved p -> Proved $ Left p
-    Disproved v -> case g x of
+    :: forall p q a. ()
+    => Decision (p @@ a)
+    -> Decision (q @@ a)
+    -> Decision ((p ||| q) @@ a)
+decideOr = \case
+    Proved p -> \_ -> Proved $ Left p
+    Disproved v -> \case
       Proved q -> Proved $ Right q
       Disproved w -> Disproved $ \case
         Left p  -> v p

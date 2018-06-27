@@ -16,6 +16,7 @@ module Data.Type.Quantification (
   -- * Subset relationship
   , Subset(..), makeSubset
   , subsetToList, subsetToAny, subsetToAll
+  , intersection, union, mergeSubset
   ) where
 
 import           Data.Singletons
@@ -54,6 +55,31 @@ subsetToAny
     => Subset p as
     -> Decision (Any p as)
 subsetToAny s = decideAny (\i _ -> runSubset s i) sing
+
+-- | Combine two subsets based on a decision function
+mergeSubset
+    :: forall f p q r (as :: f k). ()
+    => (forall a. Elem f as a -> Decision (p @@ a) -> Decision (q @@ a) -> Decision (r @@ a))
+    -> Subset p as
+    -> Subset q as
+    -> Subset r as
+mergeSubset f ps qs = Subset $ \i -> f i (runSubset ps i) (runSubset qs i)
+
+-- | Subset intersection
+intersection
+    :: forall p q as. ()
+    => Subset p as
+    -> Subset q as
+    -> Subset (p &&& q) as
+intersection = mergeSubset $ \(_ :: Elem f as a) -> decideAnd @p @q @a
+
+-- | Subset union
+union
+    :: forall p q as. ()
+    => Subset p as
+    -> Subset q as
+    -> Subset (p ||| q) as
+union = mergeSubset $ \(_ :: Elem f as a) -> decideOr @p @q @a
 
 -- | Test if a subset is equal to the entire original collection
 subsetToAll
