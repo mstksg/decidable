@@ -13,12 +13,13 @@
 {-# OPTIONS_GHC -Wno-orphans     #-}
 
 module Data.Type.Universe (
-    Universe(..), Elem(..), genAll, select, splitSing
-  , decideAny', decideAll', genAllA', genAll'
+    Universe(..), Elem(..), genAll, select, splitSing, foldMapUni
+  , decideAny', decideAll', genAllA', genAll', foldMapUni'
   , pickElem
   -- * Membership witnesses
   ) where
 
+import           Control.Applicative
 import           Data.Functor.Identity
 import           Data.Kind
 import           Data.List.NonEmpty                    (NonEmpty(..))
@@ -81,14 +82,32 @@ genAll'
 genAll' f = genAll (const f)
 
 -- | Automatically generate a witness for a member, if possible
-pickElem :: forall f k (as :: f k) a. (Universe f, SingI as, SingI a, SDecide k)
-     => Decision (Elem f as a)
+pickElem
+    :: forall f k (as :: f k) a. (Universe f, SingI as, SingI a, SDecide k)
+    => Decision (Elem f as a)
 pickElem = case decideAny' @f @_ @(TyCon1 ((:~:) a)) go (sing @_ @as) of
     Proved (Any i Refl) -> Proved i
     Disproved v         -> Disproved $ \i -> v $ Any i Refl
   where
     go :: Sing b -> Decision (a :~: b)
     go = (sing %~)
+
+-- | A 'foldMap' over all items in a collection.
+foldMapUni
+    :: forall f k (as :: f k) m. (Universe f, SingI as, Monoid m)
+    => (forall a. Elem f as a -> Sing a -> m)
+    -> Sing as
+    -> m
+foldMapUni f = getConst . genAllA (\i -> Const . f i)
+
+-- | 'foldMapUni', but without the membership witness.
+foldMapUni'
+    :: forall f k (as :: f k) m. (Universe f, SingI as, Monoid m)
+    => (forall a. Elem f as a -> Sing a -> m)
+    -> Sing as
+    -> m
+foldMapUni' f = getConst . genAllA (\i -> Const . f i)
+
 
 -- | Witness an item in a type-level list by providing its index.
 data instance Elem []  :: [k] -> k -> Type where

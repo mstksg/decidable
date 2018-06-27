@@ -13,13 +13,53 @@ module Data.Type.Quantification (
   -- * Universal Quantification
   , All(..), entailAll, entailAllF, decideEntailAll
   , entailAll', entailAllF', decideEntailAll'
+  -- * Subset relationship
+  , Subset(..), makeSubset
+  , subsetToList, subsetToAny, subsetToAll
   ) where
 
 import           Data.Singletons
 import           Data.Singletons.Decide
 import           Data.Type.Elem.Internal
+import           Data.Type.Universe
 
+-- | A @'Subset' p as@ describes a subset of type-level collection @as@.
 newtype Subset p (as :: f k) = Subset { runSubset :: forall a. Elem f as a -> Decision (p @@ a) }
+
+-- | Create a 'Subset' from a predicate.
+makeSubset
+    :: forall f p (as :: f k). Universe f
+    => (forall a. Elem f as a -> Sing a -> Decision (p @@ a))
+    -> Sing as
+    -> Subset p as
+makeSubset f xs = Subset $ \i -> f i (select i xs)
+
+-- | Turn a 'Subset' into a list of satisfied predicates.
+subsetToList
+    :: forall f p (as :: f k). (Universe f, SingI as)
+    => Subset p as
+    -> [Any p as]
+subsetToList s = foldMapUni go sing
+  where
+    go :: Elem f as a -> Sing a -> [Any p as]
+    go i _ = case runSubset s i of
+      Proved p    -> [Any i p]
+      Disproved _ -> []
+
+-- | Restrict a 'Subset' to a single (arbitrary) member, or fail if none
+-- exists.
+subsetToAny
+    :: forall f p (as :: f k). (Universe f, SingI as)
+    => Subset p as
+    -> Decision (Any p as)
+subsetToAny s = decideAny (\i _ -> runSubset s i) sing
+
+-- | Test if a subset is equal to the entire original collection
+subsetToAll
+    :: forall f p (as :: f k). (Universe f, SingI as)
+    => Subset p as
+    -> Decision (All p as)
+subsetToAll s = decideAll (\i _ -> runSubset s i) sing
 
 -- | If there exists an @a@ s.t. @p a@, and if @p@ implies @q@, then there
 -- must exist an @a@ s.t. @q a@.

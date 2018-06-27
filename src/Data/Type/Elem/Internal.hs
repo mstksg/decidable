@@ -81,4 +81,3 @@ class Universe (f :: Type -> Type) where
         :: forall k (p :: k ~> Type) (as :: f k) h. Applicative h
         => (forall a. Elem f as a -> Sing a -> h (p @@ a))        -- ^ predicate on value in context
         -> (Sing as -> h (All p as))                              -- ^ predicate on collection in context
-
