@@ -52,11 +52,11 @@ instance (Universe f, Decide Sing p) => Decide Sing (TyCon1 (Any f p)) where
 instance (Universe f, Decide Sing p) => Decide Sing (TyCon1 (All f p)) where
     decide = idecideAll @f @_ @p $ \_ -> decide @_ @p
 
-instance Imply p q => Imply (TyCon1 (Any f p)) (TyCon1 (Any f q)) where
-    imply (Any (i :: Elem f as a) x) = Any i (imply @p @q @a x)
+instance Imply (Wit p) q => Imply (Any f p) (TyCon1 (Any f q)) where
+    imply (Any (i :: Elem f as a) x) = Any i (imply @(Wit p) @q @a (Wit x))
 
-instance Imply p q => Imply (TyCon1 (All f p)) (TyCon1 (All f q)) where
-    imply a = All $ \(i :: Elem f as a) -> imply @p @q @a (runAll a i)
+instance Imply (Wit p) q => Imply (All f p) (TyCon1 (All f q)) where
+    imply a = All $ \(i :: Elem f as a) -> imply @(Wit p) @q @a (Wit (runAll a i))
 
 -- | Typeclass for a type-level container that you can quantify or lift
 -- type-level predicates over.

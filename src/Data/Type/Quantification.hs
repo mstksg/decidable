@@ -134,9 +134,9 @@ ientailAnyF f = \case
 -- | 'entailAnyF', but without the membership witness.
 entailAnyF
     :: forall f p q h. Functor h
-    => TestF (TyCon1 h) p q      -- ^ implication in context
-    -> TestF (TyCon1 h) (TyCon1 (Any f p)) (TyCon1 (Any f q))
-entailAnyF f = ientailAnyF @f @p @q (\(_ :: Elem f _ a) -> f @a)
+    => TestF (TyCon1 h) (Wit p) q      -- ^ implication in context
+    -> TestF (TyCon1 h) (Any f p) (TyCon1 (Any f q))
+entailAnyF f = ientailAnyF @f @p @q (\(_ :: Elem f _ a) -> f @a . Wit)
 
 -- | If @p@ implies @q@ under some context @h@, and if we have @p a@ for
 -- all @a@, then we must have @q a@ for all @a@ under context @h@.
@@ -150,9 +150,9 @@ ientailAllF f a = igenAllA (\i _ -> f i (runAll a i)) sing
 -- | 'entailAllF', but without the membership witness.
 entailAllF
     :: forall f p q h. (Universe f, Applicative h)
-    => TestF (TyCon1 h) p q      -- ^ implication in context
-    -> TestF (TyCon1 h) (SingI ==> TyCon1 (All f p)) (TyCon1 (All f q))
-entailAllF f (Wit a) = ientailAllF @f @p @q (\(_ :: Elem f _ a) -> f @a) a
+    => TestF (TyCon1 h) (Wit p) q      -- ^ implication in context
+    -> TestF (TyCon1 h) (SingI :=> TyCon1 (All f p)) (TyCon1 (All f q))
+entailAllF f (CWit a) = ientailAllF @f @p @q (\(_ :: Elem f _ a) -> f @a . Wit) a
 
 -- | If we have @p a@ for all @a@, and @p a@ can be used to test for @q a@,
 -- then we can test all @a@s for @q a@.
@@ -166,6 +166,6 @@ idecideEntailAll f a = idecideAll (\i _ -> f i (runAll a i)) sing
 -- | 'decideEntailAll', but without the membeship witness.
 decideEntailAll
     :: forall f p q. Universe f
-    => (p -?> q)
-    -> (SingI ==> TyCon1 (All f p) -?> TyCon1 (All f q))
-decideEntailAll f (Wit a) = idecideEntailAll @f @p @q (\(_ :: Elem f as a) -> f @a) a
+    => (Wit p -?> q)
+    -> (SingI :=> TyCon1 (All f p) -?> TyCon1 (All f q))
+decideEntailAll f (CWit a) = idecideEntailAll @f @p @q (\(_ :: Elem f as a) -> f @a . Wit) a

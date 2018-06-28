@@ -16,7 +16,7 @@
 
 module Data.Type.Predicate (
     Predicate
-  , Pred(..)
+  , Wit(..)
   , TestF, Test
   , Decide(..), Imply(..)
   , type (-?>)
@@ -35,7 +35,7 @@ import           Data.Singletons.Prelude hiding (Not)
 
 type Predicate k = k ~> Type
 
-type TestF f w p = forall a. w @@ a -> f @@ (p @@ a)
+type TestF f w p = forall a. w a -> f @@ (p @@ a)
 type Test w p = TestF (TyCon1 Decision) w p
 
 type w --> p = TestF IdSym0 w p
@@ -44,16 +44,16 @@ type w -?> p = Test w p
 infixr 2 -?>
 
 class Decide w p | p -> w where
-    decide :: TyCon1 w -?> p
+    decide :: w -?> p
 
 -- | maybe can be changed to fmap?
 class Imply w p | p -> w where
     imply :: w --> p
 
-newtype Pred p a = Pred { getPred :: p @@ a }
+newtype Wit p a = Wit { getWit :: p @@ a }
 
--- instance Decide (Pred (TyCon1 Decision .@#@$$$ p)) p where
---     decide (Pred x) = x
+-- instance Decide (Wit (TyCon1 Decision .@#@$$$ p)) p where
+--     decide (Wit x) = x
 
 instance (SDecide k, SingI (a :: k)) => Decide Sing (TyCon1 ((:~:) a)) where
     decide = (sing %~)
@@ -124,6 +124,13 @@ proveXor p q = proveOr @(p &&& Not q) @(Not p &&& q) @a
 data (==>) :: (k -> Constraint) -> (k ~> Type) -> (k ~> Type)
 
 data (:=>) :: (k -> Constraint) -> (k ~> Type) -> k -> Type where
-    Wit :: c a => p @@ a -> (c :=> p) a
+    CWit :: c a => p @@ a -> (c :=> p) a
 
 type instance Apply (c ==> p) a = (c :=> p) a
+
+compImpl
+    :: forall p q r. ()
+    => Wit p --> q
+    -> Wit q --> r
+    -> Wit p --> r
+compImpl f g (x :: Wit p a) = g . Wit @q @a $ f x
