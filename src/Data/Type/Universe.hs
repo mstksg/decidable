@@ -192,6 +192,9 @@ data Index :: [k] -> k -> Type where
     IS :: Index bs a -> Index (b ': bs) a
 
 deriving instance Show (Index as a)
+instance (SingI (as :: [k]), SDecide k) => Decide (TyCon1 (Index as)) where
+    decide x = withSingI x $ pickElem
+
 type instance Elem [] = Index
 
 instance Universe [] where
@@ -246,6 +249,9 @@ data IsJust :: Maybe k -> k -> Type where
     IsJust :: IsJust ('Just a) a
 
 deriving instance Show (IsJust as a)
+instance (SingI (as :: Maybe k), SDecide k) => Decide (TyCon1 (IsJust as)) where
+    decide x = withSingI x $ pickElem
+
 type instance Elem Maybe = IsJust
 
 instance Universe Maybe where
@@ -272,6 +278,9 @@ data IsRight :: Either j k -> k -> Type where
     IsRight :: IsRight ('Right a) a
 
 deriving instance Show (IsRight as a)
+instance (SingI (as :: Either j k), SDecide k) => Decide (TyCon1 (IsRight as)) where
+    decide x = withSingI x $ pickElem
+
 type instance Elem (Either j) = IsRight
 
 instance Universe (Either j) where
@@ -299,6 +308,9 @@ data NEIndex :: NonEmpty k -> k -> Type where
     NETail :: Index as a -> NEIndex (b ':| as) a
 
 deriving instance Show (NEIndex as a)
+instance (SingI (as :: NonEmpty k), SDecide k) => Decide (TyCon1 (NEIndex as)) where
+    decide x = withSingI x $ pickElem
+
 type instance Elem NonEmpty = NEIndex
 
 instance Universe NonEmpty where
@@ -346,6 +358,9 @@ data Snd :: (j, k) -> k -> Type where
     Snd :: Snd '(a, b) b
 
 deriving instance Show (Snd as a)
+instance (SingI (as :: (j, k)), SDecide k) => Decide (TyCon1 (Snd as)) where
+    decide x = withSingI x $ pickElem
+
 type instance Elem ((,) j) = Snd
 
 instance Universe ((,) j) where
