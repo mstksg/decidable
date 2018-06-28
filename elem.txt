@@ -91,12 +91,12 @@ idecideAll :: forall k (p :: k ~> Type) (as :: f k). Universe f => (forall a. El
 --   wrapping <a>All</a>), or with <a>Maybe</a> (which can express
 --   predicates that are either provably true or not provably false).
 igenAllA :: forall k (p :: k ~> Type) (as :: f k) h. (Universe f, Applicative h) => (forall a. Elem f as a -> Sing a -> h (p @@ a)) -> (Sing as -> h (All f p as))
-decideAny :: forall f k (p :: k ~> Type). Universe f => Test p -> Test (TyCon1 (Any f p))
-decideAll :: forall f k (p :: k ~> Type). Universe f => Test p -> Test (TyCon1 (All f p))
+decideAny :: forall f k (p :: k ~> Type). Universe f => Test p -> Test (AnyPred f p)
+decideAll :: forall f k (p :: k ~> Type). Universe f => Test p -> Test (AllPred f p)
 
 -- | <a>igenAllA</a>, but without the membership witness.
 genAllA :: forall k (p :: k ~> Type) (as :: f k) h. (Universe f, Applicative h) => (forall a. Sing a -> h (p @@ a)) -> (Sing as -> h (All f p as))
-genAll :: forall f k (p :: k ~> Type). Universe f => Given p -> Given (TyCon1 (All f p))
+genAll :: forall f k (p :: k ~> Type). Universe f => Given p -> Given (AllPred f p)
 
 -- | If <tt>p a</tt> is true for all values <tt>a</tt> in <tt>as</tt>, then
 --   we have <tt><a>All</a> p as</tt>. Basically witnesses the definition
@@ -121,12 +121,14 @@ pickElem :: forall f k (as :: f k) a. (Universe f, SingI as, SingI a, SDecide k)
 newtype All f p (as :: f k)
 All :: forall a. Elem f as a -> p @@ a -> All f p
 [runAll] :: All f p -> forall a. Elem f as a -> p @@ a
+data AllPred f :: (k ~> Type) -> (f k ~> Type)
 
 -- | An <tt><a>Any</a> p as</tt> is a witness that, for at least one item
 --   <tt>a</tt> in the type-level collection <tt>as</tt>, the predicate
 --   <tt>p a</tt> is true.
 data Any f :: (k ~> Type) -> f k -> Type
 [Any] :: Elem f as a -> p @@ a -> Any f p as
+data AnyPred f :: (k ~> Type) -> (f k ~> Type)
 
 -- | Witness an item in a type-level list by providing its index.
 data Index :: [k] -> k -> Type
@@ -167,8 +169,8 @@ instance forall k (as :: GHC.Base.Maybe k). (Data.Singletons.Internal.SingI as, 
 instance Data.Type.Universe.Universe GHC.Base.Maybe
 instance forall k (as :: [k]). (Data.Singletons.Internal.SingI as, Data.Singletons.Decide.SDecide k) => Data.Type.Predicate.Decide (Data.Singletons.Internal.TyCon1 (Data.Type.Universe.Index as))
 instance Data.Type.Universe.Universe []
-instance forall k (f :: * -> *) (p :: k Data.Singletons.Internal.~> *). (Data.Type.Universe.Universe f, Data.Type.Predicate.Decide p) => Data.Type.Predicate.Decide (Data.Singletons.Internal.TyCon1 (Data.Type.Universe.Any f p))
-instance forall k (f :: * -> *) (p :: k Data.Singletons.Internal.~> *). (Data.Type.Universe.Universe f, Data.Type.Predicate.Decide p) => Data.Type.Predicate.Decide (Data.Singletons.Internal.TyCon1 (Data.Type.Universe.All f p))
+instance forall k (f :: * -> *) (p :: k Data.Singletons.Internal.~> *). (Data.Type.Universe.Universe f, Data.Type.Predicate.Decide p) => Data.Type.Predicate.Decide (Data.Type.Universe.AnyPred f p)
+instance forall k (f :: * -> *) (p :: k Data.Singletons.Internal.~> *). (Data.Type.Universe.Universe f, Data.Type.Predicate.Decide p) => Data.Type.Predicate.Decide (Data.Type.Universe.AllPred f p)
 
 module Data.Type.Quantification
 
@@ -177,7 +179,8 @@ module Data.Type.Quantification
 --   <tt>p a</tt> is true.
 data Any f :: (k ~> Type) -> f k -> Type
 [Any] :: Elem f as a -> p @@ a -> Any f p as
-entailAny :: Universe f => (p --> q) -> (TyCon1 (Any f p) --> TyCon1 (Any f q))
+data AnyPred f :: (k ~> Type) -> (f k ~> Type)
+entailAny :: Universe f => (p --> q) -> (AnyPred f p --> AnyPred f q)
 
 -- | If there exists an <tt>a</tt> s.t. <tt>p a</tt>, and if <tt>p</tt>
 --   implies <tt>q</tt>, then there must exist an <tt>a</tt> s.t. <tt>q
@@ -185,7 +188,7 @@ entailAny :: Universe f => (p --> q) -> (TyCon1 (Any f p) --> TyCon1 (Any f q))
 ientailAny :: forall f p q as. () => (forall a. Elem f as a -> p @@ a -> q @@ a) -> Any f p as -> Any f q as
 
 -- | <a>entailAnyF</a>, but without the membership witness.
-entailAnyF :: forall f p q h. (Universe f, Functor h) => (p --># q) h -> (TyCon1 (Any f p) --># TyCon1 (Any f q)) h
+entailAnyF :: forall f p q h. (Universe f, Functor h) => (p --># q) h -> (AnyPred f p --># AnyPred f q) h
 
 -- | If <tt>p</tt> implies <tt>q</tt> under some context <tt>h</tt>, and if
 --   there exists some <tt>a</tt> such that <tt>p a</tt>, then there must
@@ -209,14 +212,15 @@ ientailAnyF :: forall f p q as h. Functor h => (forall a. Elem f as a -> p @@ a 
 newtype All f p (as :: f k)
 All :: forall a. Elem f as a -> p @@ a -> All f p
 [runAll] :: All f p -> forall a. Elem f as a -> p @@ a
-entailAll :: Universe f => (p --> q) -> (TyCon1 (All f p) --> TyCon1 (All f q))
+data AllPred f :: (k ~> Type) -> (f k ~> Type)
+entailAll :: Universe f => (p --> q) -> (AllPred f p --> AllPred f q)
 
 -- | If for all <tt>a</tt> we have <tt>p a</tt>, and if <tt>p</tt> implies
 --   <tt>q</tt>, then for all <tt>a</tt> we must also have <tt>p a</tt>.
 ientailAll :: forall f p q as. () => (forall a. Elem f as a -> p @@ a -> q @@ a) -> All f p as -> All f q as
 
 -- | <a>entailAllF</a>, but without the membership witness.
-entailAllF :: forall f p q h. (Universe f, Applicative h) => (p --># q) h -> (TyCon1 (All f p) --># TyCon1 (All f q)) h
+entailAllF :: forall f p q h. (Universe f, Applicative h) => (p --># q) h -> (AllPred f p --># AllPred f q) h
 
 -- | If <tt>p</tt> implies <tt>q</tt> under some context <tt>h</tt>, and if
 --   we have <tt>p a</tt> for all <tt>a</tt>, then we must have <tt>q
@@ -224,7 +228,7 @@ entailAllF :: forall f p q h. (Universe f, Applicative h) => (p --># q) h -> (Ty
 ientailAllF :: forall f p q as h. (Universe f, Applicative h, SingI as) => (forall a. Elem f as a -> p @@ a -> h (q @@ a)) -> All f p as -> h (All f q as)
 
 -- | <a>decideEntailAll</a>, but without the membeship witness.
-decideEntailAll :: forall f p q. Universe f => p -?> q -> TyCon1 (All f p) -?> TyCon1 (All f q)
+decideEntailAll :: forall f p q. Universe f => p -?> q -> AllPred f p -?> AllPred f q
 
 -- | If we have <tt>p a</tt> for all <tt>a</tt>, and <tt>p a</tt> can be
 --   used to test for <tt>q a</tt>, then we can test all <tt>a</tt>s for
@@ -236,6 +240,7 @@ idecideEntailAll :: forall f p q as. (Universe f, SingI as) => (forall a. Elem f
 newtype Subset f p (as :: f k)
 Subset :: forall a. Elem f as a -> Decision (p @@ a) -> Subset f p
 [runSubset] :: Subset f p -> forall a. Elem f as a -> Decision (p @@ a)
+data SubsetPred f :: (k ~> Type) -> (f k ~> Type)
 
 -- | Create a <a>Subset</a> from a predicate.
 makeSubset :: forall f k p (as :: f k). Universe f => (forall a. Elem f as a -> Sing a -> Decision (p @@ a)) -> Sing as -> Subset f p as
@@ -258,5 +263,5 @@ union :: forall f k p q (as :: f k). () => Subset f p as -> Subset f q as -> Sub
 
 -- | Combine two subsets based on a decision function
 mergeSubset :: forall f k p q r (as :: f k). () => (forall a. Elem f as a -> Decision (p @@ a) -> Decision (q @@ a) -> Decision (r @@ a)) -> Subset f p as -> Subset f q as -> Subset f r as
-instance forall k (f :: * -> *) (p :: k Data.Singletons.Internal.~> *). (Data.Type.Universe.Universe f, Data.Type.Predicate.Decide p) => Data.Type.Predicate.Decide (Data.Singletons.Internal.TyCon1 (Data.Type.Quantification.Subset f p))
-instance forall k (f :: * -> *) (p :: k Data.Singletons.Internal.~> *). (Data.Type.Universe.Universe f, Data.Type.Predicate.Decide p) => Data.Type.Predicate.Taken (Data.Singletons.Internal.TyCon1 (Data.Type.Quantification.Subset f p))
+instance forall k (f :: * -> *) (p :: k Data.Singletons.Internal.~> *). (Data.Type.Universe.Universe f, Data.Type.Predicate.Decide p) => Data.Type.Predicate.Decide (Data.Type.Quantification.SubsetPred f p)
+instance forall k (f :: * -> *) (p :: k Data.Singletons.Internal.~> *). (Data.Type.Universe.Universe f, Data.Type.Predicate.Decide p) => Data.Type.Predicate.Taken (Data.Type.Quantification.SubsetPred f p)
