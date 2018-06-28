@@ -30,7 +30,6 @@ module Data.Type.Predicate (
 import           Data.Kind
 import           Data.Singletons
 import           Data.Singletons.Decide
-import           Data.Singletons.Prelude hiding (Not)
 
 type Predicate k = k ~> Type
 

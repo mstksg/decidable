@@ -20,7 +20,6 @@ module Data.Type.Quantification (
   , intersection, union, mergeSubset
   ) where
 
-import           Data.Kind
 import           Data.Singletons
 import           Data.Singletons.Decide
 import           Data.Type.Predicate

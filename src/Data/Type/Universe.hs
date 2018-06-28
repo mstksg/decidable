@@ -16,7 +16,7 @@
 {-# LANGUAGE UndecidableInstances  #-}
 
 module Data.Type.Universe (
-    Elem
+    Elem(..)
   , Universe(..), decideAny, decideAll, genAllA, genAll, igenAll
   , foldMapUni, ifoldMapUni, select, pickElem
   , All(..)
