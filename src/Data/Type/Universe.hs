@@ -165,14 +165,14 @@ select i = (`runAll` i) . splitSing
 splitSing
     :: forall f (as :: f k). Universe f
     => Sing as
-    -> All f (TyCon1 Sing) as
-splitSing = igenAll @f @_ @(TyCon1 Sing) (\_ x -> x)
+    -> All f (TyPred Sing) as
+splitSing = igenAll @f @_ @(TyPred Sing) (\_ x -> x)
 
 -- | Automatically generate a witness for a member, if possible
 pickElem
     :: forall f k (as :: f k) a. (Universe f, SingI as, SingI a, SDecide k)
     => Decision (Elem f as a)
-pickElem = case decide @(AnyPred f (TyCon1 ((:~:) a))) sing of
+pickElem = case decide @(AnyPred f (TyPred ((:~:) a))) sing of
     Proved (Any i Refl) -> Proved i
     Disproved v         -> Disproved $ \i -> v $ Any i Refl
 
@@ -198,7 +198,7 @@ data Index :: [k] -> k -> Type where
     IS :: Index bs a -> Index (b ': bs) a
 
 deriving instance Show (Index as a)
-instance (SingI (as :: [k]), SDecide k) => Decide (TyCon1 (Index as)) where
+instance (SingI (as :: [k]), SDecide k) => Decide (TyPred (Index as)) where
     decide x = withSingI x $ pickElem
 
 type instance Elem [] = Index
@@ -255,7 +255,7 @@ data IsJust :: Maybe k -> k -> Type where
     IsJust :: IsJust ('Just a) a
 
 deriving instance Show (IsJust as a)
-instance (SingI (as :: Maybe k), SDecide k) => Decide (TyCon1 (IsJust as)) where
+instance (SingI (as :: Maybe k), SDecide k) => Decide (TyPred (IsJust as)) where
     decide x = withSingI x $ pickElem
 
 type instance Elem Maybe = IsJust
@@ -284,7 +284,7 @@ data IsRight :: Either j k -> k -> Type where
     IsRight :: IsRight ('Right a) a
 
 deriving instance Show (IsRight as a)
-instance (SingI (as :: Either j k), SDecide k) => Decide (TyCon1 (IsRight as)) where
+instance (SingI (as :: Either j k), SDecide k) => Decide (TyPred (IsRight as)) where
     decide x = withSingI x $ pickElem
 
 type instance Elem (Either j) = IsRight
@@ -314,7 +314,7 @@ data NEIndex :: NonEmpty k -> k -> Type where
     NETail :: Index as a -> NEIndex (b ':| as) a
 
 deriving instance Show (NEIndex as a)
-instance (SingI (as :: NonEmpty k), SDecide k) => Decide (TyCon1 (NEIndex as)) where
+instance (SingI (as :: NonEmpty k), SDecide k) => Decide (TyPred (NEIndex as)) where
     decide x = withSingI x $ pickElem
 
 type instance Elem NonEmpty = NEIndex
@@ -364,7 +364,7 @@ data Snd :: (j, k) -> k -> Type where
     Snd :: Snd '(a, b) b
 
 deriving instance Show (Snd as a)
-instance (SingI (as :: (j, k)), SDecide k) => Decide (TyCon1 (Snd as)) where
+instance (SingI (as :: (j, k)), SDecide k) => Decide (TyPred (Snd as)) where
     decide x = withSingI x $ pickElem
 
 type instance Elem ((,) j) = Snd

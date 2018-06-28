@@ -16,7 +16,7 @@
 {-# LANGUAGE UndecidableInstances   #-}
 
 module Data.Type.Predicate (
-    Predicate, Wit(..)
+    Predicate, TyPred, Wit(..)
   , Test, type (-?>), type (-?>#)
   , Given, type (-->), type (-->#)
   , Decide(..), Taken(..)
@@ -32,6 +32,7 @@ import           Data.Singletons
 import           Data.Singletons.Decide
 
 type Predicate k = k ~> Type
+type TyPred = TyCon1
 
 newtype Wit p a = Wit { getWit :: p @@ a }
 
@@ -57,11 +58,11 @@ class Decide p where
 class Decide p => Taken p where
     taken :: Given p
 
-instance (SDecide k, SingI (a :: k)) => Decide (TyCon1 ((:~:) a)) where
+instance (SDecide k, SingI (a :: k)) => Decide (TyPred ((:~:) a)) where
     decide = (sing %~)
 
-instance Decide (TyCon1 Sing)
-instance Taken (TyCon1 Sing) where
+instance Decide (TyPred Sing)
+instance Taken (TyPred Sing) where
     taken = id
 
 data Not :: (k ~> Type) -> (k ~> Type)
