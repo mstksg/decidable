@@ -1,6 +1,6 @@
-name:                elem
+name:                decidable-predicates
 version:             0.1.0.0
-github:              "mstksg/elem"
+github:              "mstksg/decidable-predicates"
 license:             BSD3
 author:              "Justin Le"
 maintainer:          "justin@jle.im"
@@ -11,13 +11,13 @@ extra-source-files:
 - CHANGELOG.md
 
 # Metadata used when publishing your package
-synopsis:            Class and combinators for expressing membership in type-level containers
+synopsis:            Combinators for manipulating dependently-typed predicates.
 # category:            Web
 
 # To avoid duplicated efforts in documentation and dealing with the
 # complications of embedding Haddock markup inside cabal files, it is
 # common to point users to the README.md file.
-description:         Please see the README on GitHub at <https://github.com/mstksg/elem#readme>
+description:         Please see the README on GitHub at <https://github.com/mstksg/decidable-predicates#readme>
 
 dependencies:
 - base >= 4.7 && < 5
