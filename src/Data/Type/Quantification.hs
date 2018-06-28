@@ -151,8 +151,8 @@ ientailAllF f a = igenAllA (\i _ -> f i (runAll a i)) sing
 entailAllF
     :: forall f p q h. (Universe f, Applicative h)
     => TestF (TyCon1 h) (Wit p) q      -- ^ implication in context
-    -> TestF (TyCon1 h) (SingI :=> TyCon1 (All f p)) (TyCon1 (All f q))
-entailAllF f (CWit a) = ientailAllF @f @p @q (\(_ :: Elem f _ a) -> f @a . Wit) a
+    -> TestF (TyCon1 h) (WitC SingI (TyCon1 (All f p))) (TyCon1 (All f q))
+entailAllF f (WitC a) = ientailAllF @f @p @q (\(_ :: Elem f _ a) -> f @a . Wit) a
 
 -- | If we have @p a@ for all @a@, and @p a@ can be used to test for @q a@,
 -- then we can test all @a@s for @q a@.
@@ -167,5 +167,5 @@ idecideEntailAll f a = idecideAll (\i _ -> f i (runAll a i)) sing
 decideEntailAll
     :: forall f p q. Universe f
     => (Wit p -?> q)
-    -> (SingI :=> TyCon1 (All f p) -?> TyCon1 (All f q))
-decideEntailAll f (CWit a) = idecideEntailAll @f @p @q (\(_ :: Elem f as a) -> f @a . Wit) a
+    -> (WitC SingI (TyCon1 (All f p)) -?> TyCon1 (All f q))
+decideEntailAll f (WitC a) = idecideEntailAll @f @p @q (\(_ :: Elem f as a) -> f @a . Wit) a

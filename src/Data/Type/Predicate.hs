@@ -16,7 +16,7 @@
 
 module Data.Type.Predicate (
     Predicate
-  , Wit(..)
+  , Wit(..), WitC(..), type (==>)
   , TestF, Test
   , Decide(..), Imply(..)
   , type (-?>)
@@ -25,7 +25,6 @@ module Data.Type.Predicate (
   , type (&&&), proveAnd
   , type (|||), proveOr
   , type (^^^), proveXor
-  , (:=>)(..), type (==>)
   ) where
 
 import           Data.Kind
@@ -51,6 +50,10 @@ class Imply w p | p -> w where
     imply :: w --> p
 
 newtype Wit p a = Wit { getWit :: p @@ a }
+data WitC c p a = c a => WitC { getWitC :: p @@ a }
+
+data (==>) :: (k -> Constraint) -> (k ~> Type) -> (k ~> Type)
+type instance Apply (c ==> p) a = WitC c p a
 
 -- instance Decide (Wit (TyCon1 Decision .@#@$$$ p)) p where
 --     decide (Wit x) = x
@@ -120,13 +123,6 @@ proveXor
 proveXor p q = proveOr @(p &&& Not q) @(Not p &&& q) @a
                   (proveAnd @p @(Not q) @a p (proveNot @q @a q))
                   (proveAnd @(Not p) @q @a (proveNot @p @a p) q)
-
-data (==>) :: (k -> Constraint) -> (k ~> Type) -> (k ~> Type)
-
-data (:=>) :: (k -> Constraint) -> (k ~> Type) -> k -> Type where
-    CWit :: c a => p @@ a -> (c :=> p) a
-
-type instance Apply (c ==> p) a = (c :=> p) a
 
 compImpl
     :: forall p q r. ()
