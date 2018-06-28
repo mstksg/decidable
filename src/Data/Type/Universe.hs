@@ -16,11 +16,11 @@
 {-# LANGUAGE UndecidableInstances  #-}
 
 module Data.Type.Universe (
-    Elem(..)
+    Elem
   , Universe(..), decideAny, decideAll, genAllA, genAll, igenAll
   , foldMapUni, ifoldMapUni, select, pickElem
-  , All(..)
-  , Any(..)
+  , All(..), Any(..)
+  , Index(..), IsJust(..), IsRight(..), NEIndex(..), Snd(..)
   ) where
 
 import           Control.Applicative
@@ -29,13 +29,13 @@ import           Data.Kind
 import           Data.List.NonEmpty                    (NonEmpty(..))
 import           Data.Singletons
 import           Data.Singletons.Decide
-import           Data.Singletons.Prelude hiding        (Elem, Any, All)
+import           Data.Singletons.Prelude hiding        (Elem, Any, All, Snd)
 import           Data.Type.Predicate
 import           Prelude hiding                        (any, all)
 import qualified Data.Singletons.Prelude.List.NonEmpty as NE
 
 -- | A witness for membership of a given item in a type-level collection
-data family Elem (f :: Type -> Type) :: f k -> k -> Type
+type family Elem (f :: Type -> Type) :: f k -> k -> Type
 
 -- | An @'Any' p as@ is a witness that, for at least one item @a@ in the
 -- type-level collection @as@, the predicate @p a@ is true.
@@ -187,11 +187,12 @@ foldMapUni
 foldMapUni f = ifoldMapUni (const f)
 
 -- | Witness an item in a type-level list by providing its index.
-data instance Elem []  :: [k] -> k -> Type where
-    IZ :: Elem [] (a ': as) a
-    IS :: Elem [] bs a -> Elem [] (b ': bs) a
+data Index :: [k] -> k -> Type where
+    IZ :: Index (a ': as) a
+    IS :: Index bs a -> Index (b ': bs) a
 
-deriving instance Show (Elem [] as a)
+deriving instance Show (Index as a)
+type instance Elem [] = Index
 
 instance Universe [] where
     idecideAny
@@ -241,10 +242,11 @@ instance Universe [] where
 
 -- | Witness an item in a type-level 'Maybe' by proving the 'Maybe' is
 -- 'Just'.
-data instance Elem Maybe :: Maybe k -> k -> Type where
-    IsJust :: Elem Maybe ('Just a) a
+data IsJust :: Maybe k -> k -> Type where
+    IsJust :: IsJust ('Just a) a
 
-deriving instance Show (Elem Maybe as a)
+deriving instance Show (IsJust as a)
+type instance Elem Maybe = IsJust
 
 instance Universe Maybe where
     idecideAny f = \case
@@ -266,10 +268,11 @@ instance Universe Maybe where
 
 -- | Witness an item in a type-level @'Either' j@ by proving the 'Either'
 -- is 'Right'.
-data instance Elem (Either j) :: Either j k -> k -> Type where
-    IsRight :: Elem (Either j) ('Right a) a
+data IsRight :: Either j k -> k -> Type where
+    IsRight :: IsRight ('Right a) a
 
-deriving instance Show (Elem (Either j) as a)
+deriving instance Show (IsRight as a)
+type instance Elem (Either j) = IsRight
 
 instance Universe (Either j) where
     idecideAny f = \case
@@ -291,11 +294,12 @@ instance Universe (Either j) where
 
 -- | Witness an item in a type-level 'NonEmpty' by either indicating that
 -- it is the "head", or by providing an index in the "tail".
-data instance Elem NonEmpty :: NonEmpty k -> k -> Type where
-    NEHead :: Elem NonEmpty (a ':| as) a
-    NETail :: Elem [] as a -> Elem NonEmpty (b ':| as) a
+data NEIndex :: NonEmpty k -> k -> Type where
+    NEHead :: NEIndex (a ':| as) a
+    NETail :: Index as a -> NEIndex (b ':| as) a
 
-deriving instance Show (Elem NonEmpty as a)
+deriving instance Show (NEIndex as a)
+type instance Elem NonEmpty = NEIndex
 
 instance Universe NonEmpty where
     idecideAny
@@ -338,10 +342,11 @@ instance Universe NonEmpty where
           NETail i -> runAll ps i
 
 -- | Trivially witness an item in the second field of a type-level tuple.
-data instance Elem ((,) j) :: (j, k) -> k -> Type where
-    Snd :: Elem ((,) j) '(a, b) b
+data Snd :: (j, k) -> k -> Type where
+    Snd :: Snd '(a, b) b
 
-deriving instance Show (Elem ((,) j) as a)
+deriving instance Show (Snd as a)
+type instance Elem ((,) j) = Snd
 
 instance Universe ((,) j) where
     idecideAny f (STuple2 _ x) = case f Snd x of
