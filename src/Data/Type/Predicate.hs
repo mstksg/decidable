@@ -1,5 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes    #-}
 {-# LANGUAGE ConstraintKinds        #-}
+{-# LANGUAGE DefaultSignatures      #-}
 {-# LANGUAGE FlexibleInstances      #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE GADTs                  #-}
@@ -15,16 +16,15 @@
 {-# LANGUAGE UndecidableInstances   #-}
 
 module Data.Type.Predicate (
-    Predicate
-  , Wit(..), WitC(..), type (==>)
-  , TestF, Test
-  , Decide(..), Imply(..)
-  , type (-?>)
-  , type (-->)
+    Predicate, Wit(..)
+  , Test, type (-?>), type (-?>#)
+  , Given, type (-->), type (-->#)
+  , Decide(..), Taken(..)
   , type Not, proveNot
   , type (&&&), proveAnd
   , type (|||), proveOr
   , type (^^^), proveXor
+  , compImpl
   ) where
 
 import           Data.Kind
@@ -34,38 +34,42 @@ import           Data.Singletons.Prelude hiding (Not)
 
 type Predicate k = k ~> Type
 
-type TestF f w p = forall a. w a -> f @@ (p @@ a)
-type Test w p = TestF (TyCon1 Decision) w p
-
-type w --> p = TestF IdSym0 w p
-infixr 2 -->
-type w -?> p = Test w p
-infixr 2 -?>
-
-class Decide w p | p -> w where
-    decide :: w -?> p
-
--- | maybe can be changed to fmap?
-class Imply w p | p -> w where
-    imply :: w --> p
-
 newtype Wit p a = Wit { getWit :: p @@ a }
-data WitC c p a = c a => WitC { getWitC :: p @@ a }
 
-data (==>) :: (k -> Constraint) -> (k ~> Type) -> (k ~> Type)
-type instance Apply (c ==> p) a = WitC c p a
+type Test  p = forall a. Sing a -> Decision (p @@ a)
+type p -?> q = forall a. Sing a -> p @@ a -> Decision (q @@ a)
+type (p -?># q) h = forall a. Sing a -> p @@ a -> h (Decision (q @@ a))
 
--- instance Decide (Wit (TyCon1 Decision .@#@$$$ p)) p where
---     decide (Wit x) = x
+type Given p = forall a. Sing a -> p @@ a
+type p --> q = forall a. Sing a -> p @@ a -> q @@ a
+type (p --># q) h = forall a. Sing a -> p @@ a -> h (q @@ a)
 
-instance (SDecide k, SingI (a :: k)) => Decide Sing (TyCon1 ((:~:) a)) where
+infixr 2 -?>
+infixr 2 -?>#
+infixr 2 -->
+infixr 2 -->#
+
+class Decide p where
+    decide :: Test p
+
+    default decide :: Taken p => Test p
+    decide = Proved . taken @p
+
+class Decide p => Taken p where
+    taken :: Given p
+
+instance (SDecide k, SingI (a :: k)) => Decide (TyCon1 ((:~:) a)) where
     decide = (sing %~)
+
+instance Decide (TyCon1 Sing)
+instance Taken (TyCon1 Sing) where
+    taken = id
 
 data Not :: (k ~> Type) -> (k ~> Type)
 type instance Apply (Not p) a = Refuted (p @@ a)
 
-instance Decide w p => Decide w (Not p) where
-    decide (x :: w a) = proveNot @p @a (decide @_ @p x)
+instance Decide p => Decide (Not p) where
+    decide (x :: Sing a) = proveNot @p @a (decide @p x)
 
 proveNot
     :: forall p a. ()
@@ -79,8 +83,8 @@ data (&&&) :: (k ~> Type) -> (k ~> Type) -> (k ~> Type)
 type instance Apply (p &&& q) a = (p @@ a, q @@ a)
 infixr 3 &&&
 
-instance (Decide w p, Decide w q) => Decide w (p &&& q) where
-    decide (x :: w a) = proveAnd @p @q @a (decide @_ @p x) (decide @_ @q x)
+instance (Decide p, Decide q) => Decide (p &&& q) where
+    decide (x :: Sing a) = proveAnd @p @q @a (decide @p x) (decide @q x)
 
 proveAnd
     :: forall p q a. ()
@@ -97,8 +101,8 @@ data (|||) :: (k ~> Type) -> (k ~> Type) -> (k ~> Type)
 type instance Apply (p ||| q) a = Either (p @@ a) (q @@ a)
 infixr 2 |||
 
-instance (Decide w p, Decide w q) => Decide w (p ||| q) where
-    decide (x :: w a) = proveOr @p @q @a (decide @_ @p x) (decide @_ @q x)
+instance (Decide p, Decide q) => Decide (p ||| q) where
+    decide (x :: Sing a) = proveOr @p @q @a (decide @p x) (decide @q x)
 
 proveOr
     :: forall p q a. ()
@@ -126,7 +130,43 @@ proveXor p q = proveOr @(p &&& Not q) @(Not p &&& q) @a
 
 compImpl
     :: forall p q r. ()
-    => Wit p --> q
-    -> Wit q --> r
-    -> Wit p --> r
-compImpl f g (x :: Wit p a) = g . Wit @q @a $ f x
+    => p --> q
+    -> q --> r
+    -> p --> r
+compImpl f g s = g s . f s
+
+-- data WithWit :: (k ~> Type) -> (Type ~> Type)
+-- type instance Apply (WithWit w) a = w
+
+-- type w -?> p = TestF _ p
+-- forall a. Sing a -> w @@ a -> Decision (p @@ a)
+
+-- type w -?> p = forall a. Sing a -> w @@ a -> Decision (p @@ a)
+
+-- type w  -?> p = forall a. w a -> f @@ (p @@ a)
+
+-- type TestF f w p = forall a. w a -> f @@ (p @@ a)
+-- type Test w p = TestF (TyCon1 Decision) w p
+
+-- type w --> p = TestF IdSym0 w p
+-- infixr 2 -->
+-- type w -?> p = Test w p
+-- infixr 2 -?>
+
+-- class Decide w p | p -> w where
+--     decide :: w -?> p
+
+-- -- | maybe can be changed to fmap?
+-- class Imply w p | p -> w where
+--     imply :: w --> p
+
+-- data WitC c p a = c a => WitC { getWitC :: p @@ a }
+
+-- data Arg p a = SingI a => Arg { getArg :: p @@ a }
+
+-- data (==>) :: (k -> Constraint) -> (k ~> Type) -> (k ~> Type)
+-- type instance Apply (c ==> p) a = WitC c p a
+
+-- -- instance Decide (Wit (TyCon1 Decision .@#@$$$ p)) p where
+-- --     decide (Wit x) = x
+

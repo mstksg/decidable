@@ -1,24 +1,23 @@
-{-# LANGUAGE AllowAmbiguousTypes             #-}
-{-# LANGUAGE FlexibleContexts                #-}
-{-# LANGUAGE FlexibleInstances               #-}
-{-# LANGUAGE GADTs                           #-}
-{-# LANGUAGE LambdaCase                      #-}
-{-# LANGUAGE MultiParamTypeClasses           #-}
-{-# LANGUAGE PartialTypeSignatures           #-}
-{-# LANGUAGE RankNTypes                      #-}
-{-# LANGUAGE ScopedTypeVariables             #-}
-{-# LANGUAGE TypeApplications                #-}
-{-# LANGUAGE TypeFamilies                    #-}
-{-# LANGUAGE TypeInType                      #-}
-{-# LANGUAGE TypeOperators                   #-}
-{-# LANGUAGE TypeSynonymInstances            #-}
-{-# LANGUAGE UndecidableInstances            #-}
-{-# OPTIONS_GHC -Wno-partial-type-signatures #-}
+{-# LANGUAGE AllowAmbiguousTypes   #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE GADTs                 #-}
+{-# LANGUAGE LambdaCase            #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE RankNTypes            #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE TypeApplications      #-}
+{-# LANGUAGE TypeFamilies          #-}
+{-# LANGUAGE TypeInType            #-}
+{-# LANGUAGE TypeOperators         #-}
+{-# LANGUAGE TypeSynonymInstances  #-}
+{-# LANGUAGE UndecidableInstances  #-}
 
 module Data.Type.Quantification (
-    Any(..)
-  , All(..)
-  , Subset(..), makeSubset, subsetToList, mergeSubset, subsetToAny
+    Any(..), entailAny, ientailAny, entailAnyF, ientailAnyF
+  , All(..), entailAll, ientailAll, entailAllF, ientailAllF, decideEntailAll, idecideEntailAll
+  , Subset(..), makeSubset, subsetToList, subsetToAny, subsetToAll
+  , intersection, union, mergeSubset
   ) where
 
 import           Data.Kind
@@ -30,8 +29,9 @@ import           Data.Type.Universe
 -- | A @'Subset' p as@ describes a subset of type-level collection @as@.
 newtype Subset f p (as :: f k) = Subset { runSubset :: forall a. Elem f as a -> Decision (p @@ a) }
 
-instance (Universe f, Decide Sing p) => Decide Sing (TyCon1 (Subset f p)) where
-    decide = Proved . makeSubset @f @_ @p (\_ -> decide @_ @p)
+instance (Universe f, Decide p) => Decide (TyCon1 (Subset f p))
+instance (Universe f, Decide p) => Taken (TyCon1 (Subset f p)) where
+    taken = makeSubset @f @_ @p (\_ -> decide @p)
 
 -- | Create a 'Subset' from a predicate.
 makeSubset
@@ -103,6 +103,12 @@ ientailAny
     -> Any f q as
 ientailAny f (Any i x) = Any i (f i x)
 
+entailAny
+    :: Universe f
+    => (p --> q)
+    -> (TyCon1 (Any f p) --> TyCon1 (Any f q))
+entailAny f x = ientailAny (\i -> f (select i x))
+
 -- | If for all @a@ we have @p a@, and if @p@ implies @q@, then for all @a@
 -- we must also have @p a@.
 ientailAll
@@ -111,6 +117,12 @@ ientailAll
     -> All f p as
     -> All f q as
 ientailAll f a = All $ \i -> f i (runAll a i)
+
+entailAll
+    :: Universe f
+    => (p --> q)
+    -> (TyCon1 (All f p) --> TyCon1 (All f q))
+entailAll f x = ientailAll (\i -> f (select i x))
 
 -- | If @p@ implies @q@ under some context @h@, and if there exists some
 -- @a@ such that @p a@, then there must exist some @a@ such that @p q@
@@ -128,15 +140,15 @@ ientailAnyF
     => (forall a. Elem f as a -> p @@ a -> h (q @@ a))      -- ^ implication in context
     -> Any f p as
     -> h (Any f q as)
-ientailAnyF f = \case
-    Any i x -> Any i <$> f i x
+ientailAnyF f = \case Any i x -> Any i <$> f i x
 
 -- | 'entailAnyF', but without the membership witness.
 entailAnyF
-    :: forall f p q h. Functor h
-    => TestF (TyCon1 h) (Wit p) q      -- ^ implication in context
-    -> TestF (TyCon1 h) (Any f p) (TyCon1 (Any f q))
-entailAnyF f = ientailAnyF @f @p @q (\(_ :: Elem f _ a) -> f @a . Wit)
+    :: forall f p q h. (Universe f, Functor h)
+    => (p --># q) h                                     -- ^ implication in context
+    -> (TyCon1 (Any f p) --># TyCon1 (Any f q)) h
+entailAnyF f x a = withSingI x $
+    ientailAnyF @f @p @q (\i -> f (select i x)) a
 
 -- | If @p@ implies @q@ under some context @h@, and if we have @p a@ for
 -- all @a@, then we must have @q a@ for all @a@ under context @h@.
@@ -150,9 +162,10 @@ ientailAllF f a = igenAllA (\i _ -> f i (runAll a i)) sing
 -- | 'entailAllF', but without the membership witness.
 entailAllF
     :: forall f p q h. (Universe f, Applicative h)
-    => TestF (TyCon1 h) (Wit p) q      -- ^ implication in context
-    -> TestF (TyCon1 h) (WitC SingI (TyCon1 (All f p))) (TyCon1 (All f q))
-entailAllF f (WitC a) = ientailAllF @f @p @q (\(_ :: Elem f _ a) -> f @a . Wit) a
+    => (p --># q) h                                     -- ^ implication in context
+    -> (TyCon1 (All f p) --># TyCon1 (All f q)) h
+entailAllF f x a = withSingI x $
+    ientailAllF @f @p @q (\i -> f (select i x)) a
 
 -- | If we have @p a@ for all @a@, and @p a@ can be used to test for @q a@,
 -- then we can test all @a@s for @q a@.
@@ -166,6 +179,7 @@ idecideEntailAll f a = idecideAll (\i _ -> f i (runAll a i)) sing
 -- | 'decideEntailAll', but without the membeship witness.
 decideEntailAll
     :: forall f p q. Universe f
-    => (Wit p -?> q)
-    -> (WitC SingI (TyCon1 (All f p)) -?> TyCon1 (All f q))
-decideEntailAll f (WitC a) = idecideEntailAll @f @p @q (\(_ :: Elem f as a) -> f @a . Wit) a
+    => p -?> q
+    -> TyCon1 (All f p) -?> TyCon1 (All f q)
+decideEntailAll f x a = withSingI x $
+    idecideEntailAll @f @p @q (\(i :: Elem f as a) -> f (select i x)) a

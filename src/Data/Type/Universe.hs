@@ -17,8 +17,8 @@
 
 module Data.Type.Universe (
     Elem
-  , Universe(..)
-  , genAllA, foldMapUni, ifoldMapUni, select, pickElem
+  , Universe(..), decideAny, decideAll, genAllA, genAll, igenAll
+  , foldMapUni, ifoldMapUni, select, pickElem
   , All(..)
   , Any(..)
   ) where
@@ -46,17 +46,17 @@ data Any f :: (k ~> Type) -> f k -> Type where
 -- items @a@ in the type-level collection @as@.
 newtype All f p (as :: f k) = All { runAll :: forall a. Elem f as a -> p @@ a }
 
-instance (Universe f, Decide Sing p) => Decide Sing (TyCon1 (Any f p)) where
-    decide = idecideAny @f @_ @p $ \_ -> decide @_ @p
+instance (Universe f, Decide p) => Decide (TyCon1 (Any f p)) where
+    decide = decideAny @f @_ @p $ decide @p
 
-instance (Universe f, Decide Sing p) => Decide Sing (TyCon1 (All f p)) where
-    decide = idecideAll @f @_ @p $ \_ -> decide @_ @p
+instance (Universe f, Decide p) => Decide (TyCon1 (All f p)) where
+    decide = decideAll @f @_ @p $ decide @p
 
-instance Imply (Wit p) q => Imply (Any f p) (TyCon1 (Any f q)) where
-    imply (Any (i :: Elem f as a) x) = Any i (imply @(Wit p) @q @a (Wit x))
+-- instance Imply (Wit p) q => Imply (Any f p) (TyCon1 (Any f q)) where
+--     imply (Any (i :: Elem f as a) x) = Any i (imply @(Wit p) @q @a (Wit x))
 
-instance Imply (Wit p) q => Imply (All f p) (TyCon1 (All f q)) where
-    imply a = All $ \(i :: Elem f as a) -> imply @(Wit p) @q @a (Wit (runAll a i))
+-- instance Imply (Wit p) q => Imply (All f p) (TyCon1 (All f q)) where
+--     imply a = All $ \(i :: Elem f as a) -> imply @(Wit p) @q @a (Wit (runAll a i))
 
 -- | Typeclass for a type-level container that you can quantify or lift
 -- type-level predicates over.
@@ -114,6 +114,18 @@ class Universe (f :: Type -> Type) where
         => (forall a. Elem f as a -> Sing a -> h (p @@ a))        -- ^ predicate on value in context
         -> (Sing as -> h (All f p as))                              -- ^ predicate on collection in context
 
+decideAny
+    :: forall f k (p :: k ~> Type). Universe f
+    => Test p                                 -- ^ predicate on value
+    -> Test (TyCon1 (Any f p))                -- ^ predicate on collection
+decideAny f = idecideAny (const f)
+
+decideAll
+    :: forall f k (p :: k ~> Type). Universe f
+    => Test p                                 -- ^ predicate on value
+    -> Test (TyCon1 (All f p))                -- ^ predicate on collection
+decideAll f = idecideAll (const f)
+
 -- | 'igenAllA', but without the membership witness.
 genAllA
     :: forall k (p :: k ~> Type) (as :: f k) h. (Universe f, Applicative h)
@@ -128,6 +140,12 @@ igenAll
     => (forall a. Elem f as a -> Sing a -> p @@ a)            -- ^ always-true predicate on value
     -> (Sing as -> All f p as)                                  -- ^ always-true predicate on collection
 igenAll f = runIdentity . igenAllA (\i -> Identity . f i)
+
+genAll
+    :: forall f k (p :: k ~> Type). Universe f
+    => Given p                          -- ^ always-true predicate on value
+    -> Given (TyCon1 (All f p))         -- ^ always-true predicate on collection
+genAll f = igenAll (const f)
 
 -- | Extract the item from the container witnessed by the 'Elem'
 select
@@ -148,7 +166,7 @@ splitSing = igenAll @f @_ @(TyCon1 Sing) (\_ x -> x)
 pickElem
     :: forall f k (as :: f k) a. (Universe f, SingI as, SingI a, SDecide k)
     => Decision (Elem f as a)
-pickElem = case decide @Sing @(TyCon1 (Any f (TyCon1 ((:~:) a)))) sing of
+pickElem = case decide @(TyCon1 (Any f (TyCon1 ((:~:) a)))) sing of
     Proved (Any i Refl) -> Proved i
     Disproved v         -> Disproved $ \i -> v $ Any i Refl
 
