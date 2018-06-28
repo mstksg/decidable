@@ -157,10 +157,15 @@ instance forall k (as :: GHC.Base.Maybe k) (a :: k). GHC.Show.Show (Data.Type.Un
 instance forall j k (as :: Data.Either.Either j k) (a :: k). GHC.Show.Show (Data.Type.Universe.IsRight as a)
 instance forall k (as :: GHC.Base.NonEmpty k) (a :: k). GHC.Show.Show (Data.Type.Universe.NEIndex as a)
 instance forall j k (as :: (j, k)) (a :: k). GHC.Show.Show (Data.Type.Universe.Snd as a)
+instance forall j k (as :: (j, k)). (Data.Singletons.Internal.SingI as, Data.Singletons.Decide.SDecide k) => Data.Type.Predicate.Decide (Data.Singletons.Internal.TyCon1 (Data.Type.Universe.Snd as))
 instance Data.Type.Universe.Universe ((,) j)
+instance forall k (as :: GHC.Base.NonEmpty k). (Data.Singletons.Internal.SingI as, Data.Singletons.Decide.SDecide k) => Data.Type.Predicate.Decide (Data.Singletons.Internal.TyCon1 (Data.Type.Universe.NEIndex as))
 instance Data.Type.Universe.Universe GHC.Base.NonEmpty
+instance forall j k (as :: Data.Either.Either j k). (Data.Singletons.Internal.SingI as, Data.Singletons.Decide.SDecide k) => Data.Type.Predicate.Decide (Data.Singletons.Internal.TyCon1 (Data.Type.Universe.IsRight as))
 instance Data.Type.Universe.Universe (Data.Either.Either j)
+instance forall k (as :: GHC.Base.Maybe k). (Data.Singletons.Internal.SingI as, Data.Singletons.Decide.SDecide k) => Data.Type.Predicate.Decide (Data.Singletons.Internal.TyCon1 (Data.Type.Universe.IsJust as))
 instance Data.Type.Universe.Universe GHC.Base.Maybe
+instance forall k (as :: [k]). (Data.Singletons.Internal.SingI as, Data.Singletons.Decide.SDecide k) => Data.Type.Predicate.Decide (Data.Singletons.Internal.TyCon1 (Data.Type.Universe.Index as))
 instance Data.Type.Universe.Universe []
 instance forall k (f :: * -> *) (p :: k Data.Singletons.Internal.~> *). (Data.Type.Universe.Universe f, Data.Type.Predicate.Decide p) => Data.Type.Predicate.Decide (Data.Singletons.Internal.TyCon1 (Data.Type.Universe.Any f p))
 instance forall k (f :: * -> *) (p :: k Data.Singletons.Internal.~> *). (Data.Type.Universe.Universe f, Data.Type.Predicate.Decide p) => Data.Type.Predicate.Decide (Data.Singletons.Internal.TyCon1 (Data.Type.Universe.All f p))
