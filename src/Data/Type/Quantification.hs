@@ -15,7 +15,7 @@
 module Data.Type.Quantification (
     Any(..)
   , All(..)
-  , Subset(..)
+  , Subset(..), makeSubset, subsetToList, mergeSubset, subsetToAny
   ) where
 
 import           Data.Singletons
@@ -68,7 +68,7 @@ mergeSubset f ps qs = Subset $ \i -> f i (runSubset ps i) (runSubset qs i)
 
 -- -- | Subset intersection
 -- intersection
---     :: forall f p q as. ()
+--     :: forall f k p q as. ()
 --     => Subset f p as
 --     -> Subset f q as
 --     -> Subset f (p &&& q) as
