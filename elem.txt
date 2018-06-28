@@ -11,6 +11,12 @@
 
 module Data.Type.Predicate
 type Predicate k = k ~> Type
+
+-- | Convert a normal '-&gt;' type constructor into a <a>Predicate</a>.
+--   
+--   <pre>
+--   <a>TyPred</a> :: (k -&gt; <a>Type</a>) -&gt; <a>Predicate</a> k
+--   </pre>
 type TyPred = TyCon1
 newtype Wit p a
 Wit :: p @@ a -> Wit p a
@@ -26,6 +32,10 @@ decide :: Decide p => Test p
 decide :: (Decide p, Taken p) => Test p
 class Decide p => Taken p
 taken :: Taken p => Given p
+class DFunctor f
+dmap :: forall p q. DFunctor f => (p -?> q) -> (f p -?> f q)
+class TFunctor f
+tmap :: forall p q. TFunctor f => (p --> q) -> (f p --> f q)
 data Not :: (k ~> Type) -> (k ~> Type)
 proveNot :: forall p a. () => Decision (p @@ a) -> Decision (Not p @@ a)
 data (&&&) :: (k ~> Type) -> (k ~> Type) -> (k ~> Type)
@@ -172,6 +182,9 @@ instance forall k (as :: [k]). (Data.Singletons.Internal.SingI as, Data.Singleto
 instance Data.Type.Universe.Universe []
 instance forall k (f :: * -> *) (p :: k Data.Singletons.Internal.~> *). (Data.Type.Universe.Universe f, Data.Type.Predicate.Decide p) => Data.Type.Predicate.Decide (Data.Type.Universe.AnyPred f p)
 instance forall k (f :: * -> *) (p :: k Data.Singletons.Internal.~> *). (Data.Type.Universe.Universe f, Data.Type.Predicate.Decide p) => Data.Type.Predicate.Decide (Data.Type.Universe.AllPred f p)
+instance Data.Type.Universe.Universe f => Data.Type.Predicate.TFunctor (Data.Type.Universe.AnyPred f)
+instance Data.Type.Universe.Universe f => Data.Type.Predicate.TFunctor (Data.Type.Universe.AllPred f)
+instance Data.Type.Universe.Universe f => Data.Type.Predicate.DFunctor (Data.Type.Universe.AllPred f)
 
 module Data.Type.Quantification
 
@@ -181,12 +194,12 @@ module Data.Type.Quantification
 data Any f :: (k ~> Type) -> f k -> Type
 [Any] :: Elem f as a -> p @@ a -> Any f p as
 data AnyPred f :: (k ~> Type) -> (f k ~> Type)
-entailAny :: Universe f => (p --> q) -> (AnyPred f p --> AnyPred f q)
+entailAny :: forall f p q. Universe f => (p --> q) -> (AnyPred f p --> AnyPred f q)
 
 -- | If there exists an <tt>a</tt> s.t. <tt>p a</tt>, and if <tt>p</tt>
 --   implies <tt>q</tt>, then there must exist an <tt>a</tt> s.t. <tt>q
 --   a</tt>.
-ientailAny :: forall f p q as. () => (forall a. Elem f as a -> p @@ a -> q @@ a) -> Any f p as -> Any f q as
+ientailAny :: forall f p q as. (Universe f, SingI as) => (forall a. Elem f as a -> Sing a -> p @@ a -> q @@ a) -> Any f p as -> Any f q as
 
 -- | <a>entailAnyF</a>, but without the membership witness.
 entailAnyF :: forall f p q h. (Universe f, Functor h) => (p --># q) h -> (AnyPred f p --># AnyPred f q) h
@@ -214,11 +227,11 @@ newtype All f p (as :: f k)
 All :: forall a. Elem f as a -> p @@ a -> All f p
 [runAll] :: All f p -> forall a. Elem f as a -> p @@ a
 data AllPred f :: (k ~> Type) -> (f k ~> Type)
-entailAll :: Universe f => (p --> q) -> (AllPred f p --> AllPred f q)
+entailAll :: forall f p q. Universe f => (p --> q) -> (AllPred f p --> AllPred f q)
 
 -- | If for all <tt>a</tt> we have <tt>p a</tt>, and if <tt>p</tt> implies
 --   <tt>q</tt>, then for all <tt>a</tt> we must also have <tt>p a</tt>.
-ientailAll :: forall f p q as. () => (forall a. Elem f as a -> p @@ a -> q @@ a) -> All f p as -> All f q as
+ientailAll :: forall f p q as. (Universe f, SingI as) => (forall a. Elem f as a -> Sing a -> p @@ a -> q @@ a) -> All f p as -> All f q as
 
 -- | <a>entailAllF</a>, but without the membership witness.
 entailAllF :: forall f p q h. (Universe f, Applicative h) => (p --># q) h -> (AllPred f p --># AllPred f q) h
@@ -236,8 +249,8 @@ decideEntailAll :: forall f p q. Universe f => p -?> q -> AllPred f p -?> AllPre
 --   <tt>q a</tt>.
 idecideEntailAll :: forall f p q as. (Universe f, SingI as) => (forall a. Elem f as a -> p @@ a -> Decision (q @@ a)) -> All f p as -> Decision (All f q as)
 
--- | A <tt><a>Subset</a> p as</tt> describes a subset of type-level
---   collection <tt>as</tt>.
+-- | A <tt><a>Subset</a> p as</tt> describes a <i>decidable</i> subset of
+--   type-level collection <tt>as</tt>.
 newtype Subset f p (as :: f k)
 Subset :: forall a. Elem f as a -> Decision (p @@ a) -> Subset f p
 [runSubset] :: Subset f p -> forall a. Elem f as a -> Decision (p @@ a)
