@@ -127,18 +127,43 @@ All :: forall a. Elem f as a -> p @@ a -> All f p
 --   <tt>p a</tt> is true.
 data Any f :: (k ~> Type) -> f k -> Type
 [Any] :: Elem f as a -> p @@ a -> Any f p as
-instance forall k (as :: [k]) (a :: k). GHC.Show.Show (Data.Type.Universe.Elem [] as a)
-instance forall k (as :: GHC.Base.Maybe k) (a :: k). GHC.Show.Show (Data.Type.Universe.Elem GHC.Base.Maybe as a)
-instance forall k j (as :: Data.Either.Either j k) (a :: k). GHC.Show.Show (Data.Type.Universe.Elem (Data.Either.Either j) as a)
-instance forall k (as :: GHC.Base.NonEmpty k) (a :: k). GHC.Show.Show (Data.Type.Universe.Elem GHC.Base.NonEmpty as a)
-instance forall k j (as :: (j, k)) (a :: k). GHC.Show.Show (Data.Type.Universe.Elem ((,) j) as a)
+
+-- | Witness an item in a type-level list by providing its index.
+data Index :: [k] -> k -> Type
+[IZ] :: Index (a : as) a
+[IS] :: Index bs a -> Index (b : bs) a
+
+-- | Witness an item in a type-level <a>Maybe</a> by proving the
+--   <a>Maybe</a> is <a>Just</a>.
+data IsJust :: Maybe k -> k -> Type
+[IsJust] :: IsJust ( 'Just a) a
+
+-- | Witness an item in a type-level <tt><a>Either</a> j</tt> by proving
+--   the <a>Either</a> is <a>Right</a>.
+data IsRight :: Either j k -> k -> Type
+[IsRight] :: IsRight ( 'Right a) a
+
+-- | Witness an item in a type-level <a>NonEmpty</a> by either indicating
+--   that it is the "head", or by providing an index in the "tail".
+data NEIndex :: NonEmpty k -> k -> Type
+[NEHead] :: NEIndex (a :| as) a
+[NETail] :: Index as a -> NEIndex (b :| as) a
+
+-- | Trivially witness an item in the second field of a type-level tuple.
+data Snd :: (j, k) -> k -> Type
+[Snd] :: Snd '(a, b) b
+instance forall k (as :: [k]) (a :: k). GHC.Show.Show (Data.Type.Universe.Index as a)
+instance forall k (as :: GHC.Base.Maybe k) (a :: k). GHC.Show.Show (Data.Type.Universe.IsJust as a)
+instance forall j k (as :: Data.Either.Either j k) (a :: k). GHC.Show.Show (Data.Type.Universe.IsRight as a)
+instance forall k (as :: GHC.Base.NonEmpty k) (a :: k). GHC.Show.Show (Data.Type.Universe.NEIndex as a)
+instance forall j k (as :: (j, k)) (a :: k). GHC.Show.Show (Data.Type.Universe.Snd as a)
+instance Data.Type.Universe.Universe ((,) j)
+instance Data.Type.Universe.Universe GHC.Base.NonEmpty
+instance Data.Type.Universe.Universe (Data.Either.Either j)
+instance Data.Type.Universe.Universe GHC.Base.Maybe
+instance Data.Type.Universe.Universe []
 instance forall k (f :: * -> *) (p :: k Data.Singletons.Internal.~> *). (Data.Type.Universe.Universe f, Data.Type.Predicate.Decide p) => Data.Type.Predicate.Decide (Data.Singletons.Internal.TyCon1 (Data.Type.Universe.Any f p))
 instance forall k (f :: * -> *) (p :: k Data.Singletons.Internal.~> *). (Data.Type.Universe.Universe f, Data.Type.Predicate.Decide p) => Data.Type.Predicate.Decide (Data.Singletons.Internal.TyCon1 (Data.Type.Universe.All f p))
-instance Data.Type.Universe.Universe []
-instance Data.Type.Universe.Universe GHC.Base.Maybe
-instance Data.Type.Universe.Universe (Data.Either.Either j)
-instance Data.Type.Universe.Universe GHC.Base.NonEmpty
-instance Data.Type.Universe.Universe ((,) j)
 
 module Data.Type.Quantification
 
