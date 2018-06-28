@@ -14,12 +14,16 @@
 {-# LANGUAGE UndecidableInstances  #-}
 
 module Data.Type.Quantification (
-    Any(..), entailAny, ientailAny, entailAnyF, ientailAnyF
-  , All(..), entailAll, ientailAll, entailAllF, ientailAllF, decideEntailAll, idecideEntailAll
-  , Subset(..), makeSubset, subsetToList, subsetToAny, subsetToAll
+    Any(..), AnyPred
+  , entailAny, ientailAny, entailAnyF, ientailAnyF
+  , All(..), AllPred
+  , entailAll, ientailAll, entailAllF, ientailAllF, decideEntailAll, idecideEntailAll
+  , Subset(..), SubsetPred
+  , makeSubset, subsetToList, subsetToAny, subsetToAll
   , intersection, union, mergeSubset
   ) where
 
+import           Data.Kind
 import           Data.Singletons
 import           Data.Singletons.Decide
 import           Data.Type.Predicate
@@ -28,8 +32,11 @@ import           Data.Type.Universe
 -- | A @'Subset' p as@ describes a subset of type-level collection @as@.
 newtype Subset f p (as :: f k) = Subset { runSubset :: forall a. Elem f as a -> Decision (p @@ a) }
 
-instance (Universe f, Decide p) => Decide (TyCon1 (Subset f p))
-instance (Universe f, Decide p) => Taken (TyCon1 (Subset f p)) where
+data SubsetPred f :: (k ~> Type) -> (f k ~> Type)
+type instance Apply (SubsetPred f p) as = Subset f p as
+
+instance (Universe f, Decide p) => Decide (SubsetPred f p)
+instance (Universe f, Decide p) => Taken (SubsetPred f p) where
     taken = makeSubset @f @_ @p (\_ -> decide @p)
 
 -- | Create a 'Subset' from a predicate.
@@ -105,7 +112,7 @@ ientailAny f (Any i x) = Any i (f i x)
 entailAny
     :: Universe f
     => (p --> q)
-    -> (TyCon1 (Any f p) --> TyCon1 (Any f q))
+    -> (AnyPred f p --> AnyPred f q)
 entailAny f x = ientailAny (\i -> f (select i x))
 
 -- | If for all @a@ we have @p a@, and if @p@ implies @q@, then for all @a@
@@ -120,7 +127,7 @@ ientailAll f a = All $ \i -> f i (runAll a i)
 entailAll
     :: Universe f
     => (p --> q)
-    -> (TyCon1 (All f p) --> TyCon1 (All f q))
+    -> (AllPred f p --> AllPred f q)
 entailAll f x = ientailAll (\i -> f (select i x))
 
 -- | If @p@ implies @q@ under some context @h@, and if there exists some
@@ -145,7 +152,7 @@ ientailAnyF f = \case Any i x -> Any i <$> f i x
 entailAnyF
     :: forall f p q h. (Universe f, Functor h)
     => (p --># q) h                                     -- ^ implication in context
-    -> (TyCon1 (Any f p) --># TyCon1 (Any f q)) h
+    -> (AnyPred f p --># AnyPred f q) h
 entailAnyF f x a = withSingI x $
     ientailAnyF @f @p @q (\i -> f (select i x)) a
 
@@ -162,7 +169,7 @@ ientailAllF f a = igenAllA (\i _ -> f i (runAll a i)) sing
 entailAllF
     :: forall f p q h. (Universe f, Applicative h)
     => (p --># q) h                                     -- ^ implication in context
-    -> (TyCon1 (All f p) --># TyCon1 (All f q)) h
+    -> (AllPred f p --># AllPred f q) h
 entailAllF f x a = withSingI x $
     ientailAllF @f @p @q (\i -> f (select i x)) a
 
@@ -179,6 +186,6 @@ idecideEntailAll f a = idecideAll (\i _ -> f i (runAll a i)) sing
 decideEntailAll
     :: forall f p q. Universe f
     => p -?> q
-    -> TyCon1 (All f p) -?> TyCon1 (All f q)
+    -> AllPred f p -?> AllPred f q
 decideEntailAll f x a = withSingI x $
     idecideEntailAll @f @p @q (\(i :: Elem f as a) -> f (select i x)) a
