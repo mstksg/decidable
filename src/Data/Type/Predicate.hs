@@ -20,6 +20,7 @@ module Data.Type.Predicate (
   , Test, type (-?>), type (-?>#)
   , Given, type (-->), type (-->#)
   , Decide(..), Taken(..)
+  , DFunctor(..), TFunctor(..)
   , type Not, proveNot
   , type (&&&), proveAnd
   , type (|||), proveOr
@@ -32,6 +33,12 @@ import           Data.Singletons
 import           Data.Singletons.Decide
 
 type Predicate k = k ~> Type
+
+-- | Convert a normal '->' type constructor into a 'Predicate'.
+--
+-- @
+-- 'TyPred' :: (k -> 'Type') -> 'Predicate' k
+-- @
 type TyPred = TyCon1
 
 newtype Wit p a = Wit { getWit :: p @@ a }
@@ -57,6 +64,12 @@ class Decide p where
 
 class Decide p => Taken p where
     taken :: Given p
+
+class DFunctor f where
+    dmap :: forall p q. (p -?> q) -> (f p -?> f q)
+
+class TFunctor f where
+    tmap :: forall p q. (p --> q) -> (f p --> f q)
 
 instance (SDecide k, SingI (a :: k)) => Decide (TyPred ((:~:) a)) where
     decide = (sing %~)

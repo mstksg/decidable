@@ -29,7 +29,8 @@ import           Data.Singletons.Decide
 import           Data.Type.Predicate
 import           Data.Type.Universe
 
--- | A @'Subset' p as@ describes a subset of type-level collection @as@.
+-- | A @'Subset' p as@ describes a /decidable/ subset of type-level
+-- collection @as@.
 newtype Subset f p (as :: f k) = Subset { runSubset :: forall a. Elem f as a -> Decision (p @@ a) }
 
 data SubsetPred f :: (k ~> Type) -> (f k ~> Type)
@@ -103,32 +104,32 @@ subsetToAll s = idecideAll (\i _ -> runSubset s i) sing
 -- | If there exists an @a@ s.t. @p a@, and if @p@ implies @q@, then there
 -- must exist an @a@ s.t. @q a@.
 ientailAny
-    :: forall f p q as. ()
-    => (forall a. Elem f as a -> p @@ a -> q @@ a)        -- ^ implication
+    :: forall f p q as. (Universe f, SingI as)
+    => (forall a. Elem f as a -> Sing a -> p @@ a -> q @@ a)        -- ^ implication
     -> Any f p as
     -> Any f q as
-ientailAny f (Any i x) = Any i (f i x)
+ientailAny f (Any i x) = Any i (f i (select i sing) x)
 
 entailAny
-    :: Universe f
+    :: forall f p q. Universe f
     => (p --> q)
     -> (AnyPred f p --> AnyPred f q)
-entailAny f x = ientailAny (\i -> f (select i x))
+entailAny = tmap @(AnyPred f)
 
 -- | If for all @a@ we have @p a@, and if @p@ implies @q@, then for all @a@
 -- we must also have @p a@.
 ientailAll
-    :: forall f p q as. ()
-    => (forall a. Elem f as a -> p @@ a -> q @@ a)      -- ^ implication
+    :: forall f p q as. (Universe f, SingI as)
+    => (forall a. Elem f as a -> Sing a -> p @@ a -> q @@ a)      -- ^ implication
     -> All f p as
     -> All f q as
-ientailAll f a = All $ \i -> f i (runAll a i)
+ientailAll f a = All $ \i -> f i (select i sing) (runAll a i)
 
 entailAll
-    :: Universe f
+    :: forall f p q. Universe f
     => (p --> q)
     -> (AllPred f p --> AllPred f q)
-entailAll f x = ientailAll (\i -> f (select i x))
+entailAll = tmap @(AllPred f)
 
 -- | If @p@ implies @q@ under some context @h@, and if there exists some
 -- @a@ such that @p a@, then there must exist some @a@ such that @p q@
@@ -187,5 +188,4 @@ decideEntailAll
     :: forall f p q. Universe f
     => p -?> q
     -> AllPred f p -?> AllPred f q
-decideEntailAll f x a = withSingI x $
-    idecideEntailAll @f @p @q (\(i :: Elem f as a) -> f (select i x)) a
+decideEntailAll = dmap @(AllPred f)

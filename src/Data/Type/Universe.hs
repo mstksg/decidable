@@ -35,7 +35,7 @@ import           Prelude hiding                        (any, all)
 import qualified Data.Singletons.Prelude.List.NonEmpty as NE
 
 -- | A witness for membership of a given item in a type-level collection
-type family Elem (f :: Type -> Type) :: f k -> k -> Type
+type family Elem      (f :: Type -> Type) :: f k -> k -> Type
 
 -- | An @'Any' p as@ is a witness that, for at least one item @a@ in the
 -- type-level collection @as@, the predicate @p a@ is true.
@@ -49,6 +49,8 @@ type instance Apply (AnyPred f p) as = Any f p as
 -- items @a@ in the type-level collection @as@.
 newtype All f p (as :: f k) = All { runAll :: forall a. Elem f as a -> p @@ a }
 
+-- newtype All f p (as :: f k) = All { runAll :: forall a. Elem f as a -> p @@ a }
+
 data AllPred f :: (k ~> Type) -> (f k ~> Type)
 type instance Apply (AllPred f p) as = All f p as
 
@@ -57,6 +59,15 @@ instance (Universe f, Decide p) => Decide (AnyPred f p) where
 
 instance (Universe f, Decide p) => Decide (AllPred f p) where
     decide = decideAll @f @_ @p $ decide @p
+
+instance Universe f => TFunctor (AnyPred f) where
+    tmap f xs (Any i x) = Any i (f (select i xs) x)
+
+instance Universe f => TFunctor (AllPred f) where
+    tmap f xs a = All $ \i -> f (select i xs) (runAll a i)
+
+instance Universe f => DFunctor (AllPred f) where
+    dmap f xs a = idecideAll (\i x -> f x (runAll a i)) xs
 
 -- instance Imply (Wit p) q => Imply (Any f p) (TyCon1 (Any f q)) where
 --     imply (Any (i :: Elem f as a) x) = Any i (imply @(Wit p) @q @a (Wit x))
