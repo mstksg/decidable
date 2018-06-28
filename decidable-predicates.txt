@@ -2,11 +2,11 @@
 -- See Hoogle, http://www.haskell.org/hoogle/
 
 
--- | Class and combinators for expressing membership in type-level containers
+-- | Combinators for manipulating dependently-typed predicates.
 --   
 --   Please see the README on GitHub at
---   <a>https://github.com/mstksg/elem#readme</a>
-@package elem
+--   <a>https://github.com/mstksg/decidable-predicates#readme</a>
+@package decidable-predicates
 @version 0.1.0.0
 
 module Data.Type.Predicate
