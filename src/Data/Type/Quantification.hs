@@ -1,16 +1,19 @@
-{-# LANGUAGE AllowAmbiguousTypes   #-}
-{-# LANGUAGE FlexibleContexts      #-}
-{-# LANGUAGE FlexibleInstances     #-}
-{-# LANGUAGE GADTs                 #-}
-{-# LANGUAGE LambdaCase            #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE RankNTypes            #-}
-{-# LANGUAGE ScopedTypeVariables   #-}
-{-# LANGUAGE TypeApplications      #-}
-{-# LANGUAGE TypeFamilies          #-}
-{-# LANGUAGE TypeInType            #-}
-{-# LANGUAGE TypeOperators         #-}
-{-# LANGUAGE TypeSynonymInstances  #-}
+{-# LANGUAGE AllowAmbiguousTypes             #-}
+{-# LANGUAGE FlexibleContexts                #-}
+{-# LANGUAGE FlexibleInstances               #-}
+{-# LANGUAGE GADTs                           #-}
+{-# LANGUAGE LambdaCase                      #-}
+{-# LANGUAGE MultiParamTypeClasses           #-}
+{-# LANGUAGE PartialTypeSignatures           #-}
+{-# LANGUAGE RankNTypes                      #-}
+{-# LANGUAGE ScopedTypeVariables             #-}
+{-# LANGUAGE TypeApplications                #-}
+{-# LANGUAGE TypeFamilies                    #-}
+{-# LANGUAGE TypeInType                      #-}
+{-# LANGUAGE TypeOperators                   #-}
+{-# LANGUAGE TypeSynonymInstances            #-}
+{-# LANGUAGE UndecidableInstances            #-}
+{-# OPTIONS_GHC -Wno-partial-type-signatures #-}
 
 module Data.Type.Quantification (
     Any(..)
@@ -18,6 +21,7 @@ module Data.Type.Quantification (
   , Subset(..), makeSubset, subsetToList, mergeSubset, subsetToAny
   ) where
 
+import           Data.Kind
 import           Data.Singletons
 import           Data.Singletons.Decide
 import           Data.Type.Predicate
@@ -66,203 +70,105 @@ mergeSubset
     -> Subset f r as
 mergeSubset f ps qs = Subset $ \i -> f i (runSubset ps i) (runSubset qs i)
 
--- -- | Subset intersection
--- intersection
---     :: forall f k p q as. ()
---     => Subset f p as
---     -> Subset f q as
---     -> Subset f (p &&& q) as
--- intersection = mergeSubset $ \(_ :: Elem f as a) -> decideAnd @p @q @a
+-- | Subset intersection
+intersection
+    :: forall f k p q (as :: f k). ()
+    => Subset f p as
+    -> Subset f q as
+    -> Subset f (p &&& q) as
+intersection = mergeSubset $ \(_ :: Elem f as a) -> proveAnd @p @q @a
 
--- -- | Subset union
--- union
---     :: forall f p q as. ()
---     => Subset f p as
---     -> Subset f q as
---     -> Subset f (p ||| q) as
--- union = mergeSubset $ \(_ :: Elem f as a) -> decideOr @p @q @a
+-- | Subset union
+union
+    :: forall f k p q (as :: f k). ()
+    => Subset f p as
+    -> Subset f q as
+    -> Subset f (p ||| q) as
+union = mergeSubset $ \(_ :: Elem f as a) -> proveOr @p @q @a
 
--- -- | Test if a subset is equal to the entire original collection
--- subsetToAll
---     :: forall f p (as :: f k). (Universe f, SingI as)
---     => Subset f p as
---     -> Decision (All f p as)
--- subsetToAll s = decideAll (\i _ -> runSubset s i) sing
+-- | Test if a subset is equal to the entire original collection
+subsetToAll
+    :: forall f k p (as :: f k). (Universe f, SingI as)
+    => Subset f p as
+    -> Decision (All f p as)
+subsetToAll s = idecideAll (\i _ -> runSubset s i) sing
 
---module Data.Type.Quantification (
---  -- * Existential Quantification
---    Any(..), entailAny, entailAnyF
---  , entailAny', entailAnyF'
---  -- * Universal Quantification
---  , All(..), entailAll, entailAllF, decideEntailAll
---  , entailAll', entailAllF', decideEntailAll'
---  -- * Subset relationship
---  , Subset(..), makeSubset
---  , subsetToList, subsetToAny, subsetToAll
---  , intersection, union, mergeSubset
---  ) where
 
---import           Data.Singletons
---import           Data.Singletons.Decide
---import           Data.Type.Elem.Internal
---import           Data.Type.Predicate
---import           Data.Type.Universe
+-- | If there exists an @a@ s.t. @p a@, and if @p@ implies @q@, then there
+-- must exist an @a@ s.t. @q a@.
+ientailAny
+    :: forall f p q as. ()
+    => (forall a. Elem f as a -> p @@ a -> q @@ a)        -- ^ implication
+    -> Any f p as
+    -> Any f q as
+ientailAny f (Any i x) = Any i (f i x)
 
----- | A @'Subset' p as@ describes a subset of type-level collection @as@.
---newtype Subset f p (as :: f k) = Subset { runSubset :: forall a. Elem f as a -> Decision (p @@ a) }
+-- | If for all @a@ we have @p a@, and if @p@ implies @q@, then for all @a@
+-- we must also have @p a@.
+ientailAll
+    :: forall f p q as. ()
+    => (forall a. Elem f as a -> p @@ a -> q @@ a)      -- ^ implication
+    -> All f p as
+    -> All f q as
+ientailAll f a = All $ \i -> f i (runAll a i)
 
----- | Create a 'Subset' from a predicate.
---makeSubset
---    :: forall f p (as :: f k). Universe f
---    => (forall a. Elem f as a -> Sing a -> Decision (p @@ a))
---    -> Sing as
---    -> Subset f p as
---makeSubset f xs = Subset $ \i -> f i (select i xs)
+-- | If @p@ implies @q@ under some context @h@, and if there exists some
+-- @a@ such that @p a@, then there must exist some @a@ such that @p q@
+-- under that context @h@.
+--
+-- @h@ might be something like, say, 'Maybe', to give predicate that is
+-- either provably true or unprovably false.
+--
+-- Note that it is not possible to do this with @p a -> 'Decision' (q a)@.
+-- This is if the @p a -> 'Decision' (q a)@ implication is false, there
+-- it doesn't mean that there is /no/ @a@ such that @q a@, necessarily.
+-- There could have been an @a@ where @p@ does not hold, but @q@ does.
+ientailAnyF
+    :: forall f p q as h. Functor h
+    => (forall a. Elem f as a -> p @@ a -> h (q @@ a))      -- ^ implication in context
+    -> Any f p as
+    -> h (Any f q as)
+ientailAnyF f = \case
+    Any i x -> Any i <$> f i x
 
----- | Turn a 'Subset' into a list of satisfied predicates.
---subsetToList
---    :: forall f p (as :: f k). (Universe f, SingI as)
---    => Subset f p as
---    -> [Any f p as]
---subsetToList s = foldMapUni go sing
---  where
---    go :: Elem f as a -> Sing a -> [Any f p as]
---    go i _ = case runSubset s i of
---      Proved p    -> [Any i p]
---      Disproved _ -> []
+-- | 'entailAnyF', but without the membership witness.
+entailAnyF
+    :: forall f p q h. Functor h
+    => TestF (TyCon1 h) p q      -- ^ implication in context
+    -> TestF (TyCon1 h) (TyCon1 (Any f p)) (TyCon1 (Any f q))
+entailAnyF f = ientailAnyF @f @p @q (\(_ :: Elem f _ a) -> f @a)
 
----- | Restrict a 'Subset' to a single (arbitrary) member, or fail if none
----- exists.
---subsetToAny
---    :: forall f p (as :: f k). (Universe f, SingI as)
---    => Subset f p as
---    -> Decision (Any f p as)
---subsetToAny s = decideAny (\i _ -> runSubset s i) sing
+-- | If @p@ implies @q@ under some context @h@, and if we have @p a@ for
+-- all @a@, then we must have @q a@ for all @a@ under context @h@.
+ientailAllF
+    :: forall f p q as h. (Universe f, Applicative h, SingI as)
+    => (forall a. Elem f as a -> p @@ a -> h (q @@ a))    -- ^ implication in context
+    -> All f p as
+    -> h (All f q as)
+ientailAllF f a = igenAllA (\i _ -> f i (runAll a i)) sing
 
----- | Combine two subsets based on a decision function
---mergeSubset
---    :: forall f p q r (as :: f k). ()
---    => (forall a. Elem f as a -> Decision (p @@ a) -> Decision (q @@ a) -> Decision (r @@ a))
---    -> Subset f p as
---    -> Subset f q as
---    -> Subset f r as
---mergeSubset f ps qs = Subset $ \i -> f i (runSubset ps i) (runSubset qs i)
+-- | 'entailAllF', but without the membership witness.
+entailAllF
+    :: forall f p q h. (Universe f, Applicative h)
+    => TestF (TyCon1 h) p q      -- ^ implication in context
+    -> TestF (TyCon1 h) (TyCon1 (All f p) &&& TyCon1 Sing) (TyCon1 (All f q))
+entailAllF f (a, s) = withSingI s $ ientailAllF @f @p @q (\(_ :: Elem f _ a) -> f @a) a
 
----- | Subset intersection
---intersection
---    :: forall f p q as. ()
---    => Subset f p as
---    -> Subset f q as
---    -> Subset f (p &&& q) as
---intersection = mergeSubset $ \(_ :: Elem f as a) -> decideAnd @p @q @a
+-- | If we have @p a@ for all @a@, and @p a@ can be used to test for @q a@,
+-- then we can test all @a@s for @q a@.
+idecideEntailAll
+    :: forall f p q as. (Universe f, SingI as)
+    => (forall a. Elem f as a -> p @@ a -> Decision (q @@ a))     -- ^ decidable implication
+    -> All f p as
+    -> Decision (All f q as)
+idecideEntailAll f a = idecideAll (\i _ -> f i (runAll a i)) sing
 
----- | Subset union
---union
---    :: forall f p q as. ()
---    => Subset f p as
---    -> Subset f q as
---    -> Subset f (p ||| q) as
---union = mergeSubset $ \(_ :: Elem f as a) -> decideOr @p @q @a
+-- | 'decideEntailAll', but without the membeship witness.
+decideEntailAll
+    :: forall f p q (as :: f k). (Universe f, SingI as)
+    => (forall a. p @@ a -> Decision (q @@ a))     -- ^ decidable implication
+    -> All f p as
+    -> Decision (All f q as)
+decideEntailAll f = idecideEntailAll @f @p @q (\(_ :: Elem f as a) -> f @a)
 
----- | Test if a subset is equal to the entire original collection
---subsetToAll
---    :: forall f p (as :: f k). (Universe f, SingI as)
---    => Subset f p as
---    -> Decision (All f p as)
---subsetToAll s = decideAll (\i _ -> runSubset s i) sing
-
----- | If there exists an @a@ s.t. @p a@, and if @p@ implies @q@, then there
----- must exist an @a@ s.t. @q a@.
---entailAny
---    :: forall f p q as. ()
---    => (forall a. Elem f as a -> (p --> q) @@ a)        -- ^ implication
---    -> Any f p as
---    -> Any f q as
---entailAny f (Any i x) = Any i (f i x)
-
----- | 'entailAny', but without the membership witness.
---entailAny'
---    :: forall f p q (as :: f k). ()
---    => (forall a. (p --> q) @@ a)        -- ^ implication
---    -> Any f p as
---    -> Any f q as
---entailAny' f = entailAny @f @p @q (\(_ :: Elem f as a) -> f @a)
-
----- | If for all @a@ we have @p a@, and if @p@ implies @q@, then for all @a@
----- we must also have @p a@.
---entailAll
---    :: forall f p q as. ()
---    => (forall a. Elem f as a -> (p --> q) @@ a)      -- ^ implication
---    -> All f p as
---    -> All f q as
---entailAll f a = All $ \i -> f i (runAll a i)
-
----- | 'entailAll', but without the membership witness.
---entailAll'
---    :: forall f p q (as :: f k). ()
---    => (forall a. (p --> q) @@ a)        -- ^ implication
---    -> All f p as
---    -> All f q as
---entailAll' f = entailAll @f @p @q (\(_ :: Elem f as a) -> f @a)
-
----- | If @p@ implies @q@ under some context @h@, and if there exists some
----- @a@ such that @p a@, then there must exist some @a@ such that @p q@
----- under that context @h@.
-----
----- @h@ might be something like, say, 'Maybe', to give predicate that is
----- either provably true or unprovably false.
-----
----- Note that it is not possible to do this with @p a -> 'Decision' (q a)@.
----- This is if the @p a -> 'Decision' (q a)@ implication is false, there
----- it doesn't mean that there is /no/ @a@ such that @q a@, necessarily.
----- There could have been an @a@ where @p@ does not hold, but @q@ does.
---entailAnyF
---    :: forall f p q as h. Functor h
---    => (forall a. Elem f as a -> p @@ a -> h (q @@ a))      -- ^ implication in context
---    -> Any f p as
---    -> h (Any f q as)
---entailAnyF f = \case
---    Any i x -> Any i <$> f i x
-
----- | 'entailAnyF', but without the membership witness.
---entailAnyF'
---    :: forall f p q (as :: f k) h. Functor h
---    => (forall a. p @@ a -> h (q @@ a))      -- ^ implication in context
---    -> Any f p as
---    -> h (Any f q as)
---entailAnyF' f = entailAnyF @f @p @q (\(_ :: Elem f as a) -> f @a)
-
----- | If @p@ implies @q@ under some context @h@, and if we have @p a@ for
----- all @a@, then we must have @q a@ for all @a@ under context @h@.
---entailAllF
---    :: forall f p q as h. (Universe f, Applicative h, SingI as)
---    => (forall a. Elem f as a -> p @@ a -> h (q @@ a))    -- ^ implication in context
---    -> All f p as
---    -> h (All f q as)
---entailAllF f a = genAllA (\i _ -> f i (runAll a i)) sing
-
----- | 'entailAllF', but without the membership witness.
---entailAllF'
---    :: forall f p q (as :: f k) h. (Universe f, Applicative h, SingI as)
---    => (forall a. p @@ a -> h (q @@ a))      -- ^ implication in context
---    -> All f p as
---    -> h (All f q as)
---entailAllF' f = entailAllF @f @p @q (\(_ :: Elem f as a) -> f @a)
-
----- | If we have @p a@ for all @a@, and @p a@ can be used to test for @q a@,
----- then we can test all @a@s for @q a@.
---decideEntailAll
---    :: forall f p q as. (Universe f, SingI as)
---    => (forall a. Elem f as a -> p @@ a -> Decision (q @@ a))     -- ^ decidable implication
---    -> All f p as
---    -> Decision (All f q as)
---decideEntailAll f a = decideAll (\i _ -> f i (runAll a i)) sing
-
----- | 'decideEntailAll', but without the membeship witness.
---decideEntailAll'
---    :: forall f p q (as :: f k). (Universe f, SingI as)
---    => (forall a. p @@ a -> Decision (q @@ a))     -- ^ decidable implication
---    -> All f p as
---    -> Decision (All f q as)
---decideEntailAll' f = decideEntailAll @f @p @q (\(_ :: Elem f as a) -> f @a)
-
+-- aw man this doesn't work

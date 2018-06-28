@@ -17,7 +17,7 @@ module Data.Type.Predicate (
     Predicate
   , Pred(..)
   , TestF, Test
-  , Decide(..)
+  , Decide(..), Imply(..)
   , type (-?>)
   , type (-->)
   , type Not, proveNot
@@ -33,21 +33,25 @@ import           Data.Singletons.Prelude hiding (Not)
 
 type Predicate k = k ~> Type
 
-type TestF f w p = forall a. w a -> f @@ (p @@ a)
+type TestF f w p = forall a. w @@ a -> f @@ (p @@ a)
 type Test w p = TestF (TyCon1 Decision) w p
 
-type w -?> p = Test w p
 type w --> p = TestF IdSym0 w p
-infixr 2 -?>
 infixr 2 -->
+type w -?> p = Test (TyCon1 w) p
+infixr 2 -?>
 
-class Decide w p where
+class Decide w p | p -> w where
     decide :: w -?> p
+
+-- | maybe can be changed to fmap?
+class Imply w p | p -> w where
+    imply :: w --> p
 
 newtype Pred p a = Pred { getPred :: p @@ a }
 
-instance Decide (Pred (TyCon1 Decision .@#@$$$ p)) p where
-    decide (Pred x) = x
+-- instance Decide (Pred (TyCon1 Decision .@#@$$$ p)) p where
+--     decide (Pred x) = x
 
 instance (SDecide k, SingI (a :: k)) => Decide Sing (TyCon1 ((:~:) a)) where
     decide = (sing %~)
