@@ -1,3 +1,3 @@
-# [elem][]
+# [decidable-predicates][]
 
-[elem]: https://mstksg.github.io/elem/
+[decidable-predicates]: https://mstksg.github.io/decidable-predicates/
