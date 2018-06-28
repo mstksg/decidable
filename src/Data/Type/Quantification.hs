@@ -20,14 +20,18 @@ module Data.Type.Quantification (
 
 import           Data.Singletons
 import           Data.Singletons.Decide
+import           Data.Type.Predicate
 import           Data.Type.Universe
 
 -- | A @'Subset' p as@ describes a subset of type-level collection @as@.
 newtype Subset f p (as :: f k) = Subset { runSubset :: forall a. Elem f as a -> Decision (p @@ a) }
 
+instance (Universe f, Decide Sing p) => Decide Sing (TyCon1 (Subset f p)) where
+    decide = Proved . makeSubset @f @_ @p (\_ -> decide @_ @p)
+
 -- | Create a 'Subset' from a predicate.
 makeSubset
-    :: forall f p (as :: f k). Universe f
+    :: forall f k p (as :: f k). Universe f
     => (forall a. Elem f as a -> Sing a -> Decision (p @@ a))
     -> Sing as
     -> Subset f p as
@@ -35,7 +39,7 @@ makeSubset f xs = Subset $ \i -> f i (select i xs)
 
 -- | Turn a 'Subset' into a list of satisfied predicates.
 subsetToList
-    :: forall f p (as :: f k). (Universe f, SingI as)
+    :: forall f k p (as :: f k). (Universe f, SingI as)
     => Subset f p as
     -> [Any f p as]
 subsetToList s = ifoldMapUni go sing
@@ -48,14 +52,14 @@ subsetToList s = ifoldMapUni go sing
 -- | Restrict a 'Subset' to a single (arbitrary) member, or fail if none
 -- exists.
 subsetToAny
-    :: forall f p (as :: f k). (Universe f, SingI as)
+    :: forall f k p (as :: f k). (Universe f, SingI as)
     => Subset f p as
     -> Decision (Any f p as)
 subsetToAny s = idecideAny (\i _ -> runSubset s i) sing
 
 -- | Combine two subsets based on a decision function
 mergeSubset
-    :: forall f p q r (as :: f k). ()
+    :: forall f k p q r (as :: f k). ()
     => (forall a. Elem f as a -> Decision (p @@ a) -> Decision (q @@ a) -> Decision (r @@ a))
     -> Subset f p as
     -> Subset f q as
