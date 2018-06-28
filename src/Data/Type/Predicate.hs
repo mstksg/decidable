@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes    #-}
+{-# LANGUAGE ConstraintKinds        #-}
 {-# LANGUAGE FlexibleInstances      #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE GADTs                  #-}
@@ -24,6 +25,7 @@ module Data.Type.Predicate (
   , type (&&&), proveAnd
   , type (|||), proveOr
   , type (^^^), proveXor
+  , (:=>)(..), type (==>)
   ) where
 
 import           Data.Kind
@@ -38,11 +40,11 @@ type Test w p = TestF (TyCon1 Decision) w p
 
 type w --> p = TestF IdSym0 w p
 infixr 2 -->
-type w -?> p = Test (TyCon1 w) p
+type w -?> p = Test w p
 infixr 2 -?>
 
 class Decide w p | p -> w where
-    decide :: w -?> p
+    decide :: TyCon1 w -?> p
 
 -- | maybe can be changed to fmap?
 class Imply w p | p -> w where
@@ -118,3 +120,10 @@ proveXor
 proveXor p q = proveOr @(p &&& Not q) @(Not p &&& q) @a
                   (proveAnd @p @(Not q) @a p (proveNot @q @a q))
                   (proveAnd @(Not p) @q @a (proveNot @p @a p) q)
+
+data (==>) :: (k -> Constraint) -> (k ~> Type) -> (k ~> Type)
+
+data (:=>) :: (k -> Constraint) -> (k ~> Type) -> k -> Type where
+    Wit :: c a => p @@ a -> (c :=> p) a
+
+type instance Apply (c ==> p) a = (c :=> p) a

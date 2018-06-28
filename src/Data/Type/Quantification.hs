@@ -151,8 +151,8 @@ ientailAllF f a = igenAllA (\i _ -> f i (runAll a i)) sing
 entailAllF
     :: forall f p q h. (Universe f, Applicative h)
     => TestF (TyCon1 h) p q      -- ^ implication in context
-    -> TestF (TyCon1 h) (TyCon1 (All f p) &&& TyCon1 Sing) (TyCon1 (All f q))
-entailAllF f (a, s) = withSingI s $ ientailAllF @f @p @q (\(_ :: Elem f _ a) -> f @a) a
+    -> TestF (TyCon1 h) (SingI ==> TyCon1 (All f p)) (TyCon1 (All f q))
+entailAllF f (Wit a) = ientailAllF @f @p @q (\(_ :: Elem f _ a) -> f @a) a
 
 -- | If we have @p a@ for all @a@, and @p a@ can be used to test for @q a@,
 -- then we can test all @a@s for @q a@.
@@ -165,10 +165,7 @@ idecideEntailAll f a = idecideAll (\i _ -> f i (runAll a i)) sing
 
 -- | 'decideEntailAll', but without the membeship witness.
 decideEntailAll
-    :: forall f p q (as :: f k). (Universe f, SingI as)
-    => (forall a. p @@ a -> Decision (q @@ a))     -- ^ decidable implication
-    -> All f p as
-    -> Decision (All f q as)
-decideEntailAll f = idecideEntailAll @f @p @q (\(_ :: Elem f as a) -> f @a)
-
--- aw man this doesn't work
+    :: forall f p q. Universe f
+    => (p -?> q)
+    -> (SingI ==> TyCon1 (All f p) -?> TyCon1 (All f q))
+decideEntailAll f (Wit a) = idecideEntailAll @f @p @q (\(_ :: Elem f as a) -> f @a) a
