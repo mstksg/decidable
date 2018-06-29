@@ -66,8 +66,8 @@ type BoolPred p = EqualTo 'True .@#@$$$ p
 
 -- | Convert a /parameterized/ predicate, yield a predicate on the
 -- parameter.
-data Found v :: (k -> Predicate v) -> Predicate k
-type instance Apply (Found v p) a = Σ v (p a)
+data Found :: (k -> Predicate v) -> Predicate k
+type instance Apply (Found (p :: k -> Predicate v)) a = Σ v (p a)
 
 newtype Wit p a = Wit { getWit :: p @@ a }
 
