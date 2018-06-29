@@ -19,7 +19,7 @@ module Data.Type.Predicate (
     -- * Predicates
     Predicate, Wit(..)
     -- ** Construct Predicates
-  , TyPred, Evident, EqualTo, BoolPred
+  , TyPred, Evident, EqualTo, BoolPred, Found
     -- ** Manipulate predicates
   , type Not, proveNot
   , type (&&&), proveAnd
