@@ -11,6 +11,9 @@
 
 module Data.Type.Predicate
 type Predicate k = k ~> Type
+newtype Wit p a
+Wit :: p @@ a -> Wit p a
+[getWit] :: Wit p a -> p @@ a
 
 -- | Convert a normal '-&gt;' type constructor into a <a>Predicate</a>.
 --   
@@ -25,9 +28,14 @@ type TyPred = TyCon1
 --   <a>Evident</a> :: Predicate k
 --   </pre>
 type Evident = TyPred Sing
-newtype Wit p a
-Wit :: p @@ a -> Wit p a
-[getWit] :: Wit p a -> p @@ a
+type EqualTo a = TyCon1 ((:~:) a)
+
+-- | Convert a propositional predicate into a <a>Predicate</a>
+--   
+--   <pre>
+--   <a>BoolPred</a> :: (k ~&gt; Bool) -&gt; Predicate k
+--   </pre>
+type BoolPred p = EqualTo  'True .@#@$$$ p
 type Test p = forall a. Sing a -> Decision (p @@ a)
 type p -?> q = forall a. Sing a -> p @@ a -> Decision (q @@ a)
 type ( p -?># q ) h = forall a. Sing a -> p @@ a -> h (Decision (q @@ a))
@@ -55,7 +63,7 @@ compImpl :: forall p q r. () => p --> q -> q --> r -> p --> r
 instance forall k1 (p :: k1 Data.Singletons.Internal.~> *) (q :: k1 Data.Singletons.Internal.~> *). (Data.Type.Predicate.Decide p, Data.Type.Predicate.Decide q) => Data.Type.Predicate.Decide (p Data.Type.Predicate.||| q)
 instance forall k1 (p :: k1 Data.Singletons.Internal.~> *) (q :: k1 Data.Singletons.Internal.~> *). (Data.Type.Predicate.Decide p, Data.Type.Predicate.Decide q) => Data.Type.Predicate.Decide (p Data.Type.Predicate.&&& q)
 instance forall k1 (p :: k1 Data.Singletons.Internal.~> *). Data.Type.Predicate.Decide p => Data.Type.Predicate.Decide (Data.Type.Predicate.Not p)
-instance forall k (a :: k). (Data.Singletons.Decide.SDecide k, Data.Singletons.Internal.SingI a) => Data.Type.Predicate.Decide (Data.Type.Predicate.TyPred ((Data.Type.Equality.:~:) a))
+instance forall k (a :: k). (Data.Singletons.Decide.SDecide k, Data.Singletons.Internal.SingI a) => Data.Type.Predicate.Decide (Data.Type.Predicate.EqualTo a)
 instance Data.Type.Predicate.Decide Data.Type.Predicate.Evident
 instance Data.Type.Predicate.Taken Data.Type.Predicate.Evident
 
@@ -192,6 +200,10 @@ instance forall k (f :: * -> *) (p :: k Data.Singletons.Internal.~> *). (Data.Ty
 instance Data.Type.Universe.Universe f => Data.Type.Predicate.TFunctor (Data.Type.Universe.Any f)
 instance Data.Type.Universe.Universe f => Data.Type.Predicate.TFunctor (Data.Type.Universe.All f)
 instance Data.Type.Universe.Universe f => Data.Type.Predicate.DFunctor (Data.Type.Universe.All f)
+
+module Data.Type.Search
+instance forall k1 v (p :: k1 -> v Data.Singletons.Internal.~> *). Data.Type.Search.Locate v p => Data.Type.Predicate.Taken (Data.Type.Search.Found v p)
+instance forall k1 v (p :: k1 -> v Data.Singletons.Internal.~> *). Data.Type.Search.Search v p => Data.Type.Predicate.Decide (Data.Type.Search.Found v p)
 
 module Data.Type.Quantification
 data Any f :: (k ~> Type) -> (f k ~> Type)
