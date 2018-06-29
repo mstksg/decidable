@@ -16,7 +16,7 @@
 {-# LANGUAGE UndecidableInstances   #-}
 
 module Data.Type.Predicate (
-    Predicate, TyPred, Wit(..)
+    Predicate, TyPred, Evident, Wit(..)
   , Test, type (-?>), type (-?>#)
   , Given, type (-->), type (-->#)
   , Decide(..), Taken(..)
@@ -40,6 +40,13 @@ type Predicate k = k ~> Type
 -- 'TyPred' :: (k -> 'Type') -> 'Predicate' k
 -- @
 type TyPred = TyCon1
+
+-- | The always-true predicate.
+--
+-- @
+-- 'Evident' :: Predicate k
+-- @
+type Evident = TyPred Sing
 
 newtype Wit p a = Wit { getWit :: p @@ a }
 
@@ -74,8 +81,8 @@ class TFunctor f where
 instance (SDecide k, SingI (a :: k)) => Decide (TyPred ((:~:) a)) where
     decide = (sing %~)
 
-instance Decide (TyPred Sing)
-instance Taken (TyPred Sing) where
+instance Decide Evident
+instance Taken Evident where
     taken = id
 
 data Not :: (k ~> Type) -> (k ~> Type)
