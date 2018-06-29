@@ -188,7 +188,7 @@ pickElem = case decide @(Any f (TyPred ((:~:) a))) sing of
 
 -- | 'foldMapUni' but with access to the index.
 ifoldMapUni
-    :: forall f k (as :: f k) m. (Universe f, SingI as, Monoid m)
+    :: forall f k (as :: f k) m. (Universe f, Monoid m)
     => (forall a. Elem f as a -> Sing a -> m)
     -> Sing as
     -> m
@@ -196,7 +196,7 @@ ifoldMapUni f = getConst . igenAllA (\i -> Const . f i)
 
 -- | A 'foldMap' over all items in a collection.
 foldMapUni
-    :: forall f k (as :: f k) m. (Universe f, SingI as, Monoid m)
+    :: forall f k (as :: f k) m. (Universe f, Monoid m)
     => (forall (a :: k). Sing a -> m)
     -> Sing as
     -> m
