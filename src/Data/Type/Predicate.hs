@@ -16,7 +16,8 @@
 {-# LANGUAGE UndecidableInstances   #-}
 
 module Data.Type.Predicate (
-    Predicate, TyPred, Evident, Wit(..)
+    Predicate, Wit(..)
+  , TyPred, Evident, EqualTo, BoolPred
   , Test, type (-?>), type (-?>#)
   , Given, type (-->), type (-->#)
   , Decide(..), Taken(..)
@@ -30,6 +31,7 @@ module Data.Type.Predicate (
 
 import           Data.Kind
 import           Data.Singletons
+import           Data.Singletons.Prelude hiding (Not)
 import           Data.Singletons.Decide
 
 type Predicate k = k ~> Type
@@ -47,6 +49,15 @@ type TyPred = TyCon1
 -- 'Evident' :: Predicate k
 -- @
 type Evident = TyPred Sing
+
+type EqualTo a = TyCon1 ((:~:) a)
+
+-- | Convert a propositional predicate into a 'Predicate'
+--
+-- @
+-- 'BoolPred' :: (k ~> Bool) -> Predicate k
+-- @
+type BoolPred p = EqualTo 'True .@#@$$$ p
 
 newtype Wit p a = Wit { getWit :: p @@ a }
 
@@ -78,7 +89,7 @@ class DFunctor f where
 class TFunctor f where
     tmap :: forall p q. (p --> q) -> (f p --> f q)
 
-instance (SDecide k, SingI (a :: k)) => Decide (TyPred ((:~:) a)) where
+instance (SDecide k, SingI (a :: k)) => Decide (EqualTo a) where
     decide = (sing %~)
 
 instance Decide Evident
