@@ -18,6 +18,13 @@ type Predicate k = k ~> Type
 --   <a>TyPred</a> :: (k -&gt; <a>Type</a>) -&gt; <a>Predicate</a> k
 --   </pre>
 type TyPred = TyCon1
+
+-- | The always-true predicate.
+--   
+--   <pre>
+--   <a>Evident</a> :: Predicate k
+--   </pre>
+type Evident = TyPred Sing
 newtype Wit p a
 Wit :: p @@ a -> Wit p a
 [getWit] :: Wit p a -> p @@ a
@@ -49,8 +56,8 @@ instance forall k1 (p :: k1 Data.Singletons.Internal.~> *) (q :: k1 Data.Singlet
 instance forall k1 (p :: k1 Data.Singletons.Internal.~> *) (q :: k1 Data.Singletons.Internal.~> *). (Data.Type.Predicate.Decide p, Data.Type.Predicate.Decide q) => Data.Type.Predicate.Decide (p Data.Type.Predicate.&&& q)
 instance forall k1 (p :: k1 Data.Singletons.Internal.~> *). Data.Type.Predicate.Decide p => Data.Type.Predicate.Decide (Data.Type.Predicate.Not p)
 instance forall k (a :: k). (Data.Singletons.Decide.SDecide k, Data.Singletons.Internal.SingI a) => Data.Type.Predicate.Decide (Data.Type.Predicate.TyPred ((Data.Type.Equality.:~:) a))
-instance Data.Type.Predicate.Decide (Data.Type.Predicate.TyPred Data.Singletons.Internal.Sing)
-instance Data.Type.Predicate.Taken (Data.Type.Predicate.TyPred Data.Singletons.Internal.Sing)
+instance Data.Type.Predicate.Decide Data.Type.Predicate.Evident
+instance Data.Type.Predicate.Taken Data.Type.Predicate.Evident
 
 module Data.Type.Universe
 
