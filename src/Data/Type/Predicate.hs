@@ -16,23 +16,28 @@
 {-# LANGUAGE UndecidableInstances   #-}
 
 module Data.Type.Predicate (
+    -- * Predicates
     Predicate, Wit(..)
+    -- ** Construct Predicates
   , TyPred, Evident, EqualTo, BoolPred
-  , Test, type (-?>), type (-?>#)
-  , Given, type (-->), type (-->#)
-  , Decide(..), Taken(..)
-  , DFunctor(..), TFunctor(..)
+    -- ** Manipulate predicates
   , type Not, proveNot
   , type (&&&), proveAnd
   , type (|||), proveOr
   , type (^^^), proveXor
+    -- * Decidable Predicates
+  , Test, type (-?>), type (-?>#)
+  , Given, type (-->), type (-->#)
+  , Decide(..), Taken(..)
+  , DFunctor(..), TFunctor(..)
   , compImpl
   ) where
 
 import           Data.Kind
 import           Data.Singletons
-import           Data.Singletons.Prelude hiding (Not)
 import           Data.Singletons.Decide
+import           Data.Singletons.Prelude hiding (Not)
+import           Data.Singletons.Sigma
 
 type Predicate k = k ~> Type
 
@@ -58,6 +63,11 @@ type EqualTo a = TyCon1 ((:~:) a)
 -- 'BoolPred' :: (k ~> Bool) -> Predicate k
 -- @
 type BoolPred p = EqualTo 'True .@#@$$$ p
+
+-- | Convert a /parameterized/ predicate, yield a predicate on the
+-- parameter.
+data Found v :: (k -> Predicate v) -> Predicate k
+type instance Apply (Found v p) a = Σ v (p a)
 
 newtype Wit p a = Wit { getWit :: p @@ a }
 
@@ -165,39 +175,4 @@ compImpl
     -> q --> r
     -> p --> r
 compImpl f g s = g s . f s
-
--- data WithWit :: (k ~> Type) -> (Type ~> Type)
--- type instance Apply (WithWit w) a = w
-
--- type w -?> p = TestF _ p
--- forall a. Sing a -> w @@ a -> Decision (p @@ a)
-
--- type w -?> p = forall a. Sing a -> w @@ a -> Decision (p @@ a)
-
--- type w  -?> p = forall a. w a -> f @@ (p @@ a)
-
--- type TestF f w p = forall a. w a -> f @@ (p @@ a)
--- type Test w p = TestF (TyCon1 Decision) w p
-
--- type w --> p = TestF IdSym0 w p
--- infixr 2 -->
--- type w -?> p = Test w p
--- infixr 2 -?>
-
--- class Decide w p | p -> w where
---     decide :: w -?> p
-
--- -- | maybe can be changed to fmap?
--- class Imply w p | p -> w where
---     imply :: w --> p
-
--- data WitC c p a = c a => WitC { getWitC :: p @@ a }
-
--- data Arg p a = SingI a => Arg { getArg :: p @@ a }
-
--- data (==>) :: (k -> Constraint) -> (k ~> Type) -> (k ~> Type)
--- type instance Apply (c ==> p) a = WitC c p a
-
--- -- instance Decide (Wit (TyCon1 Decision .@#@$$$ p)) p where
--- --     decide (Wit x) = x
 
