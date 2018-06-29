@@ -115,10 +115,10 @@ genAll :: forall f k (p :: k ~> Type). Universe f => Given p -> Given (All f p)
 igenAll :: forall f k (p :: k ~> Type) (as :: f k). Universe f => (forall a. Elem f as a -> Sing a -> p @@ a) -> (Sing as -> All f p @@ as)
 
 -- | A <a>foldMap</a> over all items in a collection.
-foldMapUni :: forall f k (as :: f k) m. (Universe f, SingI as, Monoid m) => (forall (a :: k). Sing a -> m) -> Sing as -> m
+foldMapUni :: forall f k (as :: f k) m. (Universe f, Monoid m) => (forall (a :: k). Sing a -> m) -> Sing as -> m
 
 -- | <a>foldMapUni</a> but with access to the index.
-ifoldMapUni :: forall f k (as :: f k) m. (Universe f, SingI as, Monoid m) => (forall a. Elem f as a -> Sing a -> m) -> Sing as -> m
+ifoldMapUni :: forall f k (as :: f k) m. (Universe f, Monoid m) => (forall a. Elem f as a -> Sing a -> m) -> Sing as -> m
 
 -- | Extract the item from the container witnessed by the <a>Elem</a>
 select :: forall f as a. Universe f => Elem f as a -> Sing as -> Sing a
@@ -259,23 +259,28 @@ WitSubset :: forall a. Elem f as a -> Decision (p @@ a) -> WitSubset f p
 -- | Create a <a>Subset</a> from a predicate.
 makeSubset :: forall f k p (as :: f k). Universe f => (forall a. Elem f as a -> Sing a -> Decision (p @@ a)) -> Sing as -> Subset f p @@ as
 
--- | Turn a <a>Subset</a> into a list of satisfied predicates.
-subsetToList :: forall f k p (as :: f k). (Universe f, SingI as) => Subset f p @@ as -> [Any f p @@ as]
+-- | Turn a <a>Subset</a> into a list (or any <a>Alternative</a>) of
+--   satisfied predicates.
+subsetToList :: forall f p t. (Universe f, Alternative t) => (Subset f p --># Any f p) t
 
 -- | Restrict a <a>Subset</a> to a single (arbitrary) member, or fail if
 --   none exists.
-subsetToAny :: forall f k p (as :: f k). (Universe f, SingI as) => Subset f p @@ as -> Decision (Any f p @@ as)
+subsetToAny :: forall f p. Universe f => Subset f p -?> Any f p
 
 -- | Test if a subset is equal to the entire original collection
-subsetToAll :: forall f k p (as :: f k). (Universe f, SingI as) => Subset f p @@ as -> Decision (All f p @@ as)
+subsetToAll :: forall f p. Universe f => Subset f p -?> All f p
 
 -- | Subset intersection
-intersection :: forall f k p q (as :: f k). () => Subset f p @@ as -> Subset f q @@ as -> Subset f (p &&& q) @@ as
+intersection :: forall f p q. () => ((Subset f p &&& Subset f q) --> Subset f (p &&& q))
 
 -- | Subset union
-union :: forall f k p q (as :: f k). () => Subset f p @@ as -> Subset f q @@ as -> Subset f (p ||| q) @@ as
+union :: forall f p q. () => ((Subset f p &&& Subset f q) --> Subset f (p ||| q))
+symDiff :: forall f p q. () => ((Subset f p &&& Subset f q) --> Subset f (p ^^^ q))
 
 -- | Combine two subsets based on a decision function
-mergeSubset :: forall f k p q r (as :: f k). () => (forall a. Elem f as a -> Decision (p @@ a) -> Decision (q @@ a) -> Decision (r @@ a)) -> Subset f p @@ as -> Subset f q @@ as -> Subset f r @@ as
+mergeSubset :: forall f k p q r (as :: f k). () => (forall a. Decision (p @@ a) -> Decision (q @@ a) -> Decision (r @@ a)) -> Subset f p @@ as -> Subset f q @@ as -> Subset f r @@ as
+
+-- | Combine two subsets based on a decision function
+imergeSubset :: forall f k p q r (as :: f k). () => (forall a. Elem f as a -> Decision (p @@ a) -> Decision (q @@ a) -> Decision (r @@ a)) -> Subset f p @@ as -> Subset f q @@ as -> Subset f r @@ as
 instance forall k (f :: * -> *) (p :: k Data.Singletons.Internal.~> *). (Data.Type.Universe.Universe f, Data.Type.Predicate.Decide p) => Data.Type.Predicate.Decide (Data.Type.Quantification.Subset f p)
 instance forall k (f :: * -> *) (p :: k Data.Singletons.Internal.~> *). (Data.Type.Universe.Universe f, Data.Type.Predicate.Decide p) => Data.Type.Predicate.Taken (Data.Type.Quantification.Subset f p)
