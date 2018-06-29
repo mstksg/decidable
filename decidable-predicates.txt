@@ -39,7 +39,7 @@ type BoolPred p = EqualTo  'True .@#@$$$ p
 
 -- | Convert a <i>parameterized</i> predicate, yield a predicate on the
 --   parameter.
-data Found v :: (k -> Predicate v) -> Predicate k
+data Found :: (k -> Predicate v) -> Predicate k
 data Not :: (k ~> Type) -> (k ~> Type)
 proveNot :: forall p a. () => Decision (p @@ a) -> Decision (Not p @@ a)
 data (&&&) :: (k ~> Type) -> (k ~> Type) -> (k ~> Type)
