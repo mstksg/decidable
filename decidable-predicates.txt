@@ -23,6 +23,10 @@ Wit :: p @@ a -> Wit p a
 type TyPred = (TyCon1 :: (k -> Type) -> Predicate k)
 
 -- | The always-true predicate.
+--   
+--   <pre>
+--   <a>Evident</a> :: <a>Predicate</a> k
+--   </pre>
 type Evident = (TyPred Sing :: Predicate k)
 type EqualTo a = TyCon1 ((:~:) a)
 
@@ -32,6 +36,12 @@ type EqualTo a = TyCon1 ((:~:) a)
 --   <a>BoolPred</a> :: (k ~&gt; Bool) -&gt; Predicate k
 --   </pre>
 type BoolPred (p :: k ~> Bool) = (EqualTo  'True .@#@$$$ p :: Predicate k)
+
+-- | Pre-compose a function to a predicate
+--   
+--   <pre>
+--   <a>PMap</a> :: (k ~&gt; j) -&gt; <a>Predicate</a> j -&gt; Predicate k
+--   </pre>
 type PMap (f :: k ~> j) (p :: Predicate j) = (p .@#@$$$ f :: Predicate k)
 data Not :: (k ~> Type) -> (k ~> Type)
 proveNot :: forall p a. () => Decision (p @@ a) -> Decision (Not p @@ a)
@@ -203,75 +213,6 @@ instance Data.Type.Universe.Universe f => Data.Type.Predicate.TFunctor (Data.Typ
 instance Data.Type.Universe.Universe f => Data.Type.Predicate.TFunctor (Data.Type.Universe.All f)
 instance Data.Type.Universe.Universe f => Data.Type.Predicate.DFunctor (Data.Type.Universe.All f)
 
-module Data.Type.Subset
-data Subset f :: (k ~> Type) -> (f k ~> Type)
-
--- | A <tt><a>Subset</a> p as</tt> describes a <i>decidable</i> subset of
---   type-level collection <tt>as</tt>.
-newtype WitSubset f p (as :: f k)
-WitSubset :: forall a. Elem f as a -> Decision (p @@ a) -> WitSubset f p
-[runWitSubset] :: WitSubset f p -> forall a. Elem f as a -> Decision (p @@ a)
-
--- | Create a <a>Subset</a> from a predicate.
-makeSubset :: forall f k p (as :: f k). Universe f => (forall a. Elem f as a -> Sing a -> Decision (p @@ a)) -> Sing as -> Subset f p @@ as
-
--- | Turn a <a>Subset</a> into a list (or any <a>Alternative</a>) of
---   satisfied predicates.
-subsetToList :: forall f p t. (Universe f, Alternative t) => (Subset f p --># Any f p) t
-
--- | Restrict a <a>Subset</a> to a single (arbitrary) member, or fail if
---   none exists.
-subsetToAny :: forall f p. Universe f => Subset f p -?> Any f p
-
--- | Test if a subset is equal to the entire original collection
-subsetToAll :: forall f p. Universe f => Subset f p -?> All f p
-
--- | Subset intersection
-intersection :: forall f p q. () => ((Subset f p &&& Subset f q) --> Subset f (p &&& q))
-
--- | Subset union
-union :: forall f p q. () => ((Subset f p &&& Subset f q) --> Subset f (p ||| q))
-symDiff :: forall f p q. () => ((Subset f p &&& Subset f q) --> Subset f (p ^^^ q))
-
--- | Combine two subsets based on a decision function
-mergeSubset :: forall f k p q r (as :: f k). () => (forall a. Decision (p @@ a) -> Decision (q @@ a) -> Decision (r @@ a)) -> Subset f p @@ as -> Subset f q @@ as -> Subset f r @@ as
-
--- | Combine two subsets based on a decision function
-imergeSubset :: forall f k p q r (as :: f k). () => (forall a. Elem f as a -> Decision (p @@ a) -> Decision (q @@ a) -> Decision (r @@ a)) -> Subset f p @@ as -> Subset f q @@ as -> Subset f r @@ as
-instance forall k (f :: * -> *) (p :: k Data.Singletons.Internal.~> *). (Data.Type.Universe.Universe f, Data.Type.Predicate.Decide p) => Data.Type.Predicate.Decide (Data.Type.Subset.Subset f p)
-instance forall k (f :: * -> *) (p :: k Data.Singletons.Internal.~> *). (Data.Type.Universe.Universe f, Data.Type.Predicate.Decide p) => Data.Type.Predicate.Decide_ (Data.Type.Subset.Subset f p)
-
-module Data.Type.Search
-
--- | A parameterized predicate.
-type ParamPred k v = k -> Predicate v
-
--- | Convert a parameterized predicate into a predicate on the parameter
-data Found :: ParamPred k v -> Predicate k
-
--- | Flip the arguments of a <a>ParamPred</a>.
-data FlipPP :: ParamPred v k -> ParamPred k v
-data PPMap :: (k ~> j) -> ParamPred j v -> ParamPred k v
-class Search p
-search :: Search p => Test (Found p)
-search :: (Search p, Search_ p) => Test (Found p)
-class Search p => Search_ p
-search_ :: Search_ p => Test_ (Found p)
-
--- | <tt><a>AnyMatch</a> f</tt> takes a parmaeterized predicate on
---   <tt>k</tt> (testing for a <tt>v</tt>) and turns it into a
---   parameterized predicate on <tt>f k</tt> (testing for a <tt>v</tt>).
---   
---   An <tt><a>AnyMatch</a> f p as</tt> is a predicate taking an argument
---   <tt>a</tt> and testing if <tt>p a :: <a>Predicate</a> k</tt> is
---   satisfied for any item in <tt>as :: f k</tt>.
-data AnyMatch f :: ParamPred k v -> ParamPred (f k) v
-instance forall k v (f :: * -> *) (p :: Data.Type.Search.ParamPred k v). (Data.Type.Universe.Universe f, Data.Type.Search.Search p) => Data.Type.Search.Search (Data.Type.Search.AnyMatch f p)
-instance forall k1 v (p :: Data.Type.Search.ParamPred k1 v). Data.Type.Search.Search p => Data.Type.Predicate.Decide (Data.Type.Search.Found p)
-instance forall k1 v (p :: Data.Type.Search.ParamPred k1 v). Data.Type.Search.Search_ p => Data.Type.Predicate.Decide_ (Data.Type.Search.Found p)
-instance forall j v k (p :: Data.Type.Search.ParamPred j v) (f :: k Data.Singletons.Internal.~> j). (Data.Type.Search.Search p, Data.Singletons.Internal.SingI f) => Data.Type.Search.Search (Data.Type.Search.PPMap f p)
-instance forall j v k (p :: Data.Type.Search.ParamPred j v) (f :: k Data.Singletons.Internal.~> j). (Data.Type.Search.Search_ p, Data.Singletons.Internal.SingI f) => Data.Type.Search.Search_ (Data.Type.Search.PPMap f p)
-
 module Data.Type.Quantification
 data Any f :: (k ~> Type) -> (f k ~> Type)
 
@@ -334,3 +275,76 @@ decideEntailAll :: forall f p q. Universe f => p -?> q -> All f p -?> All f q
 --   used to test for <tt>q a</tt>, then we can test all <tt>a</tt>s for
 --   <tt>q a</tt>.
 idecideEntailAll :: forall f p q as. (Universe f, SingI as) => (forall a. Elem f as a -> p @@ a -> Decision (q @@ a)) -> All f p @@ as -> Decision (All f q @@ as)
+
+module Data.Type.Predicate.Param
+
+-- | A parameterized predicate.
+type ParamPred k v = k -> Predicate v
+
+-- | Convert a parameterized predicate into a predicate on the parameter
+data Found :: ParamPred k v -> Predicate k
+
+-- | Flip the arguments of a <a>ParamPred</a>.
+data FlipPP :: ParamPred v k -> ParamPred k v
+
+-- | Pre-compose a function to a <a>ParamPred</a>. Is essentially
+--   <tt><a>flip</a> (<a>.</a>)</tt>, but unfortunately defunctionalization
+--   doesn't work too well with that definition.
+data PPMap :: (k ~> j) -> ParamPred j v -> ParamPred k v
+class Search p
+search :: Search p => Test (Found p)
+search :: (Search p, Search_ p) => Test (Found p)
+class Search p => Search_ p
+search_ :: Search_ p => Test_ (Found p)
+
+-- | <tt><a>AnyMatch</a> f</tt> takes a parmaeterized predicate on
+--   <tt>k</tt> (testing for a <tt>v</tt>) and turns it into a
+--   parameterized predicate on <tt>f k</tt> (testing for a <tt>v</tt>).
+--   
+--   An <tt><a>AnyMatch</a> f p as</tt> is a predicate taking an argument
+--   <tt>a</tt> and testing if <tt>p a :: <a>Predicate</a> k</tt> is
+--   satisfied for any item in <tt>as :: f k</tt>.
+data AnyMatch f :: ParamPred k v -> ParamPred (f k) v
+instance forall k v (f :: * -> *) (p :: Data.Type.Predicate.Param.ParamPred k v). (Data.Type.Universe.Universe f, Data.Type.Predicate.Param.Search p) => Data.Type.Predicate.Param.Search (Data.Type.Predicate.Param.AnyMatch f p)
+instance forall k1 v (p :: Data.Type.Predicate.Param.ParamPred k1 v). Data.Type.Predicate.Param.Search p => Data.Type.Predicate.Decide (Data.Type.Predicate.Param.Found p)
+instance forall k1 v (p :: Data.Type.Predicate.Param.ParamPred k1 v). Data.Type.Predicate.Param.Search_ p => Data.Type.Predicate.Decide_ (Data.Type.Predicate.Param.Found p)
+instance forall j v k (p :: Data.Type.Predicate.Param.ParamPred j v) (f :: k Data.Singletons.Internal.~> j). (Data.Type.Predicate.Param.Search p, Data.Singletons.Internal.SingI f) => Data.Type.Predicate.Param.Search (Data.Type.Predicate.Param.PPMap f p)
+instance forall j v k (p :: Data.Type.Predicate.Param.ParamPred j v) (f :: k Data.Singletons.Internal.~> j). (Data.Type.Predicate.Param.Search_ p, Data.Singletons.Internal.SingI f) => Data.Type.Predicate.Param.Search_ (Data.Type.Predicate.Param.PPMap f p)
+
+module Data.Type.Universe.Subset
+data Subset f :: (k ~> Type) -> (f k ~> Type)
+
+-- | A <tt><a>Subset</a> p as</tt> describes a <i>decidable</i> subset of
+--   type-level collection <tt>as</tt>.
+newtype WitSubset f p (as :: f k)
+WitSubset :: forall a. Elem f as a -> Decision (p @@ a) -> WitSubset f p
+[runWitSubset] :: WitSubset f p -> forall a. Elem f as a -> Decision (p @@ a)
+
+-- | Create a <a>Subset</a> from a predicate.
+makeSubset :: forall f k p (as :: f k). Universe f => (forall a. Elem f as a -> Sing a -> Decision (p @@ a)) -> Sing as -> Subset f p @@ as
+
+-- | Turn a <a>Subset</a> into a list (or any <a>Alternative</a>) of
+--   satisfied predicates.
+subsetToList :: forall f p t. (Universe f, Alternative t) => (Subset f p --># Any f p) t
+
+-- | Restrict a <a>Subset</a> to a single (arbitrary) member, or fail if
+--   none exists.
+subsetToAny :: forall f p. Universe f => Subset f p -?> Any f p
+
+-- | Test if a subset is equal to the entire original collection
+subsetToAll :: forall f p. Universe f => Subset f p -?> All f p
+
+-- | Subset intersection
+intersection :: forall f p q. () => ((Subset f p &&& Subset f q) --> Subset f (p &&& q))
+
+-- | Subset union
+union :: forall f p q. () => ((Subset f p &&& Subset f q) --> Subset f (p ||| q))
+symDiff :: forall f p q. () => ((Subset f p &&& Subset f q) --> Subset f (p ^^^ q))
+
+-- | Combine two subsets based on a decision function
+mergeSubset :: forall f k p q r (as :: f k). () => (forall a. Decision (p @@ a) -> Decision (q @@ a) -> Decision (r @@ a)) -> Subset f p @@ as -> Subset f q @@ as -> Subset f r @@ as
+
+-- | Combine two subsets based on a decision function
+imergeSubset :: forall f k p q r (as :: f k). () => (forall a. Elem f as a -> Decision (p @@ a) -> Decision (q @@ a) -> Decision (r @@ a)) -> Subset f p @@ as -> Subset f q @@ as -> Subset f r @@ as
+instance forall k (f :: * -> *) (p :: k Data.Singletons.Internal.~> *). (Data.Type.Universe.Universe f, Data.Type.Predicate.Decide p) => Data.Type.Predicate.Decide (Data.Type.Universe.Subset.Subset f p)
+instance forall k (f :: * -> *) (p :: k Data.Singletons.Internal.~> *). (Data.Type.Universe.Universe f, Data.Type.Predicate.Decide p) => Data.Type.Predicate.Decide_ (Data.Type.Universe.Subset.Subset f p)
