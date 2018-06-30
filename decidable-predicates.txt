@@ -20,14 +20,10 @@ Wit :: p @@ a -> Wit p a
 --   <pre>
 --   <a>TyPred</a> :: (k -&gt; <a>Type</a>) -&gt; <a>Predicate</a> k
 --   </pre>
-type TyPred = TyCon1
+type TyPred = (TyCon1 :: (k -> Type) -> Predicate k)
 
 -- | The always-true predicate.
---   
---   <pre>
---   <a>Evident</a> :: Predicate k
---   </pre>
-type Evident = TyPred Sing
+type Evident = (TyPred Sing :: Predicate k)
 type EqualTo a = TyCon1 ((:~:) a)
 
 -- | Convert a propositional predicate into a <a>Predicate</a>
@@ -35,7 +31,8 @@ type EqualTo a = TyCon1 ((:~:) a)
 --   <pre>
 --   <a>BoolPred</a> :: (k ~&gt; Bool) -&gt; Predicate k
 --   </pre>
-type BoolPred p = EqualTo  'True .@#@$$$ p
+type BoolPred (p :: k ~> Bool) = (EqualTo  'True .@#@$$$ p :: Predicate k)
+type PMap (f :: k ~> j) (p :: Predicate j) = (p .@#@$$$ f :: Predicate k)
 data Not :: (k ~> Type) -> (k ~> Type)
 proveNot :: forall p a. () => Decision (p @@ a) -> Decision (Not p @@ a)
 data (&&&) :: (k ~> Type) -> (k ~> Type) -> (k ~> Type)
@@ -66,6 +63,8 @@ instance forall k1 (p :: k1 Data.Singletons.Internal.~> *). Data.Type.Predicate.
 instance forall k (a :: k). (Data.Singletons.Decide.SDecide k, Data.Singletons.Internal.SingI a) => Data.Type.Predicate.Decide (Data.Type.Predicate.EqualTo a)
 instance Data.Type.Predicate.Decide Data.Type.Predicate.Evident
 instance Data.Type.Predicate.Decide_ Data.Type.Predicate.Evident
+instance forall k1 b6989586621679662928 (f :: b6989586621679662928 Data.Singletons.Internal.~> *) (g :: Data.Singletons.Internal.TyFun k1 b6989586621679662928 -> *). (Data.Type.Predicate.Decide f, Data.Singletons.Internal.SingI g) => Data.Type.Predicate.Decide (f Data.Singletons.Prelude.Base..@#@$$$ g)
+instance forall k1 b6989586621679662928 (f :: b6989586621679662928 Data.Singletons.Internal.~> *) (g :: Data.Singletons.Internal.TyFun k1 b6989586621679662928 -> *). (Data.Type.Predicate.Decide_ f, Data.Singletons.Internal.SingI g) => Data.Type.Predicate.Decide_ (f Data.Singletons.Prelude.Base..@#@$$$ g)
 
 module Data.Type.Universe
 
