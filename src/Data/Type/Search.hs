@@ -12,7 +12,7 @@
 module Data.Type.Search (
     ParamPred
   , Found, FlipPP
-  , Search(..)
+  , Search(..), Search_(..)
   , AnyMatch
   ) where
 
