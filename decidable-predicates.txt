@@ -36,10 +36,6 @@ type EqualTo a = TyCon1 ((:~:) a)
 --   <a>BoolPred</a> :: (k ~&gt; Bool) -&gt; Predicate k
 --   </pre>
 type BoolPred p = EqualTo  'True .@#@$$$ p
-
--- | Convert a <i>parameterized</i> predicate, yield a predicate on the
---   parameter.
-data Found :: (k -> Predicate v) -> Predicate k
 data Not :: (k ~> Type) -> (k ~> Type)
 proveNot :: forall p a. () => Decision (p @@ a) -> Decision (Not p @@ a)
 data (&&&) :: (k ~> Type) -> (k ~> Type) -> (k ~> Type)
@@ -242,6 +238,30 @@ mergeSubset :: forall f k p q r (as :: f k). () => (forall a. Decision (p @@ a) 
 imergeSubset :: forall f k p q r (as :: f k). () => (forall a. Elem f as a -> Decision (p @@ a) -> Decision (q @@ a) -> Decision (r @@ a)) -> Subset f p @@ as -> Subset f q @@ as -> Subset f r @@ as
 instance forall k (f :: * -> *) (p :: k Data.Singletons.Internal.~> *). (Data.Type.Universe.Universe f, Data.Type.Predicate.Decide p) => Data.Type.Predicate.Decide (Data.Type.Subset.Subset f p)
 instance forall k (f :: * -> *) (p :: k Data.Singletons.Internal.~> *). (Data.Type.Universe.Universe f, Data.Type.Predicate.Decide p) => Data.Type.Predicate.Taken (Data.Type.Subset.Subset f p)
+
+module Data.Type.Search
+
+-- | A parameterized predicate.
+type ParamPred k v = k -> Predicate v
+
+-- | Convert a parameterized predicate into a predicate on the parameter
+data Found :: ParamPred k v -> Predicate k
+
+-- | Flip the arguments of a <a>ParamPred</a>.
+data FlipPP :: ParamPred v k -> ParamPred k v
+class Search (p :: ParamPred k v)
+search :: Search p => Test (Found p)
+
+-- | <tt><a>AnyMatch</a> f</tt> takes a parmaeterized predicate on
+--   <tt>k</tt> (testing for a <tt>v</tt>) and turns it into a
+--   parameterized predicate on <tt>f k</tt> (testing for a <tt>v</tt>).
+--   
+--   An <tt><a>AnyMatch</a> f p as</tt> is a predicate taking an argument
+--   <tt>a</tt> and testing if <tt>p a :: <a>Predicate</a> k</tt> is
+--   satisfied for any item in <tt>as :: f k</tt>.
+data AnyMatch f :: ParamPred k v -> ParamPred (f k) v
+instance forall k v (f :: * -> *) (p :: Data.Type.Search.ParamPred k v). (Data.Type.Universe.Universe f, Data.Type.Search.Search p) => Data.Type.Search.Search (Data.Type.Search.AnyMatch f p)
+instance forall k1 v (p :: Data.Type.Search.ParamPred k1 v). Data.Type.Search.Search p => Data.Type.Predicate.Decide (Data.Type.Search.Found p)
 
 module Data.Type.Quantification
 data Any f :: (k ~> Type) -> (f k ~> Type)
