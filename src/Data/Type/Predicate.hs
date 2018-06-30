@@ -19,7 +19,7 @@ module Data.Type.Predicate (
     -- * Predicates
     Predicate, Wit(..)
     -- ** Construct Predicates
-  , TyPred, Evident, EqualTo, BoolPred, Found
+  , TyPred, Evident, EqualTo, BoolPred
     -- ** Manipulate predicates
   , type Not, proveNot
   , type (&&&), proveAnd
@@ -63,11 +63,6 @@ type EqualTo a = TyCon1 ((:~:) a)
 -- 'BoolPred' :: (k ~> Bool) -> Predicate k
 -- @
 type BoolPred p = EqualTo 'True .@#@$$$ p
-
--- | Convert a /parameterized/ predicate, yield a predicate on the
--- parameter.
-data Found :: (k -> Predicate v) -> Predicate k
-type instance Apply (Found (p :: k -> Predicate v)) a = Σ v (p a)
 
 newtype Wit p a = Wit { getWit :: p @@ a }
 
