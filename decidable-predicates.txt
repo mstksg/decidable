@@ -251,6 +251,7 @@ data Found :: ParamPred k v -> Predicate k
 
 -- | Flip the arguments of a <a>ParamPred</a>.
 data FlipPP :: ParamPred v k -> ParamPred k v
+data PPMap :: (k ~> j) -> ParamPred j v -> ParamPred k v
 class Search p
 search :: Search p => Test (Found p)
 search :: (Search p, Search_ p) => Test (Found p)
