@@ -21,6 +21,7 @@ module Data.Type.Predicate (
     -- ** Construct Predicates
   , TyPred, Evident, EqualTo, BoolPred
     -- ** Manipulate predicates
+  , PMap
   , type Not, proveNot
   , type (&&&), proveAnd
   , type (|||), proveOr
@@ -45,14 +46,10 @@ type Predicate k = k ~> Type
 -- @
 -- 'TyPred' :: (k -> 'Type') -> 'Predicate' k
 -- @
-type TyPred = TyCon1
+type TyPred = (TyCon1 :: (k -> Type) -> Predicate k)
 
 -- | The always-true predicate.
---
--- @
--- 'Evident' :: Predicate k
--- @
-type Evident = TyPred Sing
+type Evident = (TyPred Sing :: Predicate k)
 
 type EqualTo a = TyCon1 ((:~:) a)
 
@@ -61,7 +58,9 @@ type EqualTo a = TyCon1 ((:~:) a)
 -- @
 -- 'BoolPred' :: (k ~> Bool) -> Predicate k
 -- @
-type BoolPred p = EqualTo 'True .@#@$$$ p
+type BoolPred (p :: k ~> Bool) = (EqualTo 'True .@#@$$$ p :: Predicate k)
+
+type PMap (f :: k ~> j) (p :: Predicate j) = (p .@#@$$$ f :: Predicate k)
 
 newtype Wit p a = Wit { getWit :: p @@ a }
 
@@ -96,9 +95,15 @@ class TFunctor f where
 instance (SDecide k, SingI (a :: k)) => Decide (EqualTo a) where
     decide = (sing %~)
 
-instance Decide Evident
+instance Decide  Evident
 instance Decide_ Evident where
     decide_ = id
+
+instance (Decide f, SingI g) => Decide (f .@#@$$$ g) where
+    decide = decide @f . ((sing :: Sing g) @@) 
+
+instance (Decide_ f, SingI g) => Decide_ (f .@#@$$$ g) where
+    decide_ = decide_ @f . ((sing :: Sing g) @@) 
 
 data Not :: (k ~> Type) -> (k ~> Type)
 type instance Apply (Not p) a = Refuted (p @@ a)
