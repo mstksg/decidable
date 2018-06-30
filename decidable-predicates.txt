@@ -255,6 +255,8 @@ data FlipPP :: ParamPred v k -> ParamPred k v
 class Search (p :: ParamPred k v)
 search :: Search p => Test (Found p)
 search :: (Search p, Search_ p) => Test (Found p)
+class Search p => Search_ (p :: ParamPred k v)
+search_ :: Search_ p => Test_ (Found p)
 
 -- | <tt><a>AnyMatch</a> f</tt> takes a parmaeterized predicate on
 --   <tt>k</tt> (testing for a <tt>v</tt>) and turns it into a
