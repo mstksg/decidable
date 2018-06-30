@@ -49,6 +49,10 @@ type Predicate k = k ~> Type
 type TyPred = (TyCon1 :: (k -> Type) -> Predicate k)
 
 -- | The always-true predicate.
+--
+-- @
+-- 'Evident' :: 'Predicate' k
+-- @
 type Evident = (TyPred Sing :: Predicate k)
 
 type EqualTo a = TyCon1 ((:~:) a)
@@ -60,6 +64,11 @@ type EqualTo a = TyCon1 ((:~:) a)
 -- @
 type BoolPred (p :: k ~> Bool) = (EqualTo 'True .@#@$$$ p :: Predicate k)
 
+-- | Pre-compose a function to a predicate
+--
+-- @
+-- 'PMap' :: (k ~> j) -> 'Predicate' j -> Predicate k
+-- @
 type PMap (f :: k ~> j) (p :: Predicate j) = (p .@#@$$$ f :: Predicate k)
 
 newtype Wit p a = Wit { getWit :: p @@ a }

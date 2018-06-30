@@ -9,7 +9,7 @@
 {-# LANGUAGE TypeOperators        #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Data.Type.Search (
+module Data.Type.Predicate.Param (
     ParamPred
   , Found, FlipPP, PPMap
   , Search(..), Search_(..)
@@ -33,9 +33,11 @@ type instance Apply (Found (p :: ParamPred k v)) a = Σ v (p a)
 data FlipPP :: ParamPred v k -> ParamPred k v
 type instance Apply (FlipPP p x) y = p y @@ x
 
+-- | Pre-compose a function to a 'ParamPred'.  Is essentially @'flip'
+-- ('.')@, but unfortunately defunctionalization doesn't work too well with
+-- that definition.
 data PPMap :: (k ~> j) -> ParamPred j v -> ParamPred k v
 type instance Apply (PPMap f p x) y = p (f @@ x) @@ y
--- PPMap f p x = p (f @@ x)
 
 class Search p where
     search :: Test (Found p)

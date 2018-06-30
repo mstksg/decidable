@@ -14,7 +14,7 @@
 {-# LANGUAGE TypeSynonymInstances  #-}
 {-# LANGUAGE UndecidableInstances  #-}
 
-module Data.Type.Subset (
+module Data.Type.Universe.Subset (
     Subset, WitSubset(..)
   , makeSubset, subsetToList, subsetToAny, subsetToAll
   , intersection, union, symDiff, mergeSubset, imergeSubset
