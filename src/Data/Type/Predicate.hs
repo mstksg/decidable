@@ -27,8 +27,8 @@ module Data.Type.Predicate (
   , type (^^^), proveXor
     -- * Decidable Predicates
   , Test, type (-?>), type (-?>#)
-  , Given, type (-->), type (-->#)
-  , Decide(..), Taken(..)
+  , Test_, type (-->), type (-->#)
+  , Decide(..), Decide_(..)
   , DFunctor(..), TFunctor(..)
   , compImpl
   ) where
@@ -37,7 +37,6 @@ import           Data.Kind
 import           Data.Singletons
 import           Data.Singletons.Decide
 import           Data.Singletons.Prelude hiding (Not)
-import           Data.Singletons.Sigma
 
 type Predicate k = k ~> Type
 
@@ -70,7 +69,7 @@ type Test  p = forall a. Sing a -> Decision (p @@ a)
 type p -?> q = forall a. Sing a -> p @@ a -> Decision (q @@ a)
 type (p -?># q) h = forall a. Sing a -> p @@ a -> h (Decision (q @@ a))
 
-type Given p = forall a. Sing a -> p @@ a
+type Test_ p = forall a. Sing a -> p @@ a
 type p --> q = forall a. Sing a -> p @@ a -> q @@ a
 type (p --># q) h = forall a. Sing a -> p @@ a -> h (q @@ a)
 
@@ -82,11 +81,11 @@ infixr 2 -->#
 class Decide p where
     decide :: Test p
 
-    default decide :: Taken p => Test p
-    decide = Proved . taken @p
+    default decide :: Decide_ p => Test p
+    decide = Proved . decide_ @p
 
-class Decide p => Taken p where
-    taken :: Given p
+class Decide p => Decide_ p where
+    decide_ :: Test_ p
 
 class DFunctor f where
     dmap :: forall p q. (p -?> q) -> (f p -?> f q)
@@ -98,8 +97,8 @@ instance (SDecide k, SingI (a :: k)) => Decide (EqualTo a) where
     decide = (sing %~)
 
 instance Decide Evident
-instance Taken Evident where
-    taken = id
+instance Decide_ Evident where
+    decide_ = id
 
 data Not :: (k ~> Type) -> (k ~> Type)
 type instance Apply (Not p) a = Refuted (p @@ a)

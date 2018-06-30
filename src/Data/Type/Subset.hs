@@ -38,8 +38,8 @@ data Subset f :: (k ~> Type) -> (f k ~> Type)
 type instance Apply (Subset f p) as = WitSubset f p as
 
 instance (Universe f, Decide p) => Decide (Subset f p)
-instance (Universe f, Decide p) => Taken (Subset f p) where
-    taken = makeSubset @f @_ @p (\_ -> decide @p)
+instance (Universe f, Decide p) => Decide_ (Subset f p) where
+    decide_ = makeSubset @f @_ @p (\_ -> decide @p)
 
 -- | Create a 'Subset' from a predicate.
 makeSubset

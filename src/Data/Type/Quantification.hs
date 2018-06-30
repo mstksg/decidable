@@ -21,13 +21,8 @@ module Data.Type.Quantification (
   , entailAll, ientailAll, entailAllF, ientailAllF, decideEntailAll, idecideEntailAll
   ) where
 
-import           Control.Applicative
-import           Data.Kind
-import           Data.Monoid                    (Alt(..))
 import           Data.Singletons
 import           Data.Singletons.Decide
-import           Data.Singletons.Prelude hiding (Any, All, Elem)
-import           Data.Singletons.Sigma
 import           Data.Type.Predicate
 import           Data.Type.Universe
 

@@ -22,6 +22,7 @@ module Data.Type.Universe (
   , All, WitAll(..)
   , Any, WitAny(..)
   , Index(..), IsJust(..), IsRight(..), NEIndex(..), Snd(..)
+  , Null, NotNull
   ) where
 
 import           Control.Applicative
@@ -30,7 +31,7 @@ import           Data.Kind
 import           Data.List.NonEmpty                    (NonEmpty(..))
 import           Data.Singletons
 import           Data.Singletons.Decide
-import           Data.Singletons.Prelude hiding        (Elem, Any, All, Snd)
+import           Data.Singletons.Prelude hiding        (Elem, Any, All, Snd, Null, Not)
 import           Data.Type.Predicate
 import           Prelude hiding                        (any, all)
 import qualified Data.Singletons.Prelude.List.NonEmpty as NE
@@ -59,6 +60,9 @@ instance (Universe f, Decide p) => Decide (Any f p) where
 instance (Universe f, Decide p) => Decide (All f p) where
     decide = decideAll @f @_ @p $ decide @p
 
+instance (Universe f, Decide_ p) => Decide_ (All f p) where
+    decide_ xs = WitAll $ \i -> decide_ @p (select i xs)
+
 instance Universe f => TFunctor (Any f) where
     tmap f xs (WitAny i x) = WitAny i (f (select i xs) x)
 
@@ -67,12 +71,6 @@ instance Universe f => TFunctor (All f) where
 
 instance Universe f => DFunctor (All f) where
     dmap f xs a = idecideAll (\i x -> f x (runWitAll a i)) xs
-
--- instance Imply (Wit p) q => Imply (Any f p) (TyCon1 (Any f q)) where
---     imply (Any (i :: Elem f as a) x) = Any i (imply @(Wit p) @q @a (Wit x))
-
--- instance Imply (Wit p) q => Imply (All f p) (TyCon1 (All f q)) where
---     imply a = All $ \(i :: Elem f as a) -> imply @(Wit p) @q @a (Wit (runWitAll a i))
 
 -- | Typeclass for a type-level container that you can quantify or lift
 -- type-level predicates over.
@@ -130,6 +128,9 @@ class Universe (f :: Type -> Type) where
         => (forall a. Elem f as a -> Sing a -> h (p @@ a))        -- ^ predicate on value in context
         -> (Sing as -> h (All f p @@ as))                              -- ^ predicate on collection in context
 
+type Null    f = (Not (NotNull f) :: Predicate (f k))
+type NotNull f = (Any f Evident :: Predicate (f k))
+
 decideAny
     :: forall f k (p :: k ~> Type). Universe f
     => Test p                                 -- ^ predicate on value
@@ -159,8 +160,8 @@ igenAll f = runIdentity . igenAllA (\i -> Identity . f i)
 
 genAll
     :: forall f k (p :: k ~> Type). Universe f
-    => Given p                          -- ^ always-true predicate on value
-    -> Given (All f p)         -- ^ always-true predicate on collection
+    => Test_ p                          -- ^ always-true predicate on value
+    -> Test_ (All f p)         -- ^ always-true predicate on collection
 genAll f = igenAll (const f)
 
 -- | Extract the item from the container witnessed by the 'Elem'

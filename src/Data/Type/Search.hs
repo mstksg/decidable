@@ -1,3 +1,5 @@
+{-# LANGUAGE DefaultSignatures    #-}
+{-# LANGUAGE EmptyCase            #-}
 {-# LANGUAGE FlexibleInstances    #-}
 {-# LANGUAGE LambdaCase           #-}
 {-# LANGUAGE ScopedTypeVariables  #-}
@@ -34,8 +36,17 @@ type instance Apply (FlipPP p x) y = p y @@ x
 class Search (p :: ParamPred k v) where
     search :: Test (Found p)
 
+    default search :: Search_ p => Test (Found p)
+    search = Proved . search_
+
+class Search p => Search_ (p :: ParamPred k v) where
+    search_ :: Test_ (Found p)
+
 instance Search p => Decide (Found p) where
     decide = search
+
+instance Search_ p => Decide_ (Found p) where
+    decide_ = search_
 
 -- | @'AnyMatch' f@ takes a parmaeterized predicate on @k@ (testing for
 -- a @v@) and turns it into a parameterized predicate on @f k@ (testing for
