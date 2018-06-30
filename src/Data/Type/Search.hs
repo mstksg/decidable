@@ -35,6 +35,7 @@ type instance Apply (FlipPP p x) y = p y @@ x
 
 data PPMap :: (k ~> j) -> ParamPred j v -> ParamPred k v
 type instance Apply (PPMap f p x) y = p (f @@ x) @@ y
+-- PPMap f p x = p (f @@ x)
 
 class Search p where
     search :: Test (Found p)
@@ -42,7 +43,7 @@ class Search p where
     default search :: Search_ p => Test (Found p)
     search = Proved . search_
 
-class Search p => Search_ (p :: ParamPred k v) where
+class Search p => Search_ p where
     search_ :: Test_ (Found p)
 
 instance Search p => Decide (Found p) where
@@ -50,6 +51,15 @@ instance Search p => Decide (Found p) where
 
 instance Search_ p => Decide_ (Found p) where
     decide_ = search_
+
+instance (Search (p :: ParamPred j v), SingI (f :: k ~> j)) => Search (PPMap f p) where
+    search (x :: Sing a) = case search @p ((sing :: Sing f) @@ x) of
+        Proved (i :&: p) -> Proved $ i :&: p
+        Disproved v      -> Disproved $ \case i :&: p -> v (i :&: p)
+
+instance (Search_ (p :: ParamPred j v), SingI (f :: k ~> j)) => Search_ (PPMap f p) where
+    search_ (x :: Sing a) = case search_ @p ((sing :: Sing f) @@ x) of
+        i :&: p -> i :&: p
 
 -- | @'AnyMatch' f@ takes a parmaeterized predicate on @k@ (testing for
 -- a @v@) and turns it into a parameterized predicate on @f k@ (testing for
