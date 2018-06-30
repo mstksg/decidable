@@ -255,7 +255,7 @@ data PPMap :: (k ~> j) -> ParamPred j v -> ParamPred k v
 class Search p
 search :: Search p => Test (Found p)
 search :: (Search p, Search_ p) => Test (Found p)
-class Search p => Search_ (p :: ParamPred k v)
+class Search p => Search_ p
 search_ :: Search_ p => Test_ (Found p)
 
 -- | <tt><a>AnyMatch</a> f</tt> takes a parmaeterized predicate on
@@ -269,6 +269,8 @@ data AnyMatch f :: ParamPred k v -> ParamPred (f k) v
 instance forall k v (f :: * -> *) (p :: Data.Type.Search.ParamPred k v). (Data.Type.Universe.Universe f, Data.Type.Search.Search p) => Data.Type.Search.Search (Data.Type.Search.AnyMatch f p)
 instance forall k1 v (p :: Data.Type.Search.ParamPred k1 v). Data.Type.Search.Search p => Data.Type.Predicate.Decide (Data.Type.Search.Found p)
 instance forall k1 v (p :: Data.Type.Search.ParamPred k1 v). Data.Type.Search.Search_ p => Data.Type.Predicate.Decide_ (Data.Type.Search.Found p)
+instance forall j v k (p :: Data.Type.Search.ParamPred j v) (f :: k Data.Singletons.Internal.~> j). (Data.Type.Search.Search p, Data.Singletons.Internal.SingI f) => Data.Type.Search.Search (Data.Type.Search.PPMap f p)
+instance forall j v k (p :: Data.Type.Search.ParamPred j v) (f :: k Data.Singletons.Internal.~> j). (Data.Type.Search.Search_ p, Data.Singletons.Internal.SingI f) => Data.Type.Search.Search_ (Data.Type.Search.PPMap f p)
 
 module Data.Type.Quantification
 data Any f :: (k ~> Type) -> (f k ~> Type)
