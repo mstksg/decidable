@@ -33,7 +33,7 @@ type instance Apply (Found (p :: ParamPred k v)) a = Σ v (p a)
 data FlipPP :: ParamPred v k -> ParamPred k v
 type instance Apply (FlipPP p x) y = p y @@ x
 
-class Search (p :: ParamPred k v) where
+class Search p where
     search :: Test (Found p)
 
     default search :: Search_ p => Test (Found p)
