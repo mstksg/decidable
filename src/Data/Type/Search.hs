@@ -11,7 +11,7 @@
 
 module Data.Type.Search (
     ParamPred
-  , Found, FlipPP
+  , Found, FlipPP, PPMap
   , Search(..), Search_(..)
   , AnyMatch
   ) where
@@ -32,6 +32,9 @@ type instance Apply (Found (p :: ParamPred k v)) a = Σ v (p a)
 -- | Flip the arguments of a 'ParamPred'.
 data FlipPP :: ParamPred v k -> ParamPred k v
 type instance Apply (FlipPP p x) y = p y @@ x
+
+data PPMap :: (k ~> j) -> ParamPred j v -> ParamPred k v
+type instance Apply (PPMap f p x) y = p (f @@ x) @@ y
 
 class Search p where
     search :: Test (Found p)
