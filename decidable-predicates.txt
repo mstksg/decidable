@@ -47,14 +47,14 @@ proveXor :: forall p q a. () => Decision (p @@ a) -> Decision (q @@ a) -> Decisi
 type Test p = forall a. Sing a -> Decision (p @@ a)
 type p -?> q = forall a. Sing a -> p @@ a -> Decision (q @@ a)
 type ( p -?># q ) h = forall a. Sing a -> p @@ a -> h (Decision (q @@ a))
-type Given p = forall a. Sing a -> p @@ a
+type Test_ p = forall a. Sing a -> p @@ a
 type p --> q = forall a. Sing a -> p @@ a -> q @@ a
 type ( p --># q ) h = forall a. Sing a -> p @@ a -> h (q @@ a)
 class Decide p
 decide :: Decide p => Test p
-decide :: (Decide p, Taken p) => Test p
-class Decide p => Taken p
-taken :: Taken p => Given p
+decide :: (Decide p, Decide_ p) => Test p
+class Decide p => Decide_ p
+decide_ :: Decide_ p => Test_ p
 class DFunctor f
 dmap :: forall p q. DFunctor f => (p -?> q) -> (f p -?> f q)
 class TFunctor f
@@ -65,7 +65,7 @@ instance forall k1 (p :: k1 Data.Singletons.Internal.~> *) (q :: k1 Data.Singlet
 instance forall k1 (p :: k1 Data.Singletons.Internal.~> *). Data.Type.Predicate.Decide p => Data.Type.Predicate.Decide (Data.Type.Predicate.Not p)
 instance forall k (a :: k). (Data.Singletons.Decide.SDecide k, Data.Singletons.Internal.SingI a) => Data.Type.Predicate.Decide (Data.Type.Predicate.EqualTo a)
 instance Data.Type.Predicate.Decide Data.Type.Predicate.Evident
-instance Data.Type.Predicate.Taken Data.Type.Predicate.Evident
+instance Data.Type.Predicate.Decide_ Data.Type.Predicate.Evident
 
 module Data.Type.Universe
 
@@ -122,7 +122,7 @@ decideAll :: forall f k (p :: k ~> Type). Universe f => Test p -> Test (All f p)
 
 -- | <a>igenAllA</a>, but without the membership witness.
 genAllA :: forall k (p :: k ~> Type) (as :: f k) h. (Universe f, Applicative h) => (forall a. Sing a -> h (p @@ a)) -> (Sing as -> h (All f p @@ as))
-genAll :: forall f k (p :: k ~> Type). Universe f => Given p -> Given (All f p)
+genAll :: forall f k (p :: k ~> Type). Universe f => Test_ p -> Test_ (All f p)
 
 -- | If <tt>p a</tt> is true for all values <tt>a</tt> in <tt>as</tt>, then
 --   we have <tt><a>All</a> p as</tt>. Basically witnesses the definition
@@ -180,6 +180,8 @@ data NEIndex :: NonEmpty k -> k -> Type
 -- | Trivially witness an item in the second field of a type-level tuple.
 data Snd :: (j, k) -> k -> Type
 [Snd] :: Snd '(a, b) b
+type Null f = (Not (NotNull f) :: Predicate (f k))
+type NotNull f = (Any f Evident :: Predicate (f k))
 instance forall k (as :: [k]) (a :: k). GHC.Show.Show (Data.Type.Universe.Index as a)
 instance forall k (as :: GHC.Base.Maybe k) (a :: k). GHC.Show.Show (Data.Type.Universe.IsJust as a)
 instance forall j k (as :: Data.Either.Either j k) (a :: k). GHC.Show.Show (Data.Type.Universe.IsRight as a)
@@ -197,6 +199,7 @@ instance forall k (as :: [k]). (Data.Singletons.Internal.SingI as, Data.Singleto
 instance Data.Type.Universe.Universe []
 instance forall k (f :: * -> *) (p :: k Data.Singletons.Internal.~> *). (Data.Type.Universe.Universe f, Data.Type.Predicate.Decide p) => Data.Type.Predicate.Decide (Data.Type.Universe.Any f p)
 instance forall k (f :: * -> *) (p :: k Data.Singletons.Internal.~> *). (Data.Type.Universe.Universe f, Data.Type.Predicate.Decide p) => Data.Type.Predicate.Decide (Data.Type.Universe.All f p)
+instance forall k (f :: * -> *) (p :: k Data.Singletons.Internal.~> *). (Data.Type.Universe.Universe f, Data.Type.Predicate.Decide_ p) => Data.Type.Predicate.Decide_ (Data.Type.Universe.All f p)
 instance Data.Type.Universe.Universe f => Data.Type.Predicate.TFunctor (Data.Type.Universe.Any f)
 instance Data.Type.Universe.Universe f => Data.Type.Predicate.TFunctor (Data.Type.Universe.All f)
 instance Data.Type.Universe.Universe f => Data.Type.Predicate.DFunctor (Data.Type.Universe.All f)
@@ -237,7 +240,7 @@ mergeSubset :: forall f k p q r (as :: f k). () => (forall a. Decision (p @@ a) 
 -- | Combine two subsets based on a decision function
 imergeSubset :: forall f k p q r (as :: f k). () => (forall a. Elem f as a -> Decision (p @@ a) -> Decision (q @@ a) -> Decision (r @@ a)) -> Subset f p @@ as -> Subset f q @@ as -> Subset f r @@ as
 instance forall k (f :: * -> *) (p :: k Data.Singletons.Internal.~> *). (Data.Type.Universe.Universe f, Data.Type.Predicate.Decide p) => Data.Type.Predicate.Decide (Data.Type.Subset.Subset f p)
-instance forall k (f :: * -> *) (p :: k Data.Singletons.Internal.~> *). (Data.Type.Universe.Universe f, Data.Type.Predicate.Decide p) => Data.Type.Predicate.Taken (Data.Type.Subset.Subset f p)
+instance forall k (f :: * -> *) (p :: k Data.Singletons.Internal.~> *). (Data.Type.Universe.Universe f, Data.Type.Predicate.Decide p) => Data.Type.Predicate.Decide_ (Data.Type.Subset.Subset f p)
 
 module Data.Type.Search
 
@@ -251,6 +254,7 @@ data Found :: ParamPred k v -> Predicate k
 data FlipPP :: ParamPred v k -> ParamPred k v
 class Search (p :: ParamPred k v)
 search :: Search p => Test (Found p)
+search :: (Search p, Search_ p) => Test (Found p)
 
 -- | <tt><a>AnyMatch</a> f</tt> takes a parmaeterized predicate on
 --   <tt>k</tt> (testing for a <tt>v</tt>) and turns it into a
@@ -262,6 +266,7 @@ search :: Search p => Test (Found p)
 data AnyMatch f :: ParamPred k v -> ParamPred (f k) v
 instance forall k v (f :: * -> *) (p :: Data.Type.Search.ParamPred k v). (Data.Type.Universe.Universe f, Data.Type.Search.Search p) => Data.Type.Search.Search (Data.Type.Search.AnyMatch f p)
 instance forall k1 v (p :: Data.Type.Search.ParamPred k1 v). Data.Type.Search.Search p => Data.Type.Predicate.Decide (Data.Type.Search.Found p)
+instance forall k1 v (p :: Data.Type.Search.ParamPred k1 v). Data.Type.Search.Search_ p => Data.Type.Predicate.Decide_ (Data.Type.Search.Found p)
 
 module Data.Type.Quantification
 data Any f :: (k ~> Type) -> (f k ~> Type)
