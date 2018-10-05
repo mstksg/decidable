@@ -70,6 +70,9 @@ instance (Search_ (p :: ParamPred j v), SingI (f :: k ~> j)) => Search_ (PPMap f
 -- An @'AnyMatch' f p as@ is a predicate taking an argument @a@ and
 -- testing if @p a :: 'Predicate' k@ is satisfied for any item in @as ::
 -- f k@.
+--
+-- A @'ParamPred' k v@ tests if a @k@ can create some @v@.  The resulting
+-- @'Param' (f k) v@ tests if any @k@ in @f k@ can create some @v@.
 data AnyMatch f :: ParamPred k v -> ParamPred (f k) v
 type instance Apply (AnyMatch f p as) a = Any f (FlipPP p a) @@ as
 
