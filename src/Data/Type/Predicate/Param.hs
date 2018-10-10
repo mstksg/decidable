@@ -1,3 +1,4 @@
+{-# LANGUAGE ConstraintKinds      #-}
 {-# LANGUAGE DefaultSignatures    #-}
 {-# LANGUAGE EmptyCase            #-}
 {-# LANGUAGE FlexibleContexts     #-}
@@ -29,7 +30,8 @@ module Data.Type.Predicate.Param (
   , FlipPP, ConstPP, PPMap, InP, AnyMatch
   -- * Deciding and Proving
   , Found
-  , search, select
+  , Searchable, search
+  , Selectable, select
   ) where
 
 import           Data.Singletons
@@ -88,32 +90,38 @@ instance (Provable (Found (p :: ParamPred j v)), SingI (f :: k ~> j)) => Provabl
     prove (x :: Sing a) = case prove @(Found p) ((sing :: Sing f) @@ x) of
         i :&: p -> i :&: p
 
--- | Convenient alias for 'decide' in the case of @'Found' p@; basically
--- like 'decide' for a 'ParamPred'.  Saying that predicate @'Found' p@ is
--- decidable means that, for an input @x :: k@, we can prove or disprove
--- that there exists a @y :: v@ that satisfies @P x @@ y@.
+-- | A constraint that a @'ParamPred' k v@ is "searchable".  It means that
+-- for any input @x :: k@, we can prove or disprove that there exists a @y
+-- :: v@ that satisfies @P x '\@\@' y@.  We can "search" for that @y@, and
+-- prove that it can or cannot be found.
+type Searchable p = Decidable (Found p)
+
+-- | A constraint that a @'ParamPred' k v@ s "selectable".  It means that
+-- for any input @x :: k@, we can always find a @y :: v@ that satisfies @P
+-- x '\@\@' y@.  We can "select" that @y@, no matter what.
+type Selectable p = Provable  (Found p)
+
+-- | The deciding/searching function for @'Searchable' p@.
 --
--- Can be called by applying the 'ParamPred':
+-- Must be called by applying the 'ParamPred':
 --
 -- @
 -- 'search' \@p
 -- @
 search
-    :: forall p. Decidable (Found p)
+    :: forall p. Searchable p
     => Decide (Found p)
 search = decide @(Found p)
 
--- | Convenient alias for 'prove' in the case of @'Found' p@; basically
--- like 'prove' for 'ParamPred'.  You can imagine it as generating the
--- witness for "forall @x :: k@. exists @y :: v@. P x @@ y".
+-- | The proving/selecting function for @'Selectable' p@.
 --
--- Can be called by applying the 'ParamPred':
+-- Must be called by applying the 'ParamPred':
 --
 -- @
 -- 'select' \@p
 -- @
 select
-    :: forall p. Provable (Found p)
+    :: forall p. Selectable p
     => Prove (Found p)
 select = prove @(Found p)
 

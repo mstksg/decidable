@@ -2,6 +2,7 @@
 {-# LANGUAGE ConstraintKinds        #-}
 {-# LANGUAGE DefaultSignatures      #-}
 {-# LANGUAGE EmptyCase              #-}
+{-# LANGUAGE FlexibleContexts       #-}
 {-# LANGUAGE FlexibleInstances      #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE GADTs                  #-}
@@ -37,6 +38,7 @@ module Data.Type.Predicate (
     -- * Provable Predicates
   , Prove, type (-->), type (-->#)
   , Provable(..)
+  , Disprovable, disprove
   , TFunctor(..)
   , compImpl
     -- * Decidable Predicates
@@ -236,6 +238,19 @@ class Provable p where
     -- 'prove' \@MyPredicate
     -- @
     prove :: Prove p
+
+-- | @'Disprovable' p@ is a constraint that @p@ can be disproven.
+type Disprovable p = Provable (Not p)
+
+-- | The deciding/disproving function for @'Disprovable' p@.
+--
+-- Must be called by applying the 'Predicate' to disprove:
+--
+-- @
+-- 'disprove' \@p
+-- @
+disprove :: forall p. Disprovable p => Prove (Not p)
+disprove = prove @(Not p)
 
 -- | Implicatons @p '-?>' q@ can be lifted "through" a 'DFunctor' into an
 -- @f p '-?>' f q@.

@@ -42,9 +42,9 @@ module Data.Type.Predicate.Logic (
 
 import           Data.Singletons
 import           Data.Singletons.Decide
+import           Data.Singletons.Prelude.Bool (Sing(..))
 import           Data.Type.Predicate
 import           Data.Void
-import qualified Control.Category       as C
 
 -- | @p '&&&' q@ is a predicate that both @p@ and @q@ are true.
 data (&&&) :: Predicate k -> Predicate k -> Predicate k
@@ -56,12 +56,6 @@ instance (Decidable p, Decidable q) => Decidable (p &&& q) where
 
 instance (Provable p, Provable q) => Provable (p &&& q) where
     prove x = (prove @p x, prove @q x)
-
-instance Provable (p &&& q ==> p) where
-    prove = projAndFst @p @q
-
-instance Provable (p &&& q ==> q) where
-    prove = projAndSnd @p @q
 
 -- | Decide @p '&&&' q@ based on decisions of @p@ and @q@.
 decideAnd
@@ -88,14 +82,6 @@ instance (Decidable p, Decidable q) => Decidable (p ||| q) where
 -- require that either @p@ or @q@ is true.
 instance (Provable p, Provable q) => Provable (p ||| q) where
     prove x = Left (prove @p x)
-
--- | TODO: Investigate if this creates any bad overlapping instance
--- opportuniies.  Should be okay because of p constraint, but
-instance Provable (p ==> (p ||| q)) where
-    prove = injOrLeft @p @q
-
-instance Provable (q ==> (p ||| q)) where
-    prove = injOrRight @p @q
 
 -- | Decide @p '|||' q@ based on decisions of @p@ and @q@.
 decideOr
@@ -184,6 +170,12 @@ atom = const
 -- | We cannot have both @p@ and @'Not' p@.
 excludedMiddle :: (p &&& Not p) --> Impossible
 excludedMiddle _ (p, notP) _ = notP p
+
+-- | If only this worked, but darn overlapping instances.  Same for p ==>
+-- p ||| q and p &&& q ==> p :(
+-- q) ==>
+-- instance Provable (p &&& Not p ==> Impossible) where
+--     prove = excludedMiddle @p
 
 -- | If p implies q, then not q implies not p.
 contrapositive
