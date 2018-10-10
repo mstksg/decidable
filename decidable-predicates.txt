@@ -176,6 +176,19 @@ class Provable p
 --   </pre>
 prove :: Provable p => Prove p
 
+-- | <tt><a>Disprovable</a> p</tt> is a constraint that <tt>p</tt> can be
+--   disproven.
+type Disprovable p = Provable (Not p)
+
+-- | The deciding/disproving function for <tt><a>Disprovable</a> p</tt>.
+--   
+--   Must be called by applying the <a>Predicate</a> to disprove:
+--   
+--   <pre>
+--   <a>disprove</a> @p
+--   </pre>
+disprove :: forall p. Disprovable p => Prove (Not p)
+
 -- | Implicatons <tt>p <a>--&gt;</a> q</tt> can be lifted "through" a
 --   <a>TFunctor</a> into an <tt>f p <a>--&gt;</a> f q</tt>.
 class TFunctor f
@@ -353,7 +366,12 @@ excludedMiddle :: (p &&& Not p) --> Impossible
 --   <a>Decidable</a>.
 doubleNegation :: forall p. Decidable p => Not (Not p) --> p
 
--- | If p implies q, then not q implies not p.
+-- | If only this worked, but darn overlapping instances. Same for p ==&gt;
+--   p ||| q and p &amp;&amp;&amp; q ==&gt; p :( q) ==&gt; instance
+--   Provable (p &amp;&amp;&amp; Not p ==&gt; Impossible) where prove =
+--   excludedMiddle @p
+--   
+--   If p implies q, then not q implies not p.
 contrapositive :: (p --> q) -> Not q --> Not p
 
 -- | Reverse direction of <a>contrapositive</a>. Only possible if
@@ -364,10 +382,6 @@ projAndFst :: (p &&& q) --> p
 projAndSnd :: (p &&& q) --> q
 injOrLeft :: forall p q. p --> (p ||| q)
 injOrRight :: forall p q. q --> (p ||| q)
-instance forall k1 (p :: Data.Type.Predicate.Predicate k1) (q :: Data.Type.Predicate.Predicate k1). Data.Type.Predicate.Provable ((p Data.Type.Predicate.Logic.&&& q) Data.Type.Predicate.Logic.==> p)
-instance forall k1 (p :: Data.Type.Predicate.Predicate k1) (q :: Data.Type.Predicate.Predicate k1). Data.Type.Predicate.Provable ((p Data.Type.Predicate.Logic.&&& q) Data.Type.Predicate.Logic.==> q)
-instance forall k1 (p :: Data.Type.Predicate.Predicate k1) (q :: Data.Type.Predicate.Predicate k1). Data.Type.Predicate.Provable (p Data.Type.Predicate.Logic.==> (p Data.Type.Predicate.Logic.||| q))
-instance forall k1 (q :: Data.Type.Predicate.Predicate k1) (p :: Data.Type.Predicate.Predicate k1). Data.Type.Predicate.Provable (q Data.Type.Predicate.Logic.==> (p Data.Type.Predicate.Logic.||| q))
 instance forall k1 (p :: Data.Type.Predicate.Predicate k1). Data.Type.Predicate.Decidable (Data.Type.Predicate.Impossible Data.Type.Predicate.Logic.==> p)
 instance forall k1 (p :: Data.Type.Predicate.Predicate k1). Data.Type.Predicate.Provable (Data.Type.Predicate.Impossible Data.Type.Predicate.Logic.==> p)
 instance forall k1 (p :: Data.Type.Predicate.Predicate k1) (q :: Data.Type.Predicate.Predicate k1). (Data.Type.Predicate.Decidable (p Data.Type.Predicate.Logic.==> q), Data.Type.Predicate.Decidable q) => Data.Type.Predicate.Decidable (Data.Type.Predicate.Not q Data.Type.Predicate.Logic.==> Data.Type.Predicate.Not p)
@@ -705,30 +719,36 @@ data AnyMatch f :: ParamPred k v -> ParamPred (f k) v
 --   y</tt>.
 data Found :: ParamPred k v -> Predicate k
 
--- | Convenient alias for <a>decide</a> in the case of <tt><a>Found</a>
---   p</tt>; basically like <a>decide</a> for a <a>ParamPred</a>. Saying
---   that predicate <tt><a>Found</a> p</tt> is decidable means that, for an
---   input <tt>x :: k</tt>, we can prove or disprove that there exists a
---   <tt>y :: v</tt> that satisfies <tt>P x </tt><tt> y</tt>.
+-- | A constraint that a <tt><a>ParamPred</a> k v</tt> is "searchable". It
+--   means that for any input <tt>x :: k</tt>, we can prove or disprove
+--   that there exists a <tt>y :: v</tt> that satisfies <tt>P x
+--   <tt>\@\@</tt> y</tt>. We can "search" for that <tt>y</tt>, and prove
+--   that it can or cannot be found.
+type Searchable p = Decidable (Found p)
+
+-- | The deciding/searching function for <tt><a>Searchable</a> p</tt>.
 --   
---   Can be called by applying the <a>ParamPred</a>:
+--   Must be called by applying the <a>ParamPred</a>:
 --   
 --   <pre>
 --   <a>search</a> @p
 --   </pre>
-search :: forall p. Decidable (Found p) => Decide (Found p)
+search :: forall p. Searchable p => Decide (Found p)
 
--- | Convenient alias for <a>prove</a> in the case of <tt><a>Found</a>
---   p</tt>; basically like <a>prove</a> for <a>ParamPred</a>. You can
---   imagine it as generating the witness for "forall <tt>x :: k</tt>.
---   exists <tt>y :: v</tt>. P x @@ y".
+-- | A constraint that a <tt><a>ParamPred</a> k v</tt> s "selectable". It
+--   means that for any input <tt>x :: k</tt>, we can always find a <tt>y
+--   :: v</tt> that satisfies <tt>P x <tt>\@\@</tt> y</tt>. We can "select"
+--   that <tt>y</tt>, no matter what.
+type Selectable p = Provable (Found p)
+
+-- | The proving/selecting function for <tt><a>Selectable</a> p</tt>.
 --   
---   Can be called by applying the <a>ParamPred</a>:
+--   Must be called by applying the <a>ParamPred</a>:
 --   
 --   <pre>
 --   <a>select</a> @p
 --   </pre>
-select :: forall p. Provable (Found p) => Prove (Found p)
+select :: forall p. Selectable p => Prove (Found p)
 instance forall k v (f :: * -> *) (p :: Data.Type.Predicate.Param.ParamPred k v). (Data.Type.Universe.Universe f, Data.Type.Predicate.Decidable (Data.Type.Predicate.Param.Found p)) => Data.Type.Predicate.Decidable (Data.Type.Predicate.Param.Found (Data.Type.Predicate.Param.AnyMatch f p))
 instance Data.Type.Universe.Universe f => Data.Type.Predicate.Decidable (Data.Type.Predicate.Param.Found (Data.Type.Predicate.Param.InP f))
 instance Data.Type.Predicate.Decidable (Data.Type.Universe.NotNull f Data.Type.Predicate.Logic.==> Data.Type.Predicate.Param.Found (Data.Type.Predicate.Param.InP f))
