@@ -15,8 +15,8 @@
 module Data.Type.Predicate
 
 -- | A type-level predicate in Haskell. We say that the predicate <tt>P ::
---   'Predicate k'</tt> is true/satisfied by input <tt>x :: k</tt> if there
---   exists a value of type <tt>P </tt><tt> x</tt>, and that it
+--   <a>Predicate</a> k</tt> is true/satisfied by input <tt>x :: k</tt> if
+--   there exists a value of type <tt>P </tt><tt> x</tt>, and that it
 --   false/disproved if such a value cannot exist.
 --   
 --   See <a>Provable</a> and <a>Decidable</a> for more information on how
@@ -66,7 +66,7 @@ module Data.Type.Predicate
 --   
 --   <pre>
 --   data (&amp;&amp;&amp;) :: Predicate k -&gt; Predicate k -&gt; Predicate k
---   instance Apply (p &amp;&amp;&amp; q) a = (p @<tt> a, q </tt>@ a)
+--   instance Apply (p &amp;&amp;&amp; q) a = (p @<tt> a, q @</tt> a)
 --   </pre>
 --   
 --   Typically it is recommended to create predicates from the supplied

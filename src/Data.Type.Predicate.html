@@ -52,7 +52,7 @@
 </span><a name="line-52"></a><span class="hs-keyword">import</span><span>           </span><span class="hs-identifier">Data.Singletons.Prelude</span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="hs-identifier hs-type">Not</span><span class="hs-special">)</span><span>
 </span><a name="line-53"></a><span>
 </span><a name="line-54"></a><span class="hs-comment">-- | A type-level predicate in Haskell.  We say that the predicate @P ::</span><span>
-</span><a name="line-55"></a><span class="hs-comment">-- 'Predicate k'@ is true/satisfied by input @x :: k@ if there exists</span><span>
+</span><a name="line-55"></a><span class="hs-comment">-- 'Predicate' k@ is true/satisfied by input @x :: k@ if there exists</span><span>
 </span><a name="line-56"></a><span class="hs-comment">-- a value of type @P @@ x@, and that it false/disproved if such a value</span><span>
 </span><a name="line-57"></a><span class="hs-comment">-- cannot exist.</span><span>
 </span><a name="line-58"></a><span class="hs-comment">--</span><span>
@@ -99,7 +99,7 @@
 </span><a name="line-99"></a><span class="hs-comment">--</span><span>
 </span><a name="line-100"></a><span class="hs-comment">-- @</span><span>
 </span><a name="line-101"></a><span class="hs-comment">-- data (&amp;&amp;&amp;) :: Predicate k -&gt; Predicate k -&gt; Predicate k</span><span>
-</span><a name="line-102"></a><span class="hs-comment">-- instance Apply (p &amp;&amp;&amp; q) a = (p @@ a, q @@ a)</span><span>
+</span><a name="line-102"></a><span class="hs-comment">-- instance Apply (p &amp;&amp;&amp; q) a = (p \@@ a, q \@@ a)</span><span>
 </span><a name="line-103"></a><span class="hs-comment">-- @</span><span>
 </span><a name="line-104"></a><span class="hs-comment">--</span><span>
 </span><a name="line-105"></a><span class="hs-comment">-- Typically it is recommended to create predicates from the supplied</span><span>
