@@ -36,6 +36,8 @@ module Data.Type.Predicate.Logic (
   -- * Logical deductions
   , compImpl, explosion, atom, excludedMiddle, doubleNegation
   , contrapositive, contrapositive'
+  -- ** Lattice
+  , projAndFst, projAndSnd, injOrLeft, injOrRight
   ) where
 
 import           Data.Singletons
@@ -54,6 +56,12 @@ instance (Decidable p, Decidable q) => Decidable (p &&& q) where
 
 instance (Provable p, Provable q) => Provable (p &&& q) where
     prove x = (prove @p x, prove @q x)
+
+instance Provable (p &&& q ==> p) where
+    prove = projAndFst @p @q
+
+instance Provable (p &&& q ==> q) where
+    prove = projAndSnd @p @q
 
 -- | Decide @p '&&&' q@ based on decisions of @p@ and @q@.
 decideAnd
@@ -75,9 +83,19 @@ infixr 2 |||
 instance (Decidable p, Decidable q) => Decidable (p ||| q) where
     decide (x :: Sing a) = decideOr @p @q @a (decide @p x) (decide @q x)
 
--- | TODO: this might be better stated in terms of some or-constraint.
+-- | Picks the proof of @p@.  Note that this is instance has stronger
+-- constraints than is strictly necessary; we should really only have to
+-- require that either @p@ or @q@ is true.
 instance (Provable p, Provable q) => Provable (p ||| q) where
     prove x = Left (prove @p x)
+
+-- | TODO: Investigate if this creates any bad overlapping instance
+-- opportuniies.  Should be okay because of p constraint, but
+instance Provable (p ==> (p ||| q)) where
+    prove = injOrLeft @p @q
+
+instance Provable (q ==> (p ||| q)) where
+    prove = injOrRight @p @q
 
 -- | Decide @p '|||' q@ based on decisions of @p@ and @q@.
 decideOr
@@ -112,7 +130,7 @@ decideXor p q = decideOr @(p &&& Not q) @(Not p &&& q) @a
 data (==>) :: Predicate k -> Predicate k -> Predicate k
 type instance Apply (p ==> q) a = p @@ a -> q @@ a
 
-infixr 2 ==>
+infixr 1 ==>
 
 instance Decidable (Impossible ==> p) where
 instance Provable (Impossible ==> p) where
@@ -127,11 +145,11 @@ instance (Decidable (p ==> q), Decidable q) => Decidable (Not q ==> Not p) where
 instance Provable (p ==> q) => Provable (Not q ==> Not p) where
     prove = contrapositive @p @q (prove @(p ==> q))
 
--- | @'Implies' p q@ is a type synonym that @p '==>' q@ is 'Provable'; that
+-- | @'Implies' p q@ is a constraint that @p '==>' q@ is 'Provable'; that
 -- is, you can prove that @p@ implies @q@.
 type Implies  p q = Provable  (p ==> q)
 
--- | @'Implies' p q@ is a type synonym that @p '<==>' q@ is 'Provable'; that
+-- | @'Equiv' p q@ is a constraint that @p '<==>' q@ is 'Provable'; that
 -- is, you can prove that @p@ is logically equivalent to @q@.
 type Equiv  p q = Provable  (p <==> q)
 
@@ -152,6 +170,7 @@ proveImplies q x _ = q x
 
 -- | Two-way implication, or logical equivalence
 type (p <==> q) = p ==> q &&& q ==> p
+infixr 1 <==>
 
 -- | From @'Impossible' @@ a@, you can prove anything.  Essentially
 -- a lifted version of 'absurd'.
@@ -188,3 +207,15 @@ doubleNegation :: forall p. Decidable p => Not (Not p) --> p
 doubleNegation x vvp = case decide @p x of
     Proved    p  -> p
     Disproved vp -> absurd $ vvp vp
+
+projAndFst :: (p &&& q) --> p
+projAndFst _ = fst
+
+projAndSnd :: (p &&& q) --> q
+projAndSnd _ = snd
+
+injOrLeft :: forall p q. p --> (p ||| q)
+injOrLeft _ = Left
+
+injOrRight :: forall p q. q --> (p ||| q)
+injOrRight _ = Right

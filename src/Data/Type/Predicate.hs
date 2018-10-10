@@ -53,8 +53,9 @@ import           Data.Void
 
 -- | A type-level predicate in Haskell.  We say that the predicate @P ::
 -- 'Predicate' k@ is true/satisfied by input @x :: k@ if there exists
--- a value of type @P @@ x@, and that it false/disproved if such a value
--- cannot exist.
+-- a value of type @P '@@' x@, and that it false/disproved if such a value
+-- cannot exist. (Where '@@' is 'Apply', the singleton library's type-level
+-- function application for mathcable functions)
 --
 -- See 'Provable' and 'Decidable' for more information on how to use, prove
 -- and decide these predicates.
@@ -83,7 +84,7 @@ import           Data.Void
 --
 -- -- Then, write the 'Apply' instance, to specify the type of the
 -- -- witnesses of that predicate
--- instance Apply (Not p) a = (p @@ a) -> Void
+-- instance 'Apply' (Not p) a = (p '@@' a) -> Void
 -- @
 --
 -- See the source of "Data.Type.Predicate" and "Data.Type.Predicate.Logic"
@@ -99,7 +100,7 @@ import           Data.Void
 --
 -- @
 -- data (&&&) :: Predicate k -> Predicate k -> Predicate k
--- instance Apply (p &&& q) a = (p \@\@ a, q \@\@ a)
+-- instance Apply (p &&& q) a = (p '@@' a, q '@@' a)
 -- @
 --
 -- Typically it is recommended to create predicates from the supplied
@@ -170,10 +171,10 @@ type p --> q = forall a. Sing a -> p @@ a -> q @@ a
 -- | This is implication '-->#', but only in a specific context @h@.
 type (p --># q) h = forall a. Sing a -> p @@ a -> h (q @@ a)
 
-infixr 2 -?>
-infixr 2 -?>#
-infixr 2 -->
-infixr 2 -->#
+infixr 1 -?>
+infixr 1 -?>#
+infixr 1 -->
+infixr 1 -->#
 
 -- | A typeclass for decidable predicates.
 --
