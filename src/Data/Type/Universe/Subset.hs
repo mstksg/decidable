@@ -14,6 +14,17 @@
 {-# LANGUAGE TypeSynonymInstances  #-}
 {-# LANGUAGE UndecidableInstances  #-}
 
+-- |
+-- Module      : Data.Type.Universe.Subset
+-- Copyright   : (c) Justin Le 2018
+-- License     : BSD3
+--
+-- Maintainer  : justin@jle.im
+-- Stability   : experimental
+-- Portability : non-portable
+--
+-- Represent a decidable subset of a type-level collection.
+--
 module Data.Type.Universe.Subset (
     Subset, WitSubset(..)
   , makeSubset, subsetToList, subsetToAny, subsetToAll
@@ -29,12 +40,14 @@ import           Data.Type.Predicate
 import           Data.Type.Predicate.Logic
 import           Data.Type.Universe
 
--- | A @'Subset' p as@ describes a /decidable/ subset of type-level
+-- | A @'WitSubset' f p @@ as@ describes a /decidable/ subset of type-level
 -- collection @as@.
 newtype WitSubset f p (as :: f k) = WitSubset
     { runWitSubset :: forall a. Elem f as a -> Decision (p @@ a)
     }
 
+-- | A @'Subset' f p@ is a predicate that some decidable subset of an input
+-- @as@ is true.
 data Subset f :: (k ~> Type) -> (f k ~> Type)
 type instance Apply (Subset f p) as = WitSubset f p as
 

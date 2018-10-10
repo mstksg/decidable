@@ -8,12 +8,26 @@
 {-# LANGUAGE TypeFamilies         #-}
 {-# LANGUAGE TypeInType           #-}
 {-# LANGUAGE TypeOperators        #-}
+{-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
 
+-- |
+-- Module      : Data.Type.Universe.Param
+-- Copyright   : (c) Justin Le 2018
+-- License     : BSD3
+--
+-- Maintainer  : justin@jle.im
+-- Stability   : experimental
+-- Portability : non-portable
+--
+-- Manipulate "parameterized predicates".  See 'ParamPred' and 'Found' for
+-- more information.
+--
 module Data.Type.Predicate.Param (
     ParamPred
-  , Found, FlipPP, PPMap
+  , Found, FlipPP, ConstPP, PPMap
   , search, select
+  , InP
   , AnyMatch
   ) where
 
@@ -21,9 +35,10 @@ import           Data.Singletons
 import           Data.Singletons.Decide
 import           Data.Singletons.Sigma
 import           Data.Type.Predicate
+import           Data.Type.Predicate.Logic
 import           Data.Type.Universe
 
--- | A parameterized predicate.
+-- | A parameterized predicate.  See 'Found' for more information.
 type ParamPred k v = k -> Predicate v
 
 -- | Convert a parameterized predicate into a predicate on the parameter
@@ -50,6 +65,11 @@ type instance Apply (Found (p :: ParamPred k v)) a = Σ v (p a)
 -- | Flip the arguments of a 'ParamPred'.
 data FlipPP :: ParamPred v k -> ParamPred k v
 type instance Apply (FlipPP p x) y = p y @@ x
+
+-- | Promote a @'Predicate' v@ to a @'ParamPred' k v@, ignoring the @k@
+-- input.
+data ConstPP :: Predicate v -> ParamPred k v
+type instance Apply (ConstPP p k) v = p @@ v
 
 -- | Pre-compose a function to a 'ParamPred'.  Is essentially @'flip'
 -- ('.')@, but unfortunately defunctionalization doesn't work too well with
@@ -94,6 +114,26 @@ select
     :: forall p. Provable (Found p)
     => Prove (Found p)
 select = prove @(Found p)
+
+-- | A @'ParamPred' (f k) k@.  Parameterized on an @as :: f k@, returns
+-- a predicate that is true if there exists any @a :: k@ in @as@.
+--
+-- Essentially 'NotNull'.
+type InP f = (ElemSym1 f :: ParamPred (f k) k)
+
+instance Universe f => Decidable (Found (InP f)) where
+    decide xs = case decide @(NotNull f) xs of
+      Proved (WitAny i s) -> Proved $ s :&: i
+      Disproved v         -> Disproved $ \case
+        s :&: i -> v $ WitAny i s
+
+instance Decidable (NotNull f ==> Found (InP f))
+instance Provable (NotNull f ==> Found (InP f)) where
+    prove _ (WitAny i s) = s :&: i
+
+instance Decidable (Found (InP f) ==> NotNull f)
+instance Provable (Found (InP f) ==> NotNull f) where
+    prove _ (s :&: i) = WitAny i s
 
 -- | @'AnyMatch' f@ takes a parmaeterized predicate on @k@ (testing for
 -- a @v@) and turns it into a parameterized predicate on @f k@ (testing for

@@ -15,31 +15,51 @@
 {-# LANGUAGE TypeSynonymInstances  #-}
 {-# LANGUAGE UndecidableInstances  #-}
 
+-- |
+-- Module      : Data.Type.Universe
+-- Copyright   : (c) Justin Le 2018
+-- License     : BSD3
+--
+-- Maintainer  : justin@jle.im
+-- Stability   : experimental
+-- Portability : non-portable
+--
+-- Combinators for working with type-level predicates, along with
+-- typeclasses for canonical proofs and deciding functions.
+--
 module Data.Type.Universe (
     Elem, In
   , Universe(..), decideAny, decideAll, genAllA, genAll, igenAll
   , foldMapUni, ifoldMapUni, index, pickElem
   , All, WitAll(..)
-  , Any, WitAny(..)
+  , Any, WitAny(..), None
   , Index(..), IsJust(..), IsRight(..), NEIndex(..), Snd(..)
-  , Null, NotNull, choice, fromChoice, noChoice, fromNoChoice
+  , Null, NotNull
+  -- * Defunctionalization symbols
+  , ElemSym0, ElemSym1, ElemSym2
   ) where
 
+import           Data.Type.Predicate.Logic
 import           Control.Applicative
 import           Data.Functor.Identity
 import           Data.Kind
 import           Data.List.NonEmpty                    (NonEmpty(..))
 import           Data.Singletons
 import           Data.Singletons.Decide
-import           Data.Singletons.Prelude hiding        (Elem, Any, All, Snd, Null, Not)
-import           Data.Singletons.Sigma
+import           Data.Singletons.Prelude hiding        (Elem, ElemSym0, ElemSym1, ElemSym2, Any, All, Snd, Null, Not)
 import           Data.Type.Predicate
-import           Data.Type.Predicate.Logic
 import           Prelude hiding                        (any, all)
 import qualified Data.Singletons.Prelude.List.NonEmpty as NE
 
 -- | A witness for membership of a given item in a type-level collection
-type family Elem      (f :: Type -> Type) :: f k -> k -> Type
+type family Elem (f :: Type -> Type) :: f k -> k -> Type
+
+data ElemSym0 (f :: Type -> Type) :: f k ~> k ~> Type
+data ElemSym1 (f :: Type -> Type) :: f k -> k ~> Type
+type ElemSym2 (f :: Type -> Type) (as :: f k) (a :: k) = Elem f as a
+
+type instance Apply (ElemSym0 f) as = ElemSym1 f as
+type instance Apply (ElemSym1 f as) a = Elem f as a
 
 -- | @'In' f as@ is a predicate that a given input @a@ is a member of
 -- collection @as@.
@@ -50,9 +70,9 @@ type In (f :: Type -> Type) (as :: f k) = TyCon1 (Elem f as)
 data WitAny f :: (k ~> Type) -> f k -> Type where
     WitAny :: Elem f as a -> p @@ a -> WitAny f p as
 
--- | 'WitAny', but as a predicate.  An @'Any' f p@ is a predicate testing
--- a collection @as :: f a@ for the fact that at least one item in @as@
--- satisfies @p@.
+-- | An @'Any' f p@ is a predicate testing a collection @as :: f a@ for the
+-- fact that at least one item in @as@ satisfies @p@.  Represents the
+-- "exists" quantifier over a given universe.
 --
 -- This is mostly useful for its 'Decidable' and 'TFunctor' instances,
 -- which lets you lift predicates on @p@ to predicates on @'Any' f p@.
@@ -63,9 +83,9 @@ type instance Apply (Any f p) as = WitAny f p as
 -- items @a@ in the type-level collection @as@.
 newtype WitAll f p (as :: f k) = WitAll { runWitAll :: forall a. Elem f as a -> p @@ a }
 
--- | 'WitAll', but as a predicate.  An @'All' f p@ is a predicate testing
--- a collection @as :: f a@ for the fact that /all/ items in @as@ satisfy
--- @p@.
+-- | An @'All' f p@ is a predicate testing a collection @as :: f a@ for the
+-- fact that /all/ items in @as@ satisfy @p@.  Represents the "forall"
+-- quantifier over a given universe.
 --
 -- This is mostly useful for its 'Decidable', 'Provable', and 'TFunctor'
 -- instances, which lets you lift predicates on @p@ to predicates on @'All'
@@ -99,69 +119,37 @@ instance Universe f => DFunctor (All f) where
 -- | Typeclass for a type-level container that you can quantify or lift
 -- type-level predicates over.
 class Universe (f :: Type -> Type) where
-    -- | 'decideAny', but providing an 'Elem'.  See 'decideAny' for more
-    -- information.
+    -- | 'decideAny', but providing an 'Elem'.
     idecideAny
         :: forall k (p :: k ~> Type) (as :: f k). ()
         => (forall a. Elem f as a -> Sing a -> Decision (p @@ a))   -- ^ predicate on value
         -> (Sing as -> Decision (Any f p @@ as))                         -- ^ predicate on collection
 
-    -- | 'decideAll', but providing an 'Elem'.  See 'decideAll' for more
-    -- information.
+    -- | 'decideAll', but providing an 'Elem'.
     idecideAll
         :: forall k (p :: k ~> Type) (as :: f k). ()
         => (forall a. Elem f as a -> Sing a -> Decision (p @@ a))   -- ^ predicate on value
         -> (Sing as -> Decision (All f p @@ as))                         -- ^ predicate on collection
 
-    -- | 'genAllA', but providing an 'Elem'.  See 'genAllA' for more
-    -- information.
+    -- | 'genAllA', but providing an 'Elem'.
     igenAllA
         :: forall k (p :: k ~> Type) (as :: f k) h. Applicative h
         => (forall a. Elem f as a -> Sing a -> h (p @@ a))        -- ^ predicate on value in context
         -> (Sing as -> h (All f p @@ as))                              -- ^ predicate on collection in context
 
-type Null    f = (Not (NotNull f) :: Predicate (f k))
+-- | Predicate that a given @as :: f k@ is empty and has no items in it.
+type Null    f = (None f Evident :: Predicate (f k))
+
+-- | Predicate that a given @as :: f k@ is not empty, and has at least one
+-- item in it.
 type NotNull f = (Any f Evident :: Predicate (f k))
 
--- | From a witness that @as@ is 'NotNull' (non-empty), prove that an item
--- exists in it.
-choice
-    :: forall f k (as :: f k). ()
-    => NotNull f @@ as
-    -> Σ k (In f as)
-choice (WitAny i s) = s :&: i
+-- | A @'None' f p@ is a predicate on a collection @as@ that no @a@ in @as@
+-- satisfies predicate @p@.
+type None f p = (Not (Any f p) :: Predicate (f k))
 
--- | If an item is in @as@, prove that @as@ is 'NotNull' (non-empty).
-fromChoice
-    :: forall f k (as :: f k) a. SingI a
-    => In f as @@ a
-    -> NotNull f @@ as
-fromChoice = (`WitAny` sing)
-
--- | If @as@ is 'Null' (empty), prove that any @a@ is not in @as@.
-noChoice
-    :: forall f k (as :: f k) a. SingI a
-    => Null f @@ as
-    -> Not (In f as) @@ a
-noChoice n i = n $ fromChoice i
-
--- | If it is impossible to produce any item in @as@, prove that @a@ is
--- 'Null' (empty).
-fromNoChoice
-    :: forall f k (as :: f k). ()
-    => Refuted (Σ k (In f as))
-    -> Null f @@ as
-fromNoChoice n a = n $ choice a
-
--- | You should read this type as:
---
--- @
--- 'decideAny'' :: ('Sing' a  -> 'Decision' (p a)    )
---            -> (Sing as -> Decision (Any p as)
--- @
---
--- It lifts a predicate @p@ on an individual @a@ into a predicate that
--- on a collection @as@ that is true if and only if /any/ item in @as@
+-- | Lifts a predicate @p@ on an individual @a@ into a predicate that on
+-- a collection @as@ that is true if and only if /any/ item in @as@
 -- satisfies the original predicate.
 --
 -- That is, it turns a predicate of kind @k ~> Type@ into a predicate
@@ -174,15 +162,8 @@ decideAny
     -> Decide (Any f p)                -- ^ predicate on collection
 decideAny f = idecideAny (const f)
 
--- | You should read this type as:
---
--- @
--- 'decideAll'' :: ('Sing' a  -> 'Decision' (p a)    )
---            -> ('Sing' as -> 'Decision' (All p as)
--- @
---
--- It lifts a predicate @p@ on an individual @a@ into a predicate that
--- on a collection @as@ that is true if and only if /all/ items in @as@
+-- | Lifts a predicate @p@ on an individual @a@ into a predicate that on
+-- a collection @as@ that is true if and only if /all/ items in @as@
 -- satisfies the original predicate.
 --
 -- That is, it turns a predicate of kind @k ~> Type@ into a predicate
@@ -211,14 +192,15 @@ genAllA
     -> (Sing as -> h (All f p @@ as))               -- ^ predicate on collection in context
 genAllA f = igenAllA (const f)
 
--- | If @p a@ is true for all values @a@ in @as@, then we have @'All'
--- p as@.  Basically witnesses the definition of 'All'.
+-- | 'genAll', but providing an 'Elem'.
 igenAll
     :: forall f k (p :: k ~> Type) (as :: f k). Universe f
     => (forall a. Elem f as a -> Sing a -> p @@ a)            -- ^ always-true predicate on value
     -> (Sing as -> All f p @@ as)                                  -- ^ always-true predicate on collection
 igenAll f = runIdentity . igenAllA (\i -> Identity . f i)
 
+-- | If @p a@ is true for all values @a@ in @as@, then we have @'All'
+-- p as@.  Basically witnesses the definition of 'All'.
 genAll
     :: forall f k (p :: k ~> Type). Universe f
     => Prove p                 -- ^ always-true predicate on value

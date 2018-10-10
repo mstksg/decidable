@@ -16,6 +16,20 @@
 {-# LANGUAGE TypeOperators          #-}
 {-# LANGUAGE UndecidableInstances   #-}
 
+-- |
+-- Module      : Data.Type.Predicate
+-- Copyright   : (c) Justin Le 2018
+-- License     : BSD3
+--
+-- Maintainer  : justin@jle.im
+-- Stability   : experimental
+-- Portability : non-portable
+--
+-- Combinators for working with type-level predicates, along with
+-- typeclasses for canonical proofs and deciding functions.
+--
+-- TODO: explain matchable function, how to define predicates
+--
 module Data.Type.Predicate (
     -- * Predicates
     Predicate, Wit(..)
@@ -58,6 +72,7 @@ type TyPred = (TyCon1 :: (k -> Type) -> Predicate k)
 -- @
 type Evident = (TyPred Sing :: Predicate k)
 
+-- | The always-false predicate
 data Impossible :: Predicate k
 type instance Apply Impossible a = Void
 
@@ -158,7 +173,7 @@ class Decidable p where
 --     2. We can write 'Provable' instances for polymorphic predicate
 --     transformers (predicates parameterized on other predicates) easily,
 --     by refering to 'Provable' instances of the transformed predicates.
-class Decidable p => Provable p where
+class Provable p where
     -- | The canonical proving function for predicate @p@.
     --
     -- Note that 'prove' is ambiguously typed, so you /always/ need to call

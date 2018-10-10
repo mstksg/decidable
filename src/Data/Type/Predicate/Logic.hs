@@ -1,5 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE EmptyCase           #-}
+{-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE FlexibleInstances   #-}
 {-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE RankNTypes          #-}
@@ -9,6 +10,18 @@
 {-# LANGUAGE TypeInType          #-}
 {-# LANGUAGE TypeOperators       #-}
 
+-- |
+-- Module      : Data.Type.Predicate.Logic
+-- Copyright   : (c) Justin Le 2018
+-- License     : BSD3
+--
+-- Maintainer  : justin@jle.im
+-- Stability   : experimental
+-- Portability : non-portable
+--
+-- Logical and algebraic connectives for predicates, as well as common
+-- logical combinators.
+
 module Data.Type.Predicate.Logic (
     Evident, Impossible
   , type Not, decideNot
@@ -16,12 +29,15 @@ module Data.Type.Predicate.Logic (
   , type (|||), decideOr
   , type (^^^), decideXor
   , type (==>), proveImplies
-  , explosion, atom, excludedMiddle
+  , type (<==>)
+  , explosion, atom, excludedMiddle, doubleNegation
+  , contrapositive, contrapositive'
   ) where
 
-import           Data.Type.Predicate
 import           Data.Singletons
 import           Data.Singletons.Decide
+import           Data.Type.Predicate
+import           Data.Void
 
 -- | @'Not' p@ is the predicate that @p@ is not true.
 data Not :: Predicate k -> Predicate k
@@ -113,6 +129,17 @@ instance Decidable (Impossible ==> p) where
 instance Provable (Impossible ==> p) where
     prove = explosion @p
 
+-- | We can also probably write this instance if we restricted it to
+-- @'Decidable' q@.
+instance (Decidable (p ==> q), Decidable q) => Decidable (Not q ==> Not p) where
+    decide x = case decide @(p ==> q) x of
+      Proved pq     -> Proved $ \vq p -> vq (pq p)
+      Disproved vpq -> case decide @q x of
+        Proved    q  -> Disproved $ \_     -> vpq (const q)
+        Disproved vq -> Disproved $ \vnpnq -> vpq (absurd . vnpnq vq)
+instance Provable (p ==> q) => Provable (Not q ==> Not p) where
+    prove = contrapositive @p @q (prove @(p ==> q))
+
 -- | If @q@ is provable, then so is @p '==>' q@.
 --
 -- This can be used as an easy plug-in 'Provable' instance for @p '==>' q@
@@ -128,6 +155,9 @@ instance Provable (Impossible ==> p) where
 proveImplies :: Prove q -> Prove (p ==> q)
 proveImplies q x _ = q x
 
+-- | Two-way implication, or logical equivalence
+type (p <==> q) = p ==> q &&& q ==> p
+
 -- | From @'Impossible' @@ a@, you can prove anything.  Essentially
 -- a lifted version of 'absurd'.
 explosion :: Impossible --> p
@@ -140,3 +170,24 @@ atom = const
 -- | We cannot have both @p@ and @'Not' p@.
 excludedMiddle :: (p &&& Not p) --> Impossible
 excludedMiddle _ (p, notP) = notP p
+
+-- | If p implies q, then not q implies not p.
+contrapositive
+    :: (p --> q)
+    -> (Not q --> Not p)
+contrapositive f x v p = v (f x p)
+
+-- | Reverse direction of 'contrapositive'
+contrapositive'
+    :: forall p q. Decidable q
+    => (Not q --> Not p)
+    -> (p --> q)
+contrapositive' f x p = case decide @q x of
+    Proved     q -> q
+    Disproved vq -> absurd $ f x vq p
+
+-- | Logical double negation.  Only possible if @p@ is 'Decidable'.
+doubleNegation :: forall p. Decidable p => Not (Not p) --> p
+doubleNegation x vvp = case decide @p x of
+    Proved    p  -> p
+    Disproved vp -> absurd $ vvp vp

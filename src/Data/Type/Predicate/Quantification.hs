@@ -14,11 +14,26 @@
 {-# LANGUAGE TypeSynonymInstances  #-}
 {-# LANGUAGE UndecidableInstances  #-}
 
-module Data.Type.Quantification (
-    Any, WitAny(..)
+-- |
+-- Module      : Data.Type.Predicate.Quantification
+-- Copyright   : (c) Justin Le 2018
+-- License     : BSD3
+--
+-- Maintainer  : justin@jle.im
+-- Stability   : experimental
+-- Portability : non-portable
+--
+-- Higher-level predicates for quantifying predicates over universes and
+-- sets.
+--
+module Data.Type.Predicate.Quantification (
+  -- * Any
+    Any, WitAny(..), None
   , entailAny, ientailAny, entailAnyF, ientailAnyF
+  -- * All
   , All, WitAll(..)
-  , entailAll, ientailAll, entailAllF, ientailAllF, decideEntailAll, idecideEntailAll
+  , entailAll, ientailAll, entailAllF, ientailAllF
+  , decideEntailAll, idecideEntailAll
   ) where
 
 import           Data.Singletons
@@ -26,8 +41,7 @@ import           Data.Singletons.Decide
 import           Data.Type.Predicate
 import           Data.Type.Universe
 
--- | If there exists an @a@ s.t. @p a@, and if @p@ implies @q@, then there
--- must exist an @a@ s.t. @q a@.
+-- | 'entailAny', but providing an 'Elem'.
 ientailAny
     :: forall f p q as. (Universe f, SingI as)
     => (forall a. Elem f as a -> Sing a -> p @@ a -> q @@ a)        -- ^ implication
@@ -35,14 +49,15 @@ ientailAny
     -> Any f q @@ as
 ientailAny f (WitAny i x) = WitAny i (f i (index i sing) x)
 
+-- | If there exists an @a@ s.t. @p a@, and if @p@ implies @q@, then there
+-- must exist an @a@ s.t. @q a@.
 entailAny
     :: forall f p q. Universe f
     => (p --> q)
     -> (Any f p --> Any f q)
 entailAny = tmap @(Any f)
 
--- | If for all @a@ we have @p a@, and if @p@ implies @q@, then for all @a@
--- we must also have @p a@.
+-- | 'entailAll', but providing an 'Elem'.
 ientailAll
     :: forall f p q as. (Universe f, SingI as)
     => (forall a. Elem f as a -> Sing a -> p @@ a -> q @@ a)      -- ^ implication
@@ -50,11 +65,21 @@ ientailAll
     -> All f q @@ as
 ientailAll f a = WitAll $ \i -> f i (index i sing) (runWitAll a i)
 
+-- | If for all @a@ we have @p a@, and if @p@ implies @q@, then for all @a@
+-- we must also have @p a@.
 entailAll
     :: forall f p q. Universe f
     => (p --> q)
     -> (All f p --> All f q)
 entailAll = tmap @(All f)
+
+-- | 'entailAnyF', but providing an 'Elem'.
+ientailAnyF
+    :: forall f p q as h. Functor h
+    => (forall a. Elem f as a -> p @@ a -> h (q @@ a))      -- ^ implication in context
+    -> Any f p @@ as
+    -> h (Any f q @@ as)
+ientailAnyF f = \case WitAny i x -> WitAny i <$> f i x
 
 -- | If @p@ implies @q@ under some context @h@, and if there exists some
 -- @a@ such that @p a@, then there must exist some @a@ such that @p q@
@@ -67,14 +92,6 @@ entailAll = tmap @(All f)
 -- This is if the @p a -> 'Decision' (q a)@ implication is false, there
 -- it doesn't mean that there is /no/ @a@ such that @q a@, necessarily.
 -- There could have been an @a@ where @p@ does not hold, but @q@ does.
-ientailAnyF
-    :: forall f p q as h. Functor h
-    => (forall a. Elem f as a -> p @@ a -> h (q @@ a))      -- ^ implication in context
-    -> Any f p @@ as
-    -> h (Any f q @@ as)
-ientailAnyF f = \case WitAny i x -> WitAny i <$> f i x
-
--- | 'entailAnyF', but without the membership witness.
 entailAnyF
     :: forall f p q h. (Universe f, Functor h)
     => (p --># q) h                                     -- ^ implication in context
@@ -82,8 +99,7 @@ entailAnyF
 entailAnyF f x a = withSingI x $
     ientailAnyF @f @p @q (\i -> f (index i x)) a
 
--- | If @p@ implies @q@ under some context @h@, and if we have @p a@ for
--- all @a@, then we must have @q a@ for all @a@ under context @h@.
+-- | 'entailAllF', but providing an 'Elem'.
 ientailAllF
     :: forall f p q as h. (Universe f, Applicative h, SingI as)
     => (forall a. Elem f as a -> p @@ a -> h (q @@ a))    -- ^ implication in context
@@ -91,7 +107,8 @@ ientailAllF
     -> h (All f q @@ as)
 ientailAllF f a = igenAllA (\i _ -> f i (runWitAll a i)) sing
 
--- | 'entailAllF', but without the membership witness.
+-- | If @p@ implies @q@ under some context @h@, and if we have @p a@ for
+-- all @a@, then we must have @q a@ for all @a@ under context @h@.
 entailAllF
     :: forall f p q h. (Universe f, Applicative h)
     => (p --># q) h                                     -- ^ implication in context
@@ -99,8 +116,7 @@ entailAllF
 entailAllF f x a = withSingI x $
     ientailAllF @f @p @q (\i -> f (index i x)) a
 
--- | If we have @p a@ for all @a@, and @p a@ can be used to test for @q a@,
--- then we can test all @a@s for @q a@.
+-- | 'entailAllF', but providing an 'Elem'.
 idecideEntailAll
     :: forall f p q as. (Universe f, SingI as)
     => (forall a. Elem f as a -> p @@ a -> Decision (q @@ a))     -- ^ decidable implication
@@ -108,7 +124,8 @@ idecideEntailAll
     -> Decision (All f q @@ as)
 idecideEntailAll f a = idecideAll (\i _ -> f i (runWitAll a i)) sing
 
--- | 'decideEntailAll', but without the membeship witness.
+-- | If we have @p a@ for all @a@, and @p a@ can be used to test for @q a@,
+-- then we can test all @a@s for @q a@.
 decideEntailAll
     :: forall f p q. Universe f
     => p -?> q
