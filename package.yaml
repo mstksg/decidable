@@ -1,6 +1,6 @@
-name:                decidable-predicates
+name:                decidable
 version:             0.1.0.0
-github:              "mstksg/decidable-predicates"
+github:              "mstksg/decidable"
 license:             BSD3
 author:              "Justin Le"
 maintainer:          "justin@jle.im"
@@ -17,7 +17,7 @@ synopsis:            Combinators for manipulating dependently-typed predicates.
 # To avoid duplicated efforts in documentation and dealing with the
 # complications of embedding Haddock markup inside cabal files, it is
 # common to point users to the README.md file.
-description:         Please see the README on GitHub at <https://github.com/mstksg/decidable-predicates#readme>
+description:         Please see the README on GitHub at <https://github.com/mstksg/decidable#readme>
 
 dependencies:
 - base >= 4.7 && < 5

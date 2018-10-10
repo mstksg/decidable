@@ -1,6 +1,6 @@
-# [decidable-predicates][]
+# [decidable][]
 
-[decidable-predicates]: https://mstksg.github.io/decidable-predicates/
+[decidable]: https://mstksg.github.io/decidable/
 
 This library provides combinators and typeclasses for working and manipulating
 type-level predicates in Haskell, which are represented as matchable type-level
