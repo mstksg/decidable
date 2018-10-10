@@ -507,6 +507,23 @@ type ParamPred k v = k -> Predicate v
 --   A <tt><a>Found</a> p</tt> is a predicate on <tt>p :: <a>ParamPred</a>
 --   k v</tt> that tests a <tt>k</tt> for the fact that there exists a
 --   <tt>v</tt> where <tt><a>ParamPred</a> k v</tt> is satisfied.
+--   
+--   Meant to be used to allow one to write <a>Provable</a> and
+--   <a>Decidable</a> instances for <tt><a>Found</a> p</tt>, for a given
+--   <a>ParamPred</a> <tt>p</tt>.
+--   
+--   For some context, an instance of <tt><a>Provable</a> (<a>Found</a>
+--   P)</tt>, where <tt>P :: <a>ParamPred</a> k v</tt>, means that for any
+--   input <tt>x :: k</tt>, we can always find a <tt>y :: v</tt> such that
+--   we have <tt>P x </tt><tt> y</tt>.
+--   
+--   In the language of quantifiers, it means that forall <tt>x :: k</tt>,
+--   there exists a <tt>y :: v</tt> such that <tt>P x </tt><tt> y</tt>.
+--   
+--   For an instance of <tt><a>Decidable</a> (<a>Found</a> P)</tt>, it
+--   means that for all <tt>x :: k</tt>, we can prove or disprove the fact
+--   that there exists a <tt>y :: v</tt> such that <tt>P x </tt><tt>
+--   y</tt>.
 data Found :: ParamPred k v -> Predicate k
 
 -- | Flip the arguments of a <a>ParamPred</a>.
@@ -516,15 +533,11 @@ data FlipPP :: ParamPred v k -> ParamPred k v
 --   <tt><a>flip</a> (<a>.</a>)</tt>, but unfortunately defunctionalization
 --   doesn't work too well with that definition.
 data PPMap :: (k ~> j) -> ParamPred j v -> ParamPred k v
-class Searchable p
-search :: Searchable p => Decide (Found p)
-search :: (Searchable p, Selectable p) => Decide (Found p)
-class Searchable p => Selectable p
-select :: Selectable p => Prove (Found p)
 
 -- | <tt><a>AnyMatch</a> f</tt> takes a parmaeterized predicate on
 --   <tt>k</tt> (testing for a <tt>v</tt>) and turns it into a
---   parameterized predicate on <tt>f k</tt> (testing for a <tt>v</tt>).
+--   parameterized predicate on <tt>f k</tt> (testing for a <tt>v</tt>). It
+--   "lifts" the domain into <tt>f</tt>.
 --   
 --   An <tt><a>AnyMatch</a> f p as</tt> is a predicate taking an argument
 --   <tt>a</tt> and testing if <tt>p a :: <a>Predicate</a> k</tt> is
@@ -534,11 +547,9 @@ select :: Selectable p => Prove (Found p)
 --   <tt>v</tt>. The resulting <tt><tt>Param</tt> (f k) v</tt> tests if any
 --   <tt>k</tt> in <tt>f k</tt> can create some <tt>v</tt>.
 data AnyMatch f :: ParamPred k v -> ParamPred (f k) v
-instance forall k v (f :: * -> *) (p :: Data.Type.Predicate.Param.ParamPred k v). (Data.Type.Universe.Universe f, Data.Type.Predicate.Param.Searchable p) => Data.Type.Predicate.Param.Searchable (Data.Type.Predicate.Param.AnyMatch f p)
-instance forall k1 v (p :: Data.Type.Predicate.Param.ParamPred k1 v). Data.Type.Predicate.Param.Searchable p => Data.Type.Predicate.Decidable (Data.Type.Predicate.Param.Found p)
-instance forall k1 v (p :: Data.Type.Predicate.Param.ParamPred k1 v). Data.Type.Predicate.Param.Selectable p => Data.Type.Predicate.Provable (Data.Type.Predicate.Param.Found p)
-instance forall j v k (p :: Data.Type.Predicate.Param.ParamPred j v) (f :: k Data.Singletons.Internal.~> j). (Data.Type.Predicate.Param.Searchable p, Data.Singletons.Internal.SingI f) => Data.Type.Predicate.Param.Searchable (Data.Type.Predicate.Param.PPMap f p)
-instance forall j v k (p :: Data.Type.Predicate.Param.ParamPred j v) (f :: k Data.Singletons.Internal.~> j). (Data.Type.Predicate.Param.Selectable p, Data.Singletons.Internal.SingI f) => Data.Type.Predicate.Param.Selectable (Data.Type.Predicate.Param.PPMap f p)
+instance forall k v (f :: * -> *) (p :: Data.Type.Predicate.Param.ParamPred k v). (Data.Type.Universe.Universe f, Data.Type.Predicate.Decidable (Data.Type.Predicate.Param.Found p)) => Data.Type.Predicate.Decidable (Data.Type.Predicate.Param.Found (Data.Type.Predicate.Param.AnyMatch f p))
+instance forall j v k (p :: Data.Type.Predicate.Param.ParamPred j v) (f :: k Data.Singletons.Internal.~> j). (Data.Type.Predicate.Decidable (Data.Type.Predicate.Param.Found p), Data.Singletons.Internal.SingI f) => Data.Type.Predicate.Decidable (Data.Type.Predicate.Param.Found (Data.Type.Predicate.Param.PPMap f p))
+instance forall j v k (p :: Data.Type.Predicate.Param.ParamPred j v) (f :: k Data.Singletons.Internal.~> j). (Data.Type.Predicate.Provable (Data.Type.Predicate.Param.Found p), Data.Singletons.Internal.SingI f) => Data.Type.Predicate.Provable (Data.Type.Predicate.Param.Found (Data.Type.Predicate.Param.PPMap f p))
 
 module Data.Type.Universe.Subset
 data Subset f :: (k ~> Type) -> (f k ~> Type)
