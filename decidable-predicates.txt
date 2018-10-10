@@ -635,8 +635,8 @@ type InP f = (ElemSym1 f :: ParamPred (f k) k)
 --   satisfied for any item in <tt>as :: f k</tt>.
 --   
 --   A <tt><a>ParamPred</a> k v</tt> tests if a <tt>k</tt> can create some
---   <tt>v</tt>. The resulting <tt><tt>Param</tt> (f k) v</tt> tests if any
---   <tt>k</tt> in <tt>f k</tt> can create some <tt>v</tt>.
+--   <tt>v</tt>. The resulting <tt><a>ParamPred</a> (f k) v</tt> tests if
+--   any <tt>k</tt> in <tt>f k</tt> can create some <tt>v</tt>.
 data AnyMatch f :: ParamPred k v -> ParamPred (f k) v
 instance forall k v (f :: * -> *) (p :: Data.Type.Predicate.Param.ParamPred k v). (Data.Type.Universe.Universe f, Data.Type.Predicate.Decidable (Data.Type.Predicate.Param.Found p)) => Data.Type.Predicate.Decidable (Data.Type.Predicate.Param.Found (Data.Type.Predicate.Param.AnyMatch f p))
 instance Data.Type.Universe.Universe f => Data.Type.Predicate.Decidable (Data.Type.Predicate.Param.Found (Data.Type.Predicate.Param.InP f))
