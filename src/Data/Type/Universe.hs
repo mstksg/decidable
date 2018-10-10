@@ -39,29 +39,42 @@ import qualified Data.Singletons.Prelude.List.NonEmpty as NE
 -- | A witness for membership of a given item in a type-level collection
 type family Elem      (f :: Type -> Type) :: f k -> k -> Type
 
--- | An @'Any' p as@ is a witness that, for at least one item @a@ in the
+-- | A @'WitAny' p as@ is a witness that, for at least one item @a@ in the
 -- type-level collection @as@, the predicate @p a@ is true.
 data WitAny f :: (k ~> Type) -> f k -> Type where
     WitAny :: Elem f as a -> p @@ a -> WitAny f p as
 
+-- | 'WitAny', but as a predicate.  An @'Any' f p@ is a predicate testing
+-- a collection @as :: f a@ for the fact that at least one item in @as@
+-- satisfies @p@.
+--
+-- This is mostly useful for its 'Decidable' and 'TFunctor' instances,
+-- which lets you lift predicates on @p@ to predicates on @'Any' f p@.
 data Any f :: (k ~> Type) -> (f k ~> Type)
 type instance Apply (Any f p) as = WitAny f p as
 
--- | An @'All' p as@ is a witness that, the predicate @p a@ is true for all
+-- | A @'WitAll' p as@ is a witness that the predicate @p a@ is true for all
 -- items @a@ in the type-level collection @as@.
 newtype WitAll f p (as :: f k) = WitAll { runWitAll :: forall a. Elem f as a -> p @@ a }
 
+-- | 'WitAll', but as a predicate.  An @'All' f p@ is a predicate testing
+-- a collection @as :: f a@ for the fact that /all/ items in @as@ satisfy
+-- @p@.
+--
+-- This is mostly useful for its 'Decidable', 'Provable', and 'TFunctor'
+-- instances, which lets you lift predicates on @p@ to predicates on @'All'
+-- f p@.
 data All f :: (k ~> Type) -> (f k ~> Type)
 type instance Apply (All f p) as = WitAll f p as
 
-instance (Universe f, Decide p) => Decide (Any f p) where
+instance (Universe f, Decidable p) => Decidable (Any f p) where
     decide = decideAny @f @_ @p $ decide @p
 
-instance (Universe f, Decide p) => Decide (All f p) where
+instance (Universe f, Decidable p) => Decidable (All f p) where
     decide = decideAll @f @_ @p $ decide @p
 
-instance (Universe f, Decide_ p) => Decide_ (All f p) where
-    decide_ xs = WitAll $ \i -> decide_ @p (select i xs)
+instance (Universe f, Provable p) => Provable (All f p) where
+    prove xs = WitAll $ \i -> prove @p (select i xs)
 
 instance Universe f => TFunctor (Any f) where
     tmap f xs (WitAny i x) = WitAny i (f (select i xs) x)
@@ -75,54 +88,22 @@ instance Universe f => DFunctor (All f) where
 -- | Typeclass for a type-level container that you can quantify or lift
 -- type-level predicates over.
 class Universe (f :: Type -> Type) where
-
-    -- | You should read this type as:
-    --
-    -- @
-    -- 'decideAny'' :: ('Sing' a  -> 'Decision' (p a)    )
-    --            -> (Sing as -> Decision (Any p as)
-    -- @
-    --
-    -- It lifts a predicate @p@ on an individual @a@ into a predicate that
-    -- on a collection @as@ that is true if and only if /any/ item in @as@
-    -- satisfies the original predicate.
-    --
-    -- That is, it turns a predicate of kind @k ~> Type@ into a predicate
-    -- of kind @f k ~> Type@.
-    --
-    -- Essentially tests existential quantification.
+    -- | 'decideAny', but providing an 'Elem'.  See 'decideAny' for more
+    -- information.
     idecideAny
         :: forall k (p :: k ~> Type) (as :: f k). ()
         => (forall a. Elem f as a -> Sing a -> Decision (p @@ a))   -- ^ predicate on value
         -> (Sing as -> Decision (Any f p @@ as))                         -- ^ predicate on collection
 
-    -- | You should read this type as:
-    --
-    -- @
-    -- 'decideAll'' :: ('Sing' a  -> 'Decision' (p a)    )
-    --            -> ('Sing' as -> 'Decision' (All p as)
-    -- @
-    --
-    -- It lifts a predicate @p@ on an individual @a@ into a predicate that
-    -- on a collection @as@ that is true if and only if /all/ items in @as@
-    -- satisfies the original predicate.
-    --
-    -- That is, it turns a predicate of kind @k ~> Type@ into a predicate
-    -- of kind @f k ~> Type@.
-    --
-    -- Essentially tests universal quantification.
+    -- | 'decideAll', but providing an 'Elem'.  See 'decideAll' for more
+    -- information.
     idecideAll
         :: forall k (p :: k ~> Type) (as :: f k). ()
         => (forall a. Elem f as a -> Sing a -> Decision (p @@ a))   -- ^ predicate on value
         -> (Sing as -> Decision (All f p @@ as))                         -- ^ predicate on collection
 
-    -- | If @p a@ is true for all values @a@ in @as@ under some
-    -- (Applicative) context @h@, then you can create an @'All' p as@ under
-    -- that Applicative context @h@.
-    --
-    -- Can be useful with 'Identity' (which is basically unwrapping and
-    -- wrapping 'All'), or with 'Maybe' (which can express predicates that
-    -- are either provably true or not provably false).
+    -- | 'genAllA', but providing an 'Elem'.  See 'genAllA' for more
+    -- information.
     igenAllA
         :: forall k (p :: k ~> Type) (as :: f k) h. Applicative h
         => (forall a. Elem f as a -> Sing a -> h (p @@ a))        -- ^ predicate on value in context
@@ -131,19 +112,58 @@ class Universe (f :: Type -> Type) where
 type Null    f = (Not (NotNull f) :: Predicate (f k))
 type NotNull f = (Any f Evident :: Predicate (f k))
 
+-- | You should read this type as:
+--
+-- @
+-- 'decideAny'' :: ('Sing' a  -> 'Decision' (p a)    )
+--            -> (Sing as -> Decision (Any p as)
+-- @
+--
+-- It lifts a predicate @p@ on an individual @a@ into a predicate that
+-- on a collection @as@ that is true if and only if /any/ item in @as@
+-- satisfies the original predicate.
+--
+-- That is, it turns a predicate of kind @k ~> Type@ into a predicate
+-- of kind @f k ~> Type@.
+--
+-- Essentially tests existential quantification.
 decideAny
     :: forall f k (p :: k ~> Type). Universe f
-    => Test p                                 -- ^ predicate on value
-    -> Test (Any f p)                -- ^ predicate on collection
+    => Decide p                                 -- ^ predicate on value
+    -> Decide (Any f p)                -- ^ predicate on collection
 decideAny f = idecideAny (const f)
 
+-- | You should read this type as:
+--
+-- @
+-- 'decideAll'' :: ('Sing' a  -> 'Decision' (p a)    )
+--            -> ('Sing' as -> 'Decision' (All p as)
+-- @
+--
+-- It lifts a predicate @p@ on an individual @a@ into a predicate that
+-- on a collection @as@ that is true if and only if /all/ items in @as@
+-- satisfies the original predicate.
+--
+-- That is, it turns a predicate of kind @k ~> Type@ into a predicate
+-- of kind @f k ~> Type@.
+--
+-- Essentially tests universal quantification.
 decideAll
     :: forall f k (p :: k ~> Type). Universe f
-    => Test p                                 -- ^ predicate on value
-    -> Test (All f p)                -- ^ predicate on collection
+    => Decide p                                 -- ^ predicate on value
+    -> Decide (All f p)                -- ^ predicate on collection
 decideAll f = idecideAll (const f)
 
--- | 'igenAllA', but without the membership witness.
+-- | If @p a@ is true for all values @a@ in @as@ under some
+-- (Applicative) context @h@, then you can create an @'All' p as@ under
+-- that Applicative context @h@.
+--
+-- Can be useful with 'Identity' (which is basically unwrapping and
+-- wrapping 'All'), or with 'Maybe' (which can express predicates that
+-- are either provably true or not provably false).
+--
+-- In practice, this can be used to iterate and traverse and sequence
+-- actions over all "items" in @as@.
 genAllA
     :: forall k (p :: k ~> Type) (as :: f k) h. (Universe f, Applicative h)
     => (forall a. Sing a -> h (p @@ a))        -- ^ predicate on value in context
@@ -160,8 +180,8 @@ igenAll f = runIdentity . igenAllA (\i -> Identity . f i)
 
 genAll
     :: forall f k (p :: k ~> Type). Universe f
-    => Test_ p                          -- ^ always-true predicate on value
-    -> Test_ (All f p)         -- ^ always-true predicate on collection
+    => Prove p                 -- ^ always-true predicate on value
+    -> Prove (All f p)         -- ^ always-true predicate on collection
 genAll f = igenAll (const f)
 
 -- | Extract the item from the container witnessed by the 'Elem'
@@ -209,7 +229,7 @@ data Index :: [k] -> k -> Type where
     IS :: Index bs a -> Index (b ': bs) a
 
 deriving instance Show (Index as a)
-instance (SingI (as :: [k]), SDecide k) => Decide (TyPred (Index as)) where
+instance (SingI (as :: [k]), SDecide k) => Decidable (TyPred (Index as)) where
     decide x = withSingI x $ pickElem
 
 type instance Elem [] = Index
@@ -266,7 +286,7 @@ data IsJust :: Maybe k -> k -> Type where
     IsJust :: IsJust ('Just a) a
 
 deriving instance Show (IsJust as a)
-instance (SingI (as :: Maybe k), SDecide k) => Decide (TyPred (IsJust as)) where
+instance (SingI (as :: Maybe k), SDecide k) => Decidable (TyPred (IsJust as)) where
     decide x = withSingI x $ pickElem
 
 type instance Elem Maybe = IsJust
@@ -295,7 +315,7 @@ data IsRight :: Either j k -> k -> Type where
     IsRight :: IsRight ('Right a) a
 
 deriving instance Show (IsRight as a)
-instance (SingI (as :: Either j k), SDecide k) => Decide (TyPred (IsRight as)) where
+instance (SingI (as :: Either j k), SDecide k) => Decidable (TyPred (IsRight as)) where
     decide x = withSingI x $ pickElem
 
 type instance Elem (Either j) = IsRight
@@ -325,7 +345,7 @@ data NEIndex :: NonEmpty k -> k -> Type where
     NETail :: Index as a -> NEIndex (b ':| as) a
 
 deriving instance Show (NEIndex as a)
-instance (SingI (as :: NonEmpty k), SDecide k) => Decide (TyPred (NEIndex as)) where
+instance (SingI (as :: NonEmpty k), SDecide k) => Decidable (TyPred (NEIndex as)) where
     decide x = withSingI x $ pickElem
 
 type instance Elem NonEmpty = NEIndex
@@ -375,7 +395,7 @@ data Snd :: (j, k) -> k -> Type where
     Snd :: Snd '(a, b) b
 
 deriving instance Show (Snd as a)
-instance (SingI (as :: (j, k)), SDecide k) => Decide (TyPred (Snd as)) where
+instance (SingI (as :: (j, k)), SDecide k) => Decidable (TyPred (Snd as)) where
     decide x = withSingI x $ pickElem
 
 type instance Elem ((,) j) = Snd

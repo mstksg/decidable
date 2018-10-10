@@ -37,9 +37,9 @@ newtype WitSubset f p (as :: f k) = WitSubset
 data Subset f :: (k ~> Type) -> (f k ~> Type)
 type instance Apply (Subset f p) as = WitSubset f p as
 
-instance (Universe f, Decide p) => Decide (Subset f p)
-instance (Universe f, Decide p) => Decide_ (Subset f p) where
-    decide_ = makeSubset @f @_ @p (\_ -> decide @p)
+instance (Universe f, Decidable p) => Decidable (Subset f p)
+instance (Universe f, Decidable p) => Provable (Subset f p) where
+    prove = makeSubset @f @_ @p (\_ -> decide @p)
 
 -- | Create a 'Subset' from a predicate.
 makeSubset
@@ -88,18 +88,19 @@ mergeSubset f = imergeSubset (\(_ :: Elem f as a) p -> f @a p)
 intersection
     :: forall f p q. ()
     => ((Subset f p &&& Subset f q) --> Subset f (p &&& q))
-intersection _ = uncurry $ imergeSubset $ \(_ :: Elem f as a) -> proveAnd @p @q @a
+intersection _ = uncurry $ imergeSubset $ \(_ :: Elem f as a) -> decideAnd @p @q @a
 
 -- | Subset union
 union
     :: forall f p q. ()
     => ((Subset f p &&& Subset f q) --> Subset f (p ||| q))
-union _ = uncurry $ imergeSubset $ \(_ :: Elem f as a) -> proveOr @p @q @a
+union _ = uncurry $ imergeSubset $ \(_ :: Elem f as a) -> decideOr @p @q @a
 
+-- | Symmetric subset difference
 symDiff
     :: forall f p q. ()
     => ((Subset f p &&& Subset f q) --> Subset f (p ^^^ q))
-symDiff _ = uncurry $ imergeSubset $ \(_ :: Elem f as a) -> proveXor @p @q @a
+symDiff _ = uncurry $ imergeSubset $ \(_ :: Elem f as a) -> decideXor @p @q @a
 
 -- | Test if a subset is equal to the entire original collection
 subsetToAll
