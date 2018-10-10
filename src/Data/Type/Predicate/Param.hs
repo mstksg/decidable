@@ -12,7 +12,7 @@
 module Data.Type.Predicate.Param (
     ParamPred
   , Found, FlipPP, PPMap
-  , Searchable(..), Selectable(..)
+  -- , Searchable(..), Selectable(..)
   , AnyMatch
   ) where
 
@@ -30,7 +30,19 @@ type ParamPred k v = k -> Predicate v
 -- A @'Found' p@ is a predicate on @p :: 'ParamPred' k v@ that tests a @k@
 -- for the fact that there exists a @v@ where @'ParamPred' k v@ is satisfied.
 --
--- See 'Searchable' and 'Selectable' for more information.
+-- Meant to be used to allow one to write 'Provable' and 'Decidable'
+-- instances for @'Found' p@, for a given 'ParamPred' @p@.
+--
+-- For some context, an instance of @'Provable' ('Found' P)@, where @P ::
+-- 'ParamPred' k v@, means that for any input @x :: k@, we can always find
+-- a @y :: v@ such that we have @P x @@ y@.
+--
+-- In the language of quantifiers, it means that forall @x :: k@, there
+-- exists a @y :: v@ such that @P x @@ y@.
+--
+-- For an instance of @'Decidable' ('Found' P)@, it means that for all @x
+-- :: k@, we can prove or disprove the fact that there exists a @y :: v@
+-- such that @P x @@ y@.
 data Found :: ParamPred k v -> Predicate k
 type instance Apply (Found (p :: ParamPred k v)) a = Σ v (p a)
 
@@ -44,39 +56,13 @@ type instance Apply (FlipPP p x) y = p y @@ x
 data PPMap :: (k ~> j) -> ParamPred j v -> ParamPred k v
 type instance Apply (PPMap f p x) y = p (f @@ x) @@ y
 
--- | A parameterized predicate @P :: 'ParamPred' k v@ is searchable if,
--- given an input @x :: k@, we can prove or disprove that you can construct
--- a value @P x @@ y@ for some @y :: v@.
---
--- Essentially, you can "search" for a @v@ that fits.
-class Searchable p where
-    search :: Decide (Found p)
-
-    default search :: Selectable p => Decide (Found p)
-    search = Proved . select
-
--- | A parameterized predicate @P :: 'ParamPred' k v@ is selectable if,
--- given an input @x :: k@, we can always prove a @P x @@ y@ for some @y ::
--- k@.
---
--- In the language of quantifiers, it means that forall @x :: k@, there
--- exists a @y :: v@ such that @P x @@ y@.
-class Searchable p => Selectable p where
-    select :: Prove (Found p)
-
-instance Searchable p => Decidable (Found p) where
-    decide = search
-
-instance Selectable p => Provable (Found p) where
-    prove = select
-
-instance (Searchable (p :: ParamPred j v), SingI (f :: k ~> j)) => Searchable (PPMap f p) where
-    search (x :: Sing a) = case search @p ((sing :: Sing f) @@ x) of
+instance (Decidable (Found (p :: ParamPred j v)), SingI (f :: k ~> j)) => Decidable (Found (PPMap f p)) where
+    decide (x :: Sing a) = case decide @(Found p) ((sing :: Sing f) @@ x) of
         Proved (i :&: p) -> Proved $ i :&: p
         Disproved v      -> Disproved $ \case i :&: p -> v (i :&: p)
 
-instance (Selectable (p :: ParamPred j v), SingI (f :: k ~> j)) => Selectable (PPMap f p) where
-    select (x :: Sing a) = case select @p ((sing :: Sing f) @@ x) of
+instance (Provable (Found (p :: ParamPred j v)), SingI (f :: k ~> j)) => Provable (Found (PPMap f p)) where
+    prove (x :: Sing a) = case prove @(Found p) ((sing :: Sing f) @@ x) of
         i :&: p -> i :&: p
 
 -- | @'AnyMatch' f@ takes a parmaeterized predicate on @k@ (testing for
@@ -92,8 +78,8 @@ instance (Selectable (p :: ParamPred j v), SingI (f :: k ~> j)) => Selectable (P
 data AnyMatch f :: ParamPred k v -> ParamPred (f k) v
 type instance Apply (AnyMatch f p as) a = Any f (FlipPP p a) @@ as
 
-instance (Universe f, Searchable p) => Searchable (AnyMatch f p) where
-    search xs = case decide @(Any f (Found p)) xs of
+instance (Universe f, Decidable (Found p)) => Decidable (Found (AnyMatch f p)) where
+    decide xs = case decide @(Any f (Found p)) xs of
       Proved (WitAny i (x :&: p)) -> Proved $ x :&: WitAny i p
       Disproved v                 -> Disproved $ \case
         x :&: WitAny i p -> v $ WitAny i (x :&: p)
