@@ -22,7 +22,7 @@ instance Apply (Not p) a = (p @@ a) -&gt; Void
  always-true predicate <code><a href="Data-Type-Predicate.html#t:Evident" title="Data.Type.Predicate">Evident</a></code>:</p><pre>data Evident :: Predicate k
 instance Apply Evident a = Sing a
 </pre><p>And the &quot;and&quot; predicate combinator:</p><pre>data (&amp;&amp;&amp;) :: Predicate k -&gt; Predicate k -&gt; Predicate k
-instance Apply (p &amp;&amp;&amp; q) a = (p @<code> a, q @</code> a)
+instance Apply (p &amp;&amp;&amp; q) a = (p @@ a, q @@ a)
 </pre><p>Typically it is recommended to create predicates from the supplied
  predicate combinators (<code><a href="Data-Type-Predicate.html#t:TyPred" title="Data.Type.Predicate">TyPred</a></code> can be used for any type constructor to
  turn it into a predicate, for instance) whenever possible.</p></div></div><div class="top"><p class="src"><span class="keyword">newtype</span> <a id="t:Wit" class="def">Wit</a> p a <a href="src/Data.Type.Predicate.html#Wit" class="link">Source</a> <a href="#t:Wit" class="selflink">#</a></p><div class="doc"><p>A <code><code><a href="Data-Type-Predicate.html#t:Wit" title="Data.Type.Predicate">Wit</a></code> p a</code> is a value of type <code>p </code><code> a</code> --- that is, it is a proof
