@@ -28,15 +28,13 @@
 -- Combinators for working with type-level predicates, along with
 -- typeclasses for canonical proofs and deciding functions.
 --
--- TODO: explain matchable function, how to define predicates
---
 module Data.Type.Predicate (
     -- * Predicates
     Predicate, Wit(..)
     -- ** Construct Predicates
   , TyPred, Evident, EqualTo, BoolPred, Impossible
     -- ** Manipulate predicates
-  , PMap
+  , PMap, type Not, decideNot
     -- * Provable Predicates
   , Prove, type (-->), type (-->#)
   , Provable(..)
@@ -54,8 +52,59 @@ import           Data.Singletons.Decide
 import           Data.Singletons.Prelude hiding (Not)
 
 -- | A type-level predicate in Haskell.  We say that the predicate @P ::
--- 'Predicate k'@ is true/satisfied by input @x :: k@ if there exists a value of
--- type @P @@ x@, and that it false/disproved if such a value cannot exist.
+-- 'Predicate k'@ is true/satisfied by input @x :: k@ if there exists
+-- a value of type @P @@ x@, and that it false/disproved if such a value
+-- cannot exist.
+--
+-- See 'Provable' and 'Decidable' for more information on how to use, prove
+-- and decide these predicates.
+--
+-- The kind @k ~> 'Type'@ is the kind of "matchable" type-level functions
+-- in Haskell.  They are type-level functions that are encoded as dummy
+-- type constructors ("defunctionalization symbols") that can be decidedly
+-- "matched" on for things like typeclass instances.
+--
+-- There are two ways to define your own predicates:
+--
+--     1. Using the predicate combinators and predicate transformers in
+--     this library and the /singletons/ library, which let you construct
+--     pre-made predicates and sometimes create predicates from other
+--     predicates.
+--
+--     2. Manually creating a data type that acts as a matchable predicate.
+--
+-- For an example of the latter, we can create the "not p" predicate, which
+-- takes a predicate @p@ as input and returns the negation of the
+-- predicate:
+--
+-- @
+-- -- First, create the data type with the kind signature you want
+-- data Not :: Predicate k -> Predicate k
+--
+-- -- Then, write the 'Apply' instance, to specify the type of the
+-- -- witnesses of that predicate
+-- instance Apply (Not p) a = (p @@ a) -> Void
+-- @
+--
+-- See the source of "Data.Type.Predicate" and "Data.Type.Predicate.Logic"
+-- for simple examples of hand-made predicates.  For example, we have the
+-- always-true predicate 'Evident':
+--
+-- @
+-- data Evident :: Predicate k
+-- instance Apply Evident a = Sing a
+-- @
+--
+-- And the "and" predicate combinator:
+--
+-- @
+-- data (&&&) :: Predicate k -> Predicate k -> Predicate k
+-- instance Apply (p &&& q) a = (p @@ a, q @@ a)
+-- @
+--
+-- Typically it is recommended to create predicates from the supplied
+-- predicate combinators ('TyPred' can be used for any type constructor to
+-- turn it into a predicate, for instance) whenever possible.
 type Predicate k = k ~> Type
 
 -- | Convert a normal '->' type constructor into a 'Predicate'.
@@ -211,6 +260,9 @@ instance (Provable f, SingI g) => Provable (f .@#@$$$ g) where
 instance Decidable Impossible where
     decide _ = Disproved $ \case {}
 
+instance Provable (Not Impossible) where
+    prove _ = id
+
 -- | Compose two implications.
 compImpl
     :: forall p q r. ()
@@ -219,3 +271,18 @@ compImpl
     -> p --> r
 compImpl f g s = g s . f s
 
+-- | @'Not' p@ is the predicate that @p@ is not true.
+data Not :: Predicate k -> Predicate k
+type instance Apply (Not p) a = Refuted (p @@ a)
+
+instance Decidable p => Decidable (Not p) where
+    decide (x :: Sing a) = decideNot @p @a (decide @p x)
+
+-- | Decide @Not p@ based on decisions of @p@.
+decideNot
+    :: forall p a. ()
+    => Decision (p @@ a)
+    -> Decision (Not p @@ a)
+decideNot = \case
+    Proved p    -> Disproved ($ p)
+    Disproved v -> Proved v

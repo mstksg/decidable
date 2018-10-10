@@ -23,14 +23,17 @@
 -- logical combinators.
 
 module Data.Type.Predicate.Logic (
+  -- * Top and bottom
     Evident, Impossible
+  -- * Logical connectives
   , type Not, decideNot
   , type (&&&), decideAnd
   , type (|||), decideOr
   , type (^^^), decideXor
   , type (==>), proveImplies
   , type (<==>)
-  , explosion, atom, excludedMiddle, doubleNegation
+  -- * Logical deductions
+  , compImpl, explosion, atom, excludedMiddle, doubleNegation
   , contrapositive, contrapositive'
   ) where
 
@@ -38,22 +41,6 @@ import           Data.Singletons
 import           Data.Singletons.Decide
 import           Data.Type.Predicate
 import           Data.Void
-
--- | @'Not' p@ is the predicate that @p@ is not true.
-data Not :: Predicate k -> Predicate k
-type instance Apply (Not p) a = Refuted (p @@ a)
-
-instance Decidable p => Decidable (Not p) where
-    decide (x :: Sing a) = decideNot @p @a (decide @p x)
-
--- | Decide @Not p@ based on decisions of @p@.
-decideNot
-    :: forall p a. ()
-    => Decision (p @@ a)
-    -> Decision (Not p @@ a)
-decideNot = \case
-    Proved p    -> Disproved ($ p)
-    Disproved v -> Proved v
 
 -- | @p '&&&' q@ is a predicate that both @p@ and @q@ are true.
 data (&&&) :: Predicate k -> Predicate k -> Predicate k

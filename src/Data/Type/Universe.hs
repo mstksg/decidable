@@ -28,13 +28,17 @@
 -- typeclasses for canonical proofs and deciding functions.
 --
 module Data.Type.Universe (
-    Elem, In
-  , Universe(..), decideAny, decideAll, genAllA, genAll, igenAll
-  , foldMapUni, ifoldMapUni, index, pickElem
+  -- * Universe
+    Elem, In, Universe(..)
+  -- ** Instances
+  , Index(..), IsJust(..), IsRight(..), NEIndex(..), Snd(..)
+  -- ** Predicates
   , All, WitAll(..)
   , Any, WitAny(..), None
-  , Index(..), IsJust(..), IsRight(..), NEIndex(..), Snd(..)
   , Null, NotNull
+  -- * Decisions and manipulations
+  , decideAny, decideAll, genAllA, genAll, igenAll
+  , foldMapUni, ifoldMapUni, index, pickElem
   -- * Defunctionalization symbols
   , ElemSym0, ElemSym1, ElemSym2
   ) where

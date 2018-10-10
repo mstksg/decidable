@@ -26,9 +26,13 @@
 -- Represent a decidable subset of a type-level collection.
 --
 module Data.Type.Universe.Subset (
+  -- * Subset
     Subset, WitSubset(..)
-  , makeSubset, subsetToList, subsetToAny, subsetToAll
+  , makeSubset
+  -- ** Subset manipulation
   , intersection, union, symDiff, mergeSubset, imergeSubset
+  -- ** Subset extraction
+  , subsetToList, subsetToAny, subsetToAll
   ) where
 
 import           Control.Applicative

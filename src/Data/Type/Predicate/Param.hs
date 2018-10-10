@@ -24,11 +24,12 @@
 -- more information.
 --
 module Data.Type.Predicate.Param (
+  -- * Parameterized Predicates
     ParamPred
-  , Found, FlipPP, ConstPP, PPMap
+  , FlipPP, ConstPP, PPMap, InP, AnyMatch
+  -- * Deciding and Proving
+  , Found
   , search, select
-  , InP
-  , AnyMatch
   ) where
 
 import           Data.Singletons
@@ -41,13 +42,14 @@ import           Data.Type.Universe
 -- | A parameterized predicate.  See 'Found' for more information.
 type ParamPred k v = k -> Predicate v
 
--- | Convert a parameterized predicate into a predicate on the parameter
+-- | Convert a parameterized predicate into a predicate on the parameter.
 --
 -- A @'Found' p@ is a predicate on @p :: 'ParamPred' k v@ that tests a @k@
 -- for the fact that there exists a @v@ where @'ParamPred' k v@ is satisfied.
 --
--- Meant to be used to allow one to write 'Provable' and 'Decidable'
--- instances for @'Found' p@, for a given 'ParamPred' @p@.
+-- Intended as the basic interface for 'ParamPred', since it turns
+-- a 'ParamPred' into a normal 'Predicate', which can have 'Decidable' and
+-- 'Provable' instances.
 --
 -- For some context, an instance of @'Provable' ('Found' P)@, where @P ::
 -- 'ParamPred' k v@, means that for any input @x :: k@, we can always find
@@ -144,7 +146,7 @@ instance Provable (Found (InP f) ==> NotNull f) where
 -- f k@.
 --
 -- A @'ParamPred' k v@ tests if a @k@ can create some @v@.  The resulting
--- @'Param' (f k) v@ tests if any @k@ in @f k@ can create some @v@.
+-- @'ParamPred' (f k) v@ tests if any @k@ in @f k@ can create some @v@.
 data AnyMatch f :: ParamPred k v -> ParamPred (f k) v
 type instance Apply (AnyMatch f p as) a = Any f (FlipPP p a) @@ as
 
