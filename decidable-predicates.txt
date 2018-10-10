@@ -534,6 +534,31 @@ data FlipPP :: ParamPred v k -> ParamPred k v
 --   doesn't work too well with that definition.
 data PPMap :: (k ~> j) -> ParamPred j v -> ParamPred k v
 
+-- | Convenient alias for <a>decide</a> in the case of <tt><a>Found</a>
+--   p</tt>; basically like <a>decide</a> for a <a>ParamPred</a>. Saying
+--   that predicate <tt><a>Found</a> p</tt> is decidable means that, for an
+--   input <tt>x :: k</tt>, we can prove or disprove that there exists a
+--   <tt>y :: v</tt> that satisfies <tt>P x </tt><tt> y</tt>.
+--   
+--   Can be called by applying the <a>ParamPred</a>:
+--   
+--   <pre>
+--   <a>search</a> @p
+--   </pre>
+search :: forall p. Decidable (Found p) => Decide (Found p)
+
+-- | Convenient alias for <a>prove</a> in the case of <tt><a>Found</a>
+--   p</tt>; basically like <a>prove</a> for <a>ParamPred</a>. You can
+--   imagine it as generating the witness for "forall <tt>x :: k</tt>.
+--   exists <tt>y :: v</tt>. P x @@ y".
+--   
+--   Can be called by applying the <a>ParamPred</a>:
+--   
+--   <pre>
+--   <a>select</a> @p
+--   </pre>
+select :: forall p. Provable (Found p) => Prove (Found p)
+
 -- | <tt><a>AnyMatch</a> f</tt> takes a parmaeterized predicate on
 --   <tt>k</tt> (testing for a <tt>v</tt>) and turns it into a
 --   parameterized predicate on <tt>f k</tt> (testing for a <tt>v</tt>). It
