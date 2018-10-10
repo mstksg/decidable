@@ -47,7 +47,7 @@ makeSubset
     => (forall a. Elem f as a -> Sing a -> Decision (p @@ a))
     -> Sing as
     -> Subset f p @@ as
-makeSubset f xs = WitSubset $ \i -> f i (select i xs)
+makeSubset f xs = WitSubset $ \i -> f i (index i xs)
 
 -- | Turn a 'Subset' into a list (or any 'Alternative') of satisfied
 -- predicates.

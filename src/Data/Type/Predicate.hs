@@ -26,6 +26,7 @@ module Data.Type.Predicate (
   , type (&&&), decideAnd
   , type (|||), decideOr
   , type (^^^), decideXor
+  , type (==>), proveImplies
     -- * Provable Predicates
   , Prove, type (-->), type (-->#)
   , Provable(..)
@@ -140,10 +141,11 @@ class Decidable p where
     default decide :: Provable p => Decide p
     decide = Proved . prove @p
 
--- | A typeclass for provable predicates.
+-- | A typeclass for provable predicates (constructivist tautologies).
 --
 -- A predicate is provable if, given any input @a@, you can generate
--- a proof of @p @@ a@.
+-- a proof of @p @@ a@.  Essentially, it means that a predicate is "always
+-- true".
 --
 -- This typeclass associates a canonical proof function for every provable
 -- predicate.
@@ -192,7 +194,7 @@ instance (Provable f, SingI g) => Provable (f .@#@$$$ g) where
     prove = prove @f . ((sing :: Sing g) @@)
 
 -- | @'Not' p@ is the predicate that @p@ is not true.
-data Not :: (k ~> Type) -> (k ~> Type)
+data Not :: Predicate k -> Predicate k
 type instance Apply (Not p) a = Refuted (p @@ a)
 
 instance Decidable p => Decidable (Not p) where
@@ -208,12 +210,15 @@ decideNot = \case
     Disproved v -> Proved v
 
 -- | @p '&&&' q@ is a predicate that both @p@ and @q@ are true.
-data (&&&) :: (k ~> Type) -> (k ~> Type) -> (k ~> Type)
+data (&&&) :: Predicate k -> Predicate k -> Predicate k
 type instance Apply (p &&& q) a = (p @@ a, q @@ a)
 infixr 3 &&&
 
 instance (Decidable p, Decidable q) => Decidable (p &&& q) where
     decide (x :: Sing a) = decideAnd @p @q @a (decide @p x) (decide @q x)
+
+instance (Provable p, Provable q) => Provable (p &&& q) where
+    prove x = (prove @p x, prove @q x)
 
 -- | Decide @p '&&&' q@ based on decisions of @p@ and @q@.
 decideAnd
@@ -228,12 +233,16 @@ decideAnd = \case
     Disproved v -> \_ -> Disproved $ \(p, _) -> v p
 
 -- | @p '|||' q@ is a predicate that either @p@ and @q@ are true.
-data (|||) :: (k ~> Type) -> (k ~> Type) -> (k ~> Type)
+data (|||) :: Predicate k -> Predicate k -> Predicate k
 type instance Apply (p ||| q) a = Either (p @@ a) (q @@ a)
 infixr 2 |||
 
 instance (Decidable p, Decidable q) => Decidable (p ||| q) where
     decide (x :: Sing a) = decideOr @p @q @a (decide @p x) (decide @q x)
+
+-- | TODO: this might be better stated in terms of some or-constraint.
+instance (Provable p, Provable q) => Provable (p ||| q) where
+    prove x = Left (prove @p x)
 
 -- | Decide @p '|||' q@ based on decisions of @p@ and @q@.
 decideOr
@@ -262,6 +271,28 @@ decideXor
 decideXor p q = decideOr @(p &&& Not q) @(Not p &&& q) @a
                   (decideAnd @p @(Not q) @a p (decideNot @q @a q))
                   (decideAnd @(Not p) @q @a (decideNot @p @a p) q)
+
+-- | @p ==> q@ is true if @q@ is provably true under the condition that @p@
+-- is true.
+data (==>) :: Predicate k -> Predicate k -> Predicate k
+type instance Apply (p ==> q) a = p @@ a -> q @@ a
+
+infixr 2 ==>
+
+-- | If @q@ is provable, then so is @p '==>' q@.
+--
+-- This can be used as an easy plug-in 'Provable' instance for @p '==>' q@
+-- if @q@ is 'Provable':
+--
+-- @
+-- instance Provable (p ==> MyPred) where
+--     prove = proveImplies @MyPred
+-- @
+--
+-- This instance isn't provided polymorphically because of overlapping
+-- instance issues.
+proveImplies :: Prove q -> Prove (p ==> q)
+proveImplies q x _ = q x
 
 -- | Compose two implications.
 compImpl

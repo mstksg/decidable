@@ -33,7 +33,7 @@ ientailAny
     => (forall a. Elem f as a -> Sing a -> p @@ a -> q @@ a)        -- ^ implication
     -> Any f p @@ as
     -> Any f q @@ as
-ientailAny f (WitAny i x) = WitAny i (f i (select i sing) x)
+ientailAny f (WitAny i x) = WitAny i (f i (index i sing) x)
 
 entailAny
     :: forall f p q. Universe f
@@ -48,7 +48,7 @@ ientailAll
     => (forall a. Elem f as a -> Sing a -> p @@ a -> q @@ a)      -- ^ implication
     -> All f p @@ as
     -> All f q @@ as
-ientailAll f a = WitAll $ \i -> f i (select i sing) (runWitAll a i)
+ientailAll f a = WitAll $ \i -> f i (index i sing) (runWitAll a i)
 
 entailAll
     :: forall f p q. Universe f
@@ -80,7 +80,7 @@ entailAnyF
     => (p --># q) h                                     -- ^ implication in context
     -> (Any f p --># Any f q) h
 entailAnyF f x a = withSingI x $
-    ientailAnyF @f @p @q (\i -> f (select i x)) a
+    ientailAnyF @f @p @q (\i -> f (index i x)) a
 
 -- | If @p@ implies @q@ under some context @h@, and if we have @p a@ for
 -- all @a@, then we must have @q a@ for all @a@ under context @h@.
@@ -97,7 +97,7 @@ entailAllF
     => (p --># q) h                                     -- ^ implication in context
     -> (All f p --># All f q) h
 entailAllF f x a = withSingI x $
-    ientailAllF @f @p @q (\i -> f (select i x)) a
+    ientailAllF @f @p @q (\i -> f (index i x)) a
 
 -- | If we have @p a@ for all @a@, and @p a@ can be used to test for @q a@,
 -- then we can test all @a@s for @q a@.

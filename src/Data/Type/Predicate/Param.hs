@@ -12,7 +12,7 @@
 module Data.Type.Predicate.Param (
     ParamPred
   , Found, FlipPP, PPMap
-  , Searchable(..), Findable(..)
+  , Searchable(..), Selectable(..)
   , AnyMatch
   ) where
 
@@ -45,25 +45,25 @@ type instance Apply (PPMap f p x) y = p (f @@ x) @@ y
 class Searchable p where
     search :: Decide (Found p)
 
-    default search :: Findable p => Decide (Found p)
-    search = Proved . find
+    default search :: Selectable p => Decide (Found p)
+    search = Proved . select
 
-class Searchable p => Findable p where
-    find :: Prove (Found p)
+class Searchable p => Selectable p where
+    select :: Prove (Found p)
 
 instance Searchable p => Decidable (Found p) where
     decide = search
 
-instance Findable p => Provable (Found p) where
-    prove = find
+instance Selectable p => Provable (Found p) where
+    prove = select
 
 instance (Searchable (p :: ParamPred j v), SingI (f :: k ~> j)) => Searchable (PPMap f p) where
     search (x :: Sing a) = case search @p ((sing :: Sing f) @@ x) of
         Proved (i :&: p) -> Proved $ i :&: p
         Disproved v      -> Disproved $ \case i :&: p -> v (i :&: p)
 
-instance (Findable (p :: ParamPred j v), SingI (f :: k ~> j)) => Findable (PPMap f p) where
-    find (x :: Sing a) = case find @p ((sing :: Sing f) @@ x) of
+instance (Selectable (p :: ParamPred j v), SingI (f :: k ~> j)) => Selectable (PPMap f p) where
+    select (x :: Sing a) = case select @p ((sing :: Sing f) @@ x) of
         i :&: p -> i :&: p
 
 -- | @'AnyMatch' f@ takes a parmaeterized predicate on @k@ (testing for

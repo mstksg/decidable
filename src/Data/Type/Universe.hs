@@ -16,13 +16,13 @@
 {-# LANGUAGE UndecidableInstances  #-}
 
 module Data.Type.Universe (
-    Elem
+    Elem, In
   , Universe(..), decideAny, decideAll, genAllA, genAll, igenAll
-  , foldMapUni, ifoldMapUni, select, pickElem
+  , foldMapUni, ifoldMapUni, index, pickElem
   , All, WitAll(..)
   , Any, WitAny(..)
   , Index(..), IsJust(..), IsRight(..), NEIndex(..), Snd(..)
-  , Null, NotNull
+  , Null, NotNull, choice, fromChoice, noChoice, fromNoChoice
   ) where
 
 import           Control.Applicative
@@ -32,12 +32,17 @@ import           Data.List.NonEmpty                    (NonEmpty(..))
 import           Data.Singletons
 import           Data.Singletons.Decide
 import           Data.Singletons.Prelude hiding        (Elem, Any, All, Snd, Null, Not)
+import           Data.Singletons.Sigma
 import           Data.Type.Predicate
 import           Prelude hiding                        (any, all)
 import qualified Data.Singletons.Prelude.List.NonEmpty as NE
 
 -- | A witness for membership of a given item in a type-level collection
 type family Elem      (f :: Type -> Type) :: f k -> k -> Type
+
+-- | @'In' f as@ is a predicate that a given input @a@ is a member of
+-- collection @as@.
+type In (f :: Type -> Type) (as :: f k) = TyCon1 (Elem f as)
 
 -- | A @'WitAny' p as@ is a witness that, for at least one item @a@ in the
 -- type-level collection @as@, the predicate @p a@ is true.
@@ -73,14 +78,19 @@ instance (Universe f, Decidable p) => Decidable (Any f p) where
 instance (Universe f, Decidable p) => Decidable (All f p) where
     decide = decideAll @f @_ @p $ decide @p
 
+instance (Universe f, Provable p) => Decidable (NotNull f ==> Any f p) where
+
+instance (Universe f, Provable p) => Provable (NotNull f ==> Any f p) where
+    prove _ (WitAny i s) = WitAny i (prove @p s)
+
 instance (Universe f, Provable p) => Provable (All f p) where
-    prove xs = WitAll $ \i -> prove @p (select i xs)
+    prove xs = WitAll $ \i -> prove @p (index i xs)
 
 instance Universe f => TFunctor (Any f) where
-    tmap f xs (WitAny i x) = WitAny i (f (select i xs) x)
+    tmap f xs (WitAny i x) = WitAny i (f (index i xs) x)
 
 instance Universe f => TFunctor (All f) where
-    tmap f xs a = WitAll $ \i -> f (select i xs) (runWitAll a i)
+    tmap f xs a = WitAll $ \i -> f (index i xs) (runWitAll a i)
 
 instance Universe f => DFunctor (All f) where
     dmap f xs a = idecideAll (\i x -> f x (runWitAll a i)) xs
@@ -111,6 +121,36 @@ class Universe (f :: Type -> Type) where
 
 type Null    f = (Not (NotNull f) :: Predicate (f k))
 type NotNull f = (Any f Evident :: Predicate (f k))
+
+-- | From a witness that @as@ is 'NotNull' (non-empty), prove that an item
+-- exists in it.
+choice
+    :: forall f k (as :: f k). ()
+    => NotNull f @@ as
+    -> Σ k (In f as)
+choice (WitAny i s) = s :&: i
+
+-- | If an item is in @as@, prove that @as@ is 'NotNull' (non-empty).
+fromChoice
+    :: forall f k (as :: f k) a. SingI a
+    => In f as @@ a
+    -> NotNull f @@ as
+fromChoice = (`WitAny` sing)
+
+-- | If @as@ is 'Null' (empty), prove that any @a@ is not in @as@.
+noChoice
+    :: forall f k (as :: f k) a. SingI a
+    => Null f @@ as
+    -> Not (In f as) @@ a
+noChoice n i = n $ fromChoice i
+
+-- | If it is impossible to produce any item in @as@, prove that @a@ is
+-- 'Null' (empty).
+fromNoChoice
+    :: forall f k (as :: f k). ()
+    => Refuted (Σ k (In f as))
+    -> Null f @@ as
+fromNoChoice n a = n $ choice a
 
 -- | You should read this type as:
 --
@@ -185,12 +225,12 @@ genAll
 genAll f = igenAll (const f)
 
 -- | Extract the item from the container witnessed by the 'Elem'
-select
+index
     :: forall f as a. Universe f
     => Elem f as a        -- ^ Witness
     -> Sing as            -- ^ Collection
     -> Sing a
-select i = (`runWitAll` i) . splitSing
+index i = (`runWitAll` i) . splitSing
 
 -- | Split a @'Sing' as@ into a proof that all @a@ in @as@ exist.
 splitSing
