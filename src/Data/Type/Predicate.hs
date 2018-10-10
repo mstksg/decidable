@@ -14,7 +14,6 @@
 {-# LANGUAGE TypeFamilies           #-}
 {-# LANGUAGE TypeInType             #-}
 {-# LANGUAGE TypeOperators          #-}
-{-# LANGUAGE UndecidableInstances   #-}
 
 -- |
 -- Module      : Data.Type.Predicate
@@ -50,9 +49,10 @@ import           Data.Kind
 import           Data.Singletons
 import           Data.Singletons.Decide
 import           Data.Singletons.Prelude hiding (Not)
+import           Data.Void
 
 -- | A type-level predicate in Haskell.  We say that the predicate @P ::
--- 'Predicate k'@ is true/satisfied by input @x :: k@ if there exists
+-- 'Predicate' k@ is true/satisfied by input @x :: k@ if there exists
 -- a value of type @P @@ x@, and that it false/disproved if such a value
 -- cannot exist.
 --
@@ -99,7 +99,7 @@ import           Data.Singletons.Prelude hiding (Not)
 --
 -- @
 -- data (&&&) :: Predicate k -> Predicate k -> Predicate k
--- instance Apply (p &&& q) a = (p @@ a, q @@ a)
+-- instance Apply (p &&& q) a = (p \@\@ a, q \@\@ a)
 -- @
 --
 -- Typically it is recommended to create predicates from the supplied
@@ -122,8 +122,10 @@ type TyPred = (TyCon1 :: (k -> Type) -> Predicate k)
 type Evident = (TyPred Sing :: Predicate k)
 
 -- | The always-false predicate
-data Impossible :: Predicate k
-type instance Apply Impossible a = Void
+--
+-- Could also be defined as @'ConstSym1' Void@, but this defintion gives
+-- us a free 'Decidable' instance.
+type Impossible = (Not Evident :: Predicate k)
 
 -- | @'EqualTo' a@ is a predicate that the input is equal to @a@.
 type EqualTo (a :: k) = (TyPred ((:~:) a) :: Predicate k)
@@ -257,12 +259,6 @@ instance (Decidable f, SingI g) => Decidable (f .@#@$$$ g) where
 instance (Provable f, SingI g) => Provable (f .@#@$$$ g) where
     prove = prove @f . ((sing :: Sing g) @@)
 
-instance Decidable Impossible where
-    decide _ = Disproved $ \case {}
-
-instance Provable (Not Impossible) where
-    prove _ = id
-
 -- | Compose two implications.
 compImpl
     :: forall p q r. ()
@@ -277,6 +273,9 @@ type instance Apply (Not p) a = Refuted (p @@ a)
 
 instance Decidable p => Decidable (Not p) where
     decide (x :: Sing a) = decideNot @p @a (decide @p x)
+
+instance Provable (Not Impossible) where
+    prove x v = absurd $ v x
 
 -- | Decide @Not p@ based on decisions of @p@.
 decideNot

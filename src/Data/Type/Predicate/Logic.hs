@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE ConstraintKinds     #-}
 {-# LANGUAGE EmptyCase           #-}
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE FlexibleInstances   #-}
@@ -30,8 +31,8 @@ module Data.Type.Predicate.Logic (
   , type (&&&), decideAnd
   , type (|||), decideOr
   , type (^^^), decideXor
-  , type (==>), proveImplies
-  , type (<==>)
+  , type (==>), proveImplies, Implies
+  , type (<==>), Equiv
   -- * Logical deductions
   , compImpl, explosion, atom, excludedMiddle, doubleNegation
   , contrapositive, contrapositive'
@@ -41,6 +42,7 @@ import           Data.Singletons
 import           Data.Singletons.Decide
 import           Data.Type.Predicate
 import           Data.Void
+import qualified Control.Category       as C
 
 -- | @p '&&&' q@ is a predicate that both @p@ and @q@ are true.
 data (&&&) :: Predicate k -> Predicate k -> Predicate k
@@ -116,8 +118,6 @@ instance Decidable (Impossible ==> p) where
 instance Provable (Impossible ==> p) where
     prove = explosion @p
 
--- | We can also probably write this instance if we restricted it to
--- @'Decidable' q@.
 instance (Decidable (p ==> q), Decidable q) => Decidable (Not q ==> Not p) where
     decide x = case decide @(p ==> q) x of
       Proved pq     -> Proved $ \vq p -> vq (pq p)
@@ -126,6 +126,14 @@ instance (Decidable (p ==> q), Decidable q) => Decidable (Not q ==> Not p) where
         Disproved vq -> Disproved $ \vnpnq -> vpq (absurd . vnpnq vq)
 instance Provable (p ==> q) => Provable (Not q ==> Not p) where
     prove = contrapositive @p @q (prove @(p ==> q))
+
+-- | @'Implies' p q@ is a type synonym that @p '==>' q@ is 'Provable'; that
+-- is, you can prove that @p@ implies @q@.
+type Implies  p q = Provable  (p ==> q)
+
+-- | @'Implies' p q@ is a type synonym that @p '<==>' q@ is 'Provable'; that
+-- is, you can prove that @p@ is logically equivalent to @q@.
+type Equiv  p q = Provable  (p <==> q)
 
 -- | If @q@ is provable, then so is @p '==>' q@.
 --
@@ -148,7 +156,7 @@ type (p <==> q) = p ==> q &&& q ==> p
 -- | From @'Impossible' @@ a@, you can prove anything.  Essentially
 -- a lifted version of 'absurd'.
 explosion :: Impossible --> p
-explosion _ = \case {}
+explosion x v = absurd $ v x
 
 -- | 'Evident' can be proven from all predicates.
 atom :: p --> Evident
@@ -156,7 +164,7 @@ atom = const
 
 -- | We cannot have both @p@ and @'Not' p@.
 excludedMiddle :: (p &&& Not p) --> Impossible
-excludedMiddle _ (p, notP) = notP p
+excludedMiddle _ (p, notP) _ = notP p
 
 -- | If p implies q, then not q implies not p.
 contrapositive
@@ -164,7 +172,9 @@ contrapositive
     -> (Not q --> Not p)
 contrapositive f x v p = v (f x p)
 
--- | Reverse direction of 'contrapositive'
+-- | Reverse direction of 'contrapositive'.  Only possible if @q@ is
+-- 'Decidable' on its own, without the help of @p@, which makes this much
+-- less useful.
 contrapositive'
     :: forall p q. Decidable q
     => (Not q --> Not p)
