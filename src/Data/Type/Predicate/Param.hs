@@ -1,5 +1,6 @@
 {-# LANGUAGE DefaultSignatures    #-}
 {-# LANGUAGE EmptyCase            #-}
+{-# LANGUAGE FlexibleContexts     #-}
 {-# LANGUAGE FlexibleInstances    #-}
 {-# LANGUAGE LambdaCase           #-}
 {-# LANGUAGE ScopedTypeVariables  #-}
@@ -12,7 +13,7 @@
 module Data.Type.Predicate.Param (
     ParamPred
   , Found, FlipPP, PPMap
-  -- , Searchable(..), Selectable(..)
+  , search, select
   , AnyMatch
   ) where
 
@@ -64,6 +65,35 @@ instance (Decidable (Found (p :: ParamPred j v)), SingI (f :: k ~> j)) => Decida
 instance (Provable (Found (p :: ParamPred j v)), SingI (f :: k ~> j)) => Provable (Found (PPMap f p)) where
     prove (x :: Sing a) = case prove @(Found p) ((sing :: Sing f) @@ x) of
         i :&: p -> i :&: p
+
+-- | Convenient alias for 'decide' in the case of @'Found' p@; basically
+-- like 'decide' for a 'ParamPred'.  Saying that predicate @'Found' p@ is
+-- decidable means that, for an input @x :: k@, we can prove or disprove
+-- that there exists a @y :: v@ that satisfies @P x @@ y@.
+--
+-- Can be called by applying the 'ParamPred':
+--
+-- @
+-- 'search' \@p
+-- @
+search
+    :: forall p. Decidable (Found p)
+    => Decide (Found p)
+search = decide @(Found p)
+
+-- | Convenient alias for 'prove' in the case of @'Found' p@; basically
+-- like 'prove' for 'ParamPred'.  You can imagine it as generating the
+-- witness for "forall @x :: k@. exists @y :: v@. P x @@ y".
+--
+-- Can be called by applying the 'ParamPred':
+--
+-- @
+-- 'select' \@p
+-- @
+select
+    :: forall p. Provable (Found p)
+    => Prove (Found p)
+select = prove @(Found p)
 
 -- | @'AnyMatch' f@ takes a parmaeterized predicate on @k@ (testing for
 -- a @v@) and turns it into a parameterized predicate on @f k@ (testing for
