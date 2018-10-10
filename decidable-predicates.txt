@@ -9,6 +9,11 @@
 @package decidable-predicates
 @version 0.1.0.0
 
+
+-- | Combinators for working with type-level predicates, along with
+--   typeclasses for canonical proofs and deciding functions.
+--   
+--   TODO: explain matchable function, how to define predicates
 module Data.Type.Predicate
 
 -- | A type-level predicate in Haskell. We say that the predicate <tt>P ::
@@ -49,6 +54,8 @@ type EqualTo (a :: k) = (TyPred ((:~:) a) :: Predicate k)
 --   <a>BoolPred</a> :: (k ~&gt; Bool) -&gt; Predicate k
 --   </pre>
 type BoolPred (p :: k ~> Bool) = (EqualTo  'True .@#@$$$ p :: Predicate k)
+
+-- | The always-false predicate
 data Impossible :: Predicate k
 
 -- | Pre-compose a function to a predicate
@@ -92,7 +99,7 @@ infixr 2 -->#
 --   refering to <a>Provable</a> instances of the transformed
 --   predicates.</li>
 --   </ol>
-class Decidable p => Provable p
+class Provable p
 
 -- | The canonical proving function for predicate <tt>p</tt>.
 --   
@@ -176,11 +183,14 @@ class DFunctor f
 dmap :: forall p q. DFunctor f => (p -?> q) -> f p -?> f q
 instance forall k (a :: k). (Data.Singletons.Decide.SDecide k, Data.Singletons.Internal.SingI a) => Data.Type.Predicate.Decidable (Data.Type.Predicate.EqualTo a)
 instance Data.Type.Predicate.Decidable Data.Type.Predicate.Evident
-instance Data.Type.Predicate.Provable Data.Type.Predicate.Evident
 instance forall k1 b6989586621679919354 (f :: b6989586621679919354 Data.Singletons.Internal.~> *) (g :: k1 Data.Singletons.Internal.~> b6989586621679919354). (Data.Type.Predicate.Decidable f, Data.Singletons.Internal.SingI g) => Data.Type.Predicate.Decidable (f Data.Singletons.Prelude.Base..@#@$$$ g)
-instance forall k1 b6989586621679919354 (f :: b6989586621679919354 Data.Singletons.Internal.~> *) (g :: k1 Data.Singletons.Internal.~> b6989586621679919354). (Data.Type.Predicate.Provable f, Data.Singletons.Internal.SingI g) => Data.Type.Predicate.Provable (f Data.Singletons.Prelude.Base..@#@$$$ g)
 instance Data.Type.Predicate.Decidable Data.Type.Predicate.Impossible
+instance Data.Type.Predicate.Provable Data.Type.Predicate.Evident
+instance forall k1 b6989586621679919354 (f :: b6989586621679919354 Data.Singletons.Internal.~> *) (g :: k1 Data.Singletons.Internal.~> b6989586621679919354). (Data.Type.Predicate.Provable f, Data.Singletons.Internal.SingI g) => Data.Type.Predicate.Provable (f Data.Singletons.Prelude.Base..@#@$$$ g)
 
+
+-- | Logical and algebraic connectives for predicates, as well as common
+--   logical combinators.
 module Data.Type.Predicate.Logic
 
 -- | The always-true predicate.
@@ -189,6 +199,8 @@ module Data.Type.Predicate.Logic
 --   <a>Evident</a> :: <a>Predicate</a> k
 --   </pre>
 type Evident = (TyPred Sing :: Predicate k)
+
+-- | The always-false predicate
 data Impossible :: Predicate k
 
 -- | <tt><a>Not</a> p</tt> is the predicate that <tt>p</tt> is not true.
@@ -242,8 +254,11 @@ infixr 2 ==>
 --   instance issues.
 proveImplies :: Prove q -> Prove (p ==> q)
 
+-- | Two-way implication, or logical equivalence
+type p <==> q = p ==> q &&& q ==> p
+
 -- | From <tt><a>Impossible</a> </tt><tt> a</tt>, you can prove anything.
---   Essentially a lifted version of <tt>absurd</tt>.
+--   Essentially a lifted version of <a>absurd</a>.
 explosion :: Impossible --> p
 
 -- | <a>Evident</a> can be proven from all predicates.
@@ -251,14 +266,29 @@ atom :: p --> Evident
 
 -- | We cannot have both <tt>p</tt> and <tt><a>Not</a> p</tt>.
 excludedMiddle :: (p &&& Not p) --> Impossible
+
+-- | Logical double negation. Only possible if <tt>p</tt> is
+--   <a>Decidable</a>.
+doubleNegation :: forall p. Decidable p => Not (Not p) --> p
+
+-- | If p implies q, then not q implies not p.
+contrapositive :: (p --> q) -> Not q --> Not p
+
+-- | Reverse direction of <a>contrapositive</a>
+contrapositive' :: forall p q. Decidable q => (Not q --> Not p) -> p --> q
 instance forall k1 (p :: Data.Type.Predicate.Predicate k1). Data.Type.Predicate.Decidable (Data.Type.Predicate.Impossible Data.Type.Predicate.Logic.==> p)
 instance forall k1 (p :: Data.Type.Predicate.Predicate k1). Data.Type.Predicate.Provable (Data.Type.Predicate.Impossible Data.Type.Predicate.Logic.==> p)
+instance forall k1 (p :: Data.Type.Predicate.Predicate k1) (q :: Data.Type.Predicate.Predicate k1). (Data.Type.Predicate.Decidable (p Data.Type.Predicate.Logic.==> q), Data.Type.Predicate.Decidable q) => Data.Type.Predicate.Decidable (Data.Type.Predicate.Logic.Not q Data.Type.Predicate.Logic.==> Data.Type.Predicate.Logic.Not p)
+instance forall k1 (p :: Data.Type.Predicate.Predicate k1) (q :: Data.Type.Predicate.Predicate k1). Data.Type.Predicate.Provable (p Data.Type.Predicate.Logic.==> q) => Data.Type.Predicate.Provable (Data.Type.Predicate.Logic.Not q Data.Type.Predicate.Logic.==> Data.Type.Predicate.Logic.Not p)
 instance forall k1 (p :: k1 Data.Singletons.Internal.~> *) (q :: k1 Data.Singletons.Internal.~> *). (Data.Type.Predicate.Decidable p, Data.Type.Predicate.Decidable q) => Data.Type.Predicate.Decidable (p Data.Type.Predicate.Logic.||| q)
 instance forall k1 (p :: k1 Data.Singletons.Internal.~> *) (q :: k1 Data.Singletons.Internal.~> *). (Data.Type.Predicate.Provable p, Data.Type.Predicate.Provable q) => Data.Type.Predicate.Provable (p Data.Type.Predicate.Logic.||| q)
 instance forall k1 (p :: k1 Data.Singletons.Internal.~> *) (q :: k1 Data.Singletons.Internal.~> *). (Data.Type.Predicate.Decidable p, Data.Type.Predicate.Decidable q) => Data.Type.Predicate.Decidable (p Data.Type.Predicate.Logic.&&& q)
 instance forall k1 (p :: k1 Data.Singletons.Internal.~> *) (q :: k1 Data.Singletons.Internal.~> *). (Data.Type.Predicate.Provable p, Data.Type.Predicate.Provable q) => Data.Type.Predicate.Provable (p Data.Type.Predicate.Logic.&&& q)
 instance forall k1 (p :: k1 Data.Singletons.Internal.~> *). Data.Type.Predicate.Decidable p => Data.Type.Predicate.Decidable (Data.Type.Predicate.Logic.Not p)
 
+
+-- | Combinators for working with type-level predicates, along with
+--   typeclasses for canonical proofs and deciding functions.
 module Data.Type.Universe
 
 -- | A witness for membership of a given item in a type-level collection
@@ -272,26 +302,16 @@ type In (f :: Type -> Type) (as :: f k) = TyCon1 (Elem f as)
 --   type-level predicates over.
 class Universe (f :: Type -> Type)
 
--- | <a>decideAny</a>, but providing an <a>Elem</a>. See <a>decideAny</a>
---   for more information.
+-- | <a>decideAny</a>, but providing an <a>Elem</a>.
 idecideAny :: forall k (p :: k ~> Type) (as :: f k). Universe f => (forall a. Elem f as a -> Sing a -> Decision (p @@ a)) -> Sing as -> Decision (Any f p @@ as)
 
--- | <a>decideAll</a>, but providing an <a>Elem</a>. See <a>decideAll</a>
---   for more information.
+-- | <a>decideAll</a>, but providing an <a>Elem</a>.
 idecideAll :: forall k (p :: k ~> Type) (as :: f k). Universe f => (forall a. Elem f as a -> Sing a -> Decision (p @@ a)) -> Sing as -> Decision (All f p @@ as)
 
--- | <a>genAllA</a>, but providing an <a>Elem</a>. See <a>genAllA</a> for
---   more information.
+-- | <a>genAllA</a>, but providing an <a>Elem</a>.
 igenAllA :: forall k (p :: k ~> Type) (as :: f k) h. (Universe f, Applicative h) => (forall a. Elem f as a -> Sing a -> h (p @@ a)) -> Sing as -> h (All f p @@ as)
 
--- | You should read this type as:
---   
---   <pre>
---   <tt>decideAny'</tt> :: (<a>Sing</a> a  -&gt; <a>Decision</a> (p a)    )
---              -&gt; (Sing as -&gt; Decision (Any p as)
---   </pre>
---   
---   It lifts a predicate <tt>p</tt> on an individual <tt>a</tt> into a
+-- | Lifts a predicate <tt>p</tt> on an individual <tt>a</tt> into a
 --   predicate that on a collection <tt>as</tt> that is true if and only if
 --   <i>any</i> item in <tt>as</tt> satisfies the original predicate.
 --   
@@ -301,14 +321,7 @@ igenAllA :: forall k (p :: k ~> Type) (as :: f k) h. (Universe f, Applicative h)
 --   Essentially tests existential quantification.
 decideAny :: forall f k (p :: k ~> Type). Universe f => Decide p -> Decide (Any f p)
 
--- | You should read this type as:
---   
---   <pre>
---   <tt>decideAll'</tt> :: (<a>Sing</a> a  -&gt; <a>Decision</a> (p a)    )
---              -&gt; (<a>Sing</a> as -&gt; <a>Decision</a> (All p as)
---   </pre>
---   
---   It lifts a predicate <tt>p</tt> on an individual <tt>a</tt> into a
+-- | Lifts a predicate <tt>p</tt> on an individual <tt>a</tt> into a
 --   predicate that on a collection <tt>as</tt> that is true if and only if
 --   <i>all</i> items in <tt>as</tt> satisfies the original predicate.
 --   
@@ -329,11 +342,13 @@ decideAll :: forall f k (p :: k ~> Type). Universe f => Decide p -> Decide (All 
 --   In practice, this can be used to iterate and traverse and sequence
 --   actions over all "items" in <tt>as</tt>.
 genAllA :: forall k (p :: k ~> Type) (as :: f k) h. (Universe f, Applicative h) => (forall a. Sing a -> h (p @@ a)) -> Sing as -> h (All f p @@ as)
-genAll :: forall f k (p :: k ~> Type). Universe f => Prove p -> Prove (All f p)
 
 -- | If <tt>p a</tt> is true for all values <tt>a</tt> in <tt>as</tt>, then
 --   we have <tt><a>All</a> p as</tt>. Basically witnesses the definition
 --   of <a>All</a>.
+genAll :: forall f k (p :: k ~> Type). Universe f => Prove p -> Prove (All f p)
+
+-- | <a>genAll</a>, but providing an <a>Elem</a>.
 igenAll :: forall f k (p :: k ~> Type) (as :: f k). Universe f => (forall a. Elem f as a -> Sing a -> p @@ a) -> Sing as -> All f p @@ as
 
 -- | A <a>foldMap</a> over all items in a collection.
@@ -348,9 +363,9 @@ index :: forall f as a. Universe f => Elem f as a -> Sing as -> Sing a
 -- | Automatically generate a witness for a member, if possible
 pickElem :: forall f k (as :: f k) a. (Universe f, SingI as, SingI a, SDecide k) => Decision (Elem f as a)
 
--- | <a>WitAll</a>, but as a predicate. An <tt><a>All</a> f p</tt> is a
---   predicate testing a collection <tt>as :: f a</tt> for the fact that
---   <i>all</i> items in <tt>as</tt> satisfy <tt>p</tt>.
+-- | An <tt><a>All</a> f p</tt> is a predicate testing a collection <tt>as
+--   :: f a</tt> for the fact that <i>all</i> items in <tt>as</tt> satisfy
+--   <tt>p</tt>. Represents the "forall" quantifier over a given universe.
 --   
 --   This is mostly useful for its <a>Decidable</a>, <a>Provable</a>, and
 --   <a>TFunctor</a> instances, which lets you lift predicates on
@@ -364,9 +379,10 @@ newtype WitAll f p (as :: f k)
 WitAll :: (forall a. Elem f as a -> p @@ a) -> WitAll f p
 [runWitAll] :: WitAll f p -> forall a. Elem f as a -> p @@ a
 
--- | <a>WitAny</a>, but as a predicate. An <tt><a>Any</a> f p</tt> is a
---   predicate testing a collection <tt>as :: f a</tt> for the fact that at
---   least one item in <tt>as</tt> satisfies <tt>p</tt>.
+-- | An <tt><a>Any</a> f p</tt> is a predicate testing a collection <tt>as
+--   :: f a</tt> for the fact that at least one item in <tt>as</tt>
+--   satisfies <tt>p</tt>. Represents the "exists" quantifier over a given
+--   universe.
 --   
 --   This is mostly useful for its <a>Decidable</a> and <a>TFunctor</a>
 --   instances, which lets you lift predicates on <tt>p</tt> to predicates
@@ -378,6 +394,10 @@ data Any f :: (k ~> Type) -> (f k ~> Type)
 --   <tt>p a</tt> is true.
 data WitAny f :: (k ~> Type) -> f k -> Type
 [WitAny] :: Elem f as a -> (p @@ a) -> WitAny f p as
+
+-- | A <tt><a>None</a> f p</tt> is a predicate on a collection <tt>as</tt>
+--   that no <tt>a</tt> in <tt>as</tt> satisfies predicate <tt>p</tt>.
+type None f p = (Not (Any f p) :: Predicate (f k))
 
 -- | Witness an item in a type-level list by providing its index.
 data Index :: [k] -> k -> Type
@@ -403,24 +423,17 @@ data NEIndex :: NonEmpty k -> k -> Type
 -- | Trivially witness an item in the second field of a type-level tuple.
 data Snd :: (j, k) -> k -> Type
 [Snd] :: Snd '(a, b) b
-type Null f = (Not (NotNull f) :: Predicate (f k))
+
+-- | Predicate that a given <tt>as :: f k</tt> is empty and has no items in
+--   it.
+type Null f = (None f Evident :: Predicate (f k))
+
+-- | Predicate that a given <tt>as :: f k</tt> is not empty, and has at
+--   least one item in it.
 type NotNull f = (Any f Evident :: Predicate (f k))
-
--- | From a witness that <tt>as</tt> is <a>NotNull</a> (non-empty), prove
---   that an item exists in it.
-choice :: forall f k (as :: f k). () => (NotNull f @@ as) -> Σ k (In f as)
-
--- | If an item is in <tt>as</tt>, prove that <tt>as</tt> is <a>NotNull</a>
---   (non-empty).
-fromChoice :: forall f k (as :: f k) a. SingI a => (In f as @@ a) -> NotNull f @@ as
-
--- | If <tt>as</tt> is <a>Null</a> (empty), prove that any <tt>a</tt> is
---   not in <tt>as</tt>.
-noChoice :: forall f k (as :: f k) a. SingI a => (Null f @@ as) -> Not (In f as) @@ a
-
--- | If it is impossible to produce any item in <tt>as</tt>, prove that
---   <tt>a</tt> is <a>Null</a> (empty).
-fromNoChoice :: forall f k (as :: f k). () => Refuted (Σ k (In f as)) -> Null f @@ as
+data ElemSym0 (f :: Type -> Type) :: f k ~> k ~> Type
+data ElemSym1 (f :: Type -> Type) :: f k -> k ~> Type
+type ElemSym2 (f :: Type -> Type) (as :: f k) (a :: k) = Elem f as a
 instance forall k (as :: [k]) (a :: k). GHC.Show.Show (Data.Type.Universe.Index as a)
 instance forall k (as :: GHC.Maybe.Maybe k) (a :: k). GHC.Show.Show (Data.Type.Universe.IsJust as a)
 instance forall j k (as :: Data.Either.Either j k) (a :: k). GHC.Show.Show (Data.Type.Universe.IsRight as a)
@@ -445,11 +458,15 @@ instance Data.Type.Universe.Universe f => Data.Type.Predicate.TFunctor (Data.Typ
 instance Data.Type.Universe.Universe f => Data.Type.Predicate.TFunctor (Data.Type.Universe.All f)
 instance Data.Type.Universe.Universe f => Data.Type.Predicate.DFunctor (Data.Type.Universe.All f)
 
-module Data.Type.Quantification
 
--- | <a>WitAny</a>, but as a predicate. An <tt><a>Any</a> f p</tt> is a
---   predicate testing a collection <tt>as :: f a</tt> for the fact that at
---   least one item in <tt>as</tt> satisfies <tt>p</tt>.
+-- | Higher-level predicates for quantifying predicates over universes and
+--   sets.
+module Data.Type.Predicate.Quantification
+
+-- | An <tt><a>Any</a> f p</tt> is a predicate testing a collection <tt>as
+--   :: f a</tt> for the fact that at least one item in <tt>as</tt>
+--   satisfies <tt>p</tt>. Represents the "exists" quantifier over a given
+--   universe.
 --   
 --   This is mostly useful for its <a>Decidable</a> and <a>TFunctor</a>
 --   instances, which lets you lift predicates on <tt>p</tt> to predicates
@@ -461,15 +478,18 @@ data Any f :: (k ~> Type) -> (f k ~> Type)
 --   <tt>p a</tt> is true.
 data WitAny f :: (k ~> Type) -> f k -> Type
 [WitAny] :: Elem f as a -> (p @@ a) -> WitAny f p as
-entailAny :: forall f p q. Universe f => (p --> q) -> Any f p --> Any f q
+
+-- | A <tt><a>None</a> f p</tt> is a predicate on a collection <tt>as</tt>
+--   that no <tt>a</tt> in <tt>as</tt> satisfies predicate <tt>p</tt>.
+type None f p = (Not (Any f p) :: Predicate (f k))
 
 -- | If there exists an <tt>a</tt> s.t. <tt>p a</tt>, and if <tt>p</tt>
 --   implies <tt>q</tt>, then there must exist an <tt>a</tt> s.t. <tt>q
 --   a</tt>.
-ientailAny :: forall f p q as. (Universe f, SingI as) => (forall a. Elem f as a -> Sing a -> (p @@ a) -> q @@ a) -> (Any f p @@ as) -> Any f q @@ as
+entailAny :: forall f p q. Universe f => (p --> q) -> Any f p --> Any f q
 
--- | <a>entailAnyF</a>, but without the membership witness.
-entailAnyF :: forall f p q h. (Universe f, Functor h) => (p --># q) h -> (Any f p --># Any f q) h
+-- | <a>entailAny</a>, but providing an <a>Elem</a>.
+ientailAny :: forall f p q as. (Universe f, SingI as) => (forall a. Elem f as a -> Sing a -> (p @@ a) -> q @@ a) -> (Any f p @@ as) -> Any f q @@ as
 
 -- | If <tt>p</tt> implies <tt>q</tt> under some context <tt>h</tt>, and if
 --   there exists some <tt>a</tt> such that <tt>p a</tt>, then there must
@@ -485,11 +505,14 @@ entailAnyF :: forall f p q h. (Universe f, Functor h) => (p --># q) h -> (Any f 
 --   that there is <i>no</i> <tt>a</tt> such that <tt>q a</tt>,
 --   necessarily. There could have been an <tt>a</tt> where <tt>p</tt> does
 --   not hold, but <tt>q</tt> does.
+entailAnyF :: forall f p q h. (Universe f, Functor h) => (p --># q) h -> (Any f p --># Any f q) h
+
+-- | <a>entailAnyF</a>, but providing an <a>Elem</a>.
 ientailAnyF :: forall f p q as h. Functor h => (forall a. Elem f as a -> (p @@ a) -> h (q @@ a)) -> (Any f p @@ as) -> h (Any f q @@ as)
 
--- | <a>WitAll</a>, but as a predicate. An <tt><a>All</a> f p</tt> is a
---   predicate testing a collection <tt>as :: f a</tt> for the fact that
---   <i>all</i> items in <tt>as</tt> satisfy <tt>p</tt>.
+-- | An <tt><a>All</a> f p</tt> is a predicate testing a collection <tt>as
+--   :: f a</tt> for the fact that <i>all</i> items in <tt>as</tt> satisfy
+--   <tt>p</tt>. Represents the "forall" quantifier over a given universe.
 --   
 --   This is mostly useful for its <a>Decidable</a>, <a>Provable</a>, and
 --   <a>TFunctor</a> instances, which lets you lift predicates on
@@ -502,31 +525,36 @@ data All f :: (k ~> Type) -> (f k ~> Type)
 newtype WitAll f p (as :: f k)
 WitAll :: (forall a. Elem f as a -> p @@ a) -> WitAll f p
 [runWitAll] :: WitAll f p -> forall a. Elem f as a -> p @@ a
-entailAll :: forall f p q. Universe f => (p --> q) -> All f p --> All f q
 
 -- | If for all <tt>a</tt> we have <tt>p a</tt>, and if <tt>p</tt> implies
 --   <tt>q</tt>, then for all <tt>a</tt> we must also have <tt>p a</tt>.
-ientailAll :: forall f p q as. (Universe f, SingI as) => (forall a. Elem f as a -> Sing a -> (p @@ a) -> q @@ a) -> (All f p @@ as) -> All f q @@ as
+entailAll :: forall f p q. Universe f => (p --> q) -> All f p --> All f q
 
--- | <a>entailAllF</a>, but without the membership witness.
-entailAllF :: forall f p q h. (Universe f, Applicative h) => (p --># q) h -> (All f p --># All f q) h
+-- | <a>entailAll</a>, but providing an <a>Elem</a>.
+ientailAll :: forall f p q as. (Universe f, SingI as) => (forall a. Elem f as a -> Sing a -> (p @@ a) -> q @@ a) -> (All f p @@ as) -> All f q @@ as
 
 -- | If <tt>p</tt> implies <tt>q</tt> under some context <tt>h</tt>, and if
 --   we have <tt>p a</tt> for all <tt>a</tt>, then we must have <tt>q
 --   a</tt> for all <tt>a</tt> under context <tt>h</tt>.
-ientailAllF :: forall f p q as h. (Universe f, Applicative h, SingI as) => (forall a. Elem f as a -> (p @@ a) -> h (q @@ a)) -> (All f p @@ as) -> h (All f q @@ as)
+entailAllF :: forall f p q h. (Universe f, Applicative h) => (p --># q) h -> (All f p --># All f q) h
 
--- | <a>decideEntailAll</a>, but without the membeship witness.
-decideEntailAll :: forall f p q. Universe f => (p -?> q) -> All f p -?> All f q
+-- | <a>entailAllF</a>, but providing an <a>Elem</a>.
+ientailAllF :: forall f p q as h. (Universe f, Applicative h, SingI as) => (forall a. Elem f as a -> (p @@ a) -> h (q @@ a)) -> (All f p @@ as) -> h (All f q @@ as)
 
 -- | If we have <tt>p a</tt> for all <tt>a</tt>, and <tt>p a</tt> can be
 --   used to test for <tt>q a</tt>, then we can test all <tt>a</tt>s for
 --   <tt>q a</tt>.
+decideEntailAll :: forall f p q. Universe f => (p -?> q) -> All f p -?> All f q
+
+-- | <a>entailAllF</a>, but providing an <a>Elem</a>.
 idecideEntailAll :: forall f p q as. (Universe f, SingI as) => (forall a. Elem f as a -> (p @@ a) -> Decision (q @@ a)) -> (All f p @@ as) -> Decision (All f q @@ as)
 
+
+-- | Manipulate "parameterized predicates". See <a>ParamPred</a> and
+--   <a>Found</a> for more information.
 module Data.Type.Predicate.Param
 
--- | A parameterized predicate.
+-- | A parameterized predicate. See <a>Found</a> for more information.
 type ParamPred k v = k -> Predicate v
 
 -- | Convert a parameterized predicate into a predicate on the parameter
@@ -555,6 +583,10 @@ data Found :: ParamPred k v -> Predicate k
 
 -- | Flip the arguments of a <a>ParamPred</a>.
 data FlipPP :: ParamPred v k -> ParamPred k v
+
+-- | Promote a <tt><a>Predicate</a> v</tt> to a <tt><a>ParamPred</a> k
+--   v</tt>, ignoring the <tt>k</tt> input.
+data ConstPP :: Predicate v -> ParamPred k v
 
 -- | Pre-compose a function to a <a>ParamPred</a>. Is essentially
 --   <tt><a>flip</a> (<a>.</a>)</tt>, but unfortunately defunctionalization
@@ -586,6 +618,13 @@ search :: forall p. Decidable (Found p) => Decide (Found p)
 --   </pre>
 select :: forall p. Provable (Found p) => Prove (Found p)
 
+-- | A <tt><a>ParamPred</a> (f k) k</tt>. Parameterized on an <tt>as :: f
+--   k</tt>, returns a predicate that is true if there exists any <tt>a ::
+--   k</tt> in <tt>as</tt>.
+--   
+--   Essentially <a>NotNull</a>.
+type InP f = (ElemSym1 f :: ParamPred (f k) k)
+
 -- | <tt><a>AnyMatch</a> f</tt> takes a parmaeterized predicate on
 --   <tt>k</tt> (testing for a <tt>v</tt>) and turns it into a
 --   parameterized predicate on <tt>f k</tt> (testing for a <tt>v</tt>). It
@@ -600,14 +639,24 @@ select :: forall p. Provable (Found p) => Prove (Found p)
 --   <tt>k</tt> in <tt>f k</tt> can create some <tt>v</tt>.
 data AnyMatch f :: ParamPred k v -> ParamPred (f k) v
 instance forall k v (f :: * -> *) (p :: Data.Type.Predicate.Param.ParamPred k v). (Data.Type.Universe.Universe f, Data.Type.Predicate.Decidable (Data.Type.Predicate.Param.Found p)) => Data.Type.Predicate.Decidable (Data.Type.Predicate.Param.Found (Data.Type.Predicate.Param.AnyMatch f p))
+instance Data.Type.Universe.Universe f => Data.Type.Predicate.Decidable (Data.Type.Predicate.Param.Found (Data.Type.Predicate.Param.InP f))
+instance Data.Type.Predicate.Decidable (Data.Type.Universe.NotNull f Data.Type.Predicate.Logic.==> Data.Type.Predicate.Param.Found (Data.Type.Predicate.Param.InP f))
+instance Data.Type.Predicate.Provable (Data.Type.Universe.NotNull f Data.Type.Predicate.Logic.==> Data.Type.Predicate.Param.Found (Data.Type.Predicate.Param.InP f))
+instance Data.Type.Predicate.Decidable (Data.Type.Predicate.Param.Found (Data.Type.Predicate.Param.InP f) Data.Type.Predicate.Logic.==> Data.Type.Universe.NotNull f)
+instance Data.Type.Predicate.Provable (Data.Type.Predicate.Param.Found (Data.Type.Predicate.Param.InP f) Data.Type.Predicate.Logic.==> Data.Type.Universe.NotNull f)
 instance forall j v k (p :: Data.Type.Predicate.Param.ParamPred j v) (f :: k Data.Singletons.Internal.~> j). (Data.Type.Predicate.Decidable (Data.Type.Predicate.Param.Found p), Data.Singletons.Internal.SingI f) => Data.Type.Predicate.Decidable (Data.Type.Predicate.Param.Found (Data.Type.Predicate.Param.PPMap f p))
 instance forall j v k (p :: Data.Type.Predicate.Param.ParamPred j v) (f :: k Data.Singletons.Internal.~> j). (Data.Type.Predicate.Provable (Data.Type.Predicate.Param.Found p), Data.Singletons.Internal.SingI f) => Data.Type.Predicate.Provable (Data.Type.Predicate.Param.Found (Data.Type.Predicate.Param.PPMap f p))
 
+
+-- | Represent a decidable subset of a type-level collection.
 module Data.Type.Universe.Subset
+
+-- | A <tt><a>Subset</a> f p</tt> is a predicate that some decidable subset
+--   of an input <tt>as</tt> is true.
 data Subset f :: (k ~> Type) -> (f k ~> Type)
 
--- | A <tt><a>Subset</a> p as</tt> describes a <i>decidable</i> subset of
---   type-level collection <tt>as</tt>.
+-- | A <tt><a>WitSubset</a> f p </tt><tt> as</tt> describes a
+--   <i>decidable</i> subset of type-level collection <tt>as</tt>.
 newtype WitSubset f p (as :: f k)
 WitSubset :: (forall a. Elem f as a -> Decision (p @@ a)) -> WitSubset f p
 [runWitSubset] :: WitSubset f p -> forall a. Elem f as a -> Decision (p @@ a)
