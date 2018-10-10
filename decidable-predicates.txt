@@ -16,8 +16,10 @@ module Data.Type.Predicate
 
 -- | A type-level predicate in Haskell. We say that the predicate <tt>P ::
 --   <a>Predicate</a> k</tt> is true/satisfied by input <tt>x :: k</tt> if
---   there exists a value of type <tt>P </tt><tt> x</tt>, and that it
---   false/disproved if such a value cannot exist.
+--   there exists a value of type <tt>P '</tt><tt>' x</tt>, and that it
+--   false/disproved if such a value cannot exist. (Where <a>@@</a> is
+--   <a>Apply</a>, the singleton library's type-level function application
+--   for mathcable functions)
 --   
 --   See <a>Provable</a> and <a>Decidable</a> for more information on how
 --   to use, prove and decide these predicates.
@@ -49,7 +51,7 @@ module Data.Type.Predicate
 --   
 --   -- Then, write the <a>Apply</a> instance, to specify the type of the
 --   -- witnesses of that predicate
---   instance Apply (Not p) a = (p @@ a) -&gt; Void
+--   instance <a>Apply</a> (Not p) a = (p <a>@@</a> a) -&gt; Void
 --   </pre>
 --   
 --   See the source of <a>Data.Type.Predicate</a> and
@@ -66,7 +68,7 @@ module Data.Type.Predicate
 --   
 --   <pre>
 --   data (&amp;&amp;&amp;) :: Predicate k -&gt; Predicate k -&gt; Predicate k
---   instance Apply (p &amp;&amp;&amp; q) a = (p @@ a, q @@ a)
+--   instance Apply (p &amp;&amp;&amp; q) a = (p <a>@@</a> a, q <a>@@</a> a)
 --   </pre>
 --   
 --   Typically it is recommended to create predicates from the supplied
@@ -135,12 +137,12 @@ type Prove p = forall a. Sing a -> p @@ a
 --   if, given <tt>p </tt><tt> a</tt>, we can always prove <tt>q </tt><tt>
 --   a</tt>.
 type p --> q = forall a. Sing a -> p @@ a -> q @@ a
-infixr 2 -->
+infixr 1 -->
 
 -- | This is implication <a>--&gt;#</a>, but only in a specific context
 --   <tt>h</tt>.
 type ( p --># q ) h = forall a. Sing a -> p @@ a -> h (q @@ a)
-infixr 2 -->#
+infixr 1 -->#
 
 -- | A typeclass for provable predicates (constructivist tautologies).
 --   
@@ -189,11 +191,11 @@ type Decide p = forall a. Sing a -> Decision (p @@ a)
 -- | Like implication <a>--&gt;</a>, but knowing <tt>p </tt><tt> a</tt> can
 --   only let us decidably prove <tt>q </tt><tt> a</tt> is true or false.
 type p -?> q = forall a. Sing a -> p @@ a -> Decision (q @@ a)
-infixr 2 -?>
+infixr 1 -?>
 
 -- | Like <a>-?&gt;</a>, but only in a specific context <tt>h</tt>.
 type ( p -?># q ) h = forall a. Sing a -> p @@ a -> h (Decision (q @@ a))
-infixr 2 -?>#
+infixr 1 -?>#
 
 -- | A typeclass for decidable predicates.
 --   
@@ -304,7 +306,7 @@ decideXor :: forall p q a. () => Decision (p @@ a) -> Decision (q @@ a) -> Decis
 -- | <tt>p ==&gt; q</tt> is true if <tt>q</tt> is provably true under the
 --   condition that <tt>p</tt> is true.
 data (==>) :: Predicate k -> Predicate k -> Predicate k
-infixr 2 ==>
+infixr 1 ==>
 
 -- | If <tt>q</tt> is provable, then so is <tt>p <a>==&gt;</a> q</tt>.
 --   
@@ -320,17 +322,18 @@ infixr 2 ==>
 --   instance issues.
 proveImplies :: Prove q -> Prove (p ==> q)
 
--- | <tt><a>Implies</a> p q</tt> is a type synonym that <tt>p <a>==&gt;</a>
+-- | <tt><a>Implies</a> p q</tt> is a constraint that <tt>p <a>==&gt;</a>
 --   q</tt> is <a>Provable</a>; that is, you can prove that <tt>p</tt>
 --   implies <tt>q</tt>.
 type Implies p q = Provable (p ==> q)
 
 -- | Two-way implication, or logical equivalence
 type p <==> q = p ==> q &&& q ==> p
+infixr 1 <==>
 
--- | <tt><a>Implies</a> p q</tt> is a type synonym that <tt>p
---   <a>&lt;==&gt;</a> q</tt> is <a>Provable</a>; that is, you can prove
---   that <tt>p</tt> is logically equivalent to <tt>q</tt>.
+-- | <tt><a>Equiv</a> p q</tt> is a constraint that <tt>p <a>&lt;==&gt;</a>
+--   q</tt> is <a>Provable</a>; that is, you can prove that <tt>p</tt> is
+--   logically equivalent to <tt>q</tt>.
 type Equiv p q = Provable (p <==> q)
 
 -- | Compose two implications.
@@ -357,6 +360,14 @@ contrapositive :: (p --> q) -> Not q --> Not p
 --   <tt>q</tt> is <a>Decidable</a> on its own, without the help of
 --   <tt>p</tt>, which makes this much less useful.
 contrapositive' :: forall p q. Decidable q => (Not q --> Not p) -> p --> q
+projAndFst :: (p &&& q) --> p
+projAndSnd :: (p &&& q) --> q
+injOrLeft :: forall p q. p --> (p ||| q)
+injOrRight :: forall p q. q --> (p ||| q)
+instance forall k1 (p :: Data.Type.Predicate.Predicate k1) (q :: Data.Type.Predicate.Predicate k1). Data.Type.Predicate.Provable ((p Data.Type.Predicate.Logic.&&& q) Data.Type.Predicate.Logic.==> p)
+instance forall k1 (p :: Data.Type.Predicate.Predicate k1) (q :: Data.Type.Predicate.Predicate k1). Data.Type.Predicate.Provable ((p Data.Type.Predicate.Logic.&&& q) Data.Type.Predicate.Logic.==> q)
+instance forall k1 (p :: Data.Type.Predicate.Predicate k1) (q :: Data.Type.Predicate.Predicate k1). Data.Type.Predicate.Provable (p Data.Type.Predicate.Logic.==> (p Data.Type.Predicate.Logic.||| q))
+instance forall k1 (q :: Data.Type.Predicate.Predicate k1) (p :: Data.Type.Predicate.Predicate k1). Data.Type.Predicate.Provable (q Data.Type.Predicate.Logic.==> (p Data.Type.Predicate.Logic.||| q))
 instance forall k1 (p :: Data.Type.Predicate.Predicate k1). Data.Type.Predicate.Decidable (Data.Type.Predicate.Impossible Data.Type.Predicate.Logic.==> p)
 instance forall k1 (p :: Data.Type.Predicate.Predicate k1). Data.Type.Predicate.Provable (Data.Type.Predicate.Impossible Data.Type.Predicate.Logic.==> p)
 instance forall k1 (p :: Data.Type.Predicate.Predicate k1) (q :: Data.Type.Predicate.Predicate k1). (Data.Type.Predicate.Decidable (p Data.Type.Predicate.Logic.==> q), Data.Type.Predicate.Decidable q) => Data.Type.Predicate.Decidable (Data.Type.Predicate.Not q Data.Type.Predicate.Logic.==> Data.Type.Predicate.Not p)
