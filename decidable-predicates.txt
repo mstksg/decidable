@@ -109,7 +109,10 @@ type EqualTo (a :: k) = (TyPred ((:~:) a) :: Predicate k)
 type BoolPred (p :: k ~> Bool) = (EqualTo  'True .@#@$$$ p :: Predicate k)
 
 -- | The always-false predicate
-data Impossible :: Predicate k
+--   
+--   Could also be defined as <tt><a>ConstSym1</a> Void</tt>, but this
+--   defintion gives us a free <a>Decidable</a> instance.
+type Impossible = (Not Evident :: Predicate k)
 
 -- | Pre-compose a function to a predicate
 --   
@@ -245,7 +248,6 @@ instance forall k1 (p :: k1 Data.Singletons.Internal.~> *). Data.Type.Predicate.
 instance forall k (a :: k). (Data.Singletons.Decide.SDecide k, Data.Singletons.Internal.SingI a) => Data.Type.Predicate.Decidable (Data.Type.Predicate.EqualTo a)
 instance Data.Type.Predicate.Decidable Data.Type.Predicate.Evident
 instance forall k1 b6989586621679919354 (f :: b6989586621679919354 Data.Singletons.Internal.~> *) (g :: k1 Data.Singletons.Internal.~> b6989586621679919354). (Data.Type.Predicate.Decidable f, Data.Singletons.Internal.SingI g) => Data.Type.Predicate.Decidable (f Data.Singletons.Prelude.Base..@#@$$$ g)
-instance Data.Type.Predicate.Decidable Data.Type.Predicate.Impossible
 instance Data.Type.Predicate.Provable Data.Type.Predicate.Evident
 instance forall k1 b6989586621679919354 (f :: b6989586621679919354 Data.Singletons.Internal.~> *) (g :: k1 Data.Singletons.Internal.~> b6989586621679919354). (Data.Type.Predicate.Provable f, Data.Singletons.Internal.SingI g) => Data.Type.Predicate.Provable (f Data.Singletons.Prelude.Base..@#@$$$ g)
 
@@ -262,7 +264,10 @@ module Data.Type.Predicate.Logic
 type Evident = (TyPred Sing :: Predicate k)
 
 -- | The always-false predicate
-data Impossible :: Predicate k
+--   
+--   Could also be defined as <tt><a>ConstSym1</a> Void</tt>, but this
+--   defintion gives us a free <a>Decidable</a> instance.
+type Impossible = (Not Evident :: Predicate k)
 
 -- | <tt><a>Not</a> p</tt> is the predicate that <tt>p</tt> is not true.
 data Not :: Predicate k -> Predicate k
@@ -315,8 +320,18 @@ infixr 2 ==>
 --   instance issues.
 proveImplies :: Prove q -> Prove (p ==> q)
 
+-- | <tt><a>Implies</a> p q</tt> is a type synonym that <tt>p <a>==&gt;</a>
+--   q</tt> is <a>Provable</a>; that is, you can prove that <tt>p</tt>
+--   implies <tt>q</tt>.
+type Implies p q = Provable (p ==> q)
+
 -- | Two-way implication, or logical equivalence
 type p <==> q = p ==> q &&& q ==> p
+
+-- | <tt><a>Implies</a> p q</tt> is a type synonym that <tt>p
+--   <a>&lt;==&gt;</a> q</tt> is <a>Provable</a>; that is, you can prove
+--   that <tt>p</tt> is logically equivalent to <tt>q</tt>.
+type Equiv p q = Provable (p <==> q)
 
 -- | Compose two implications.
 compImpl :: forall p q r. () => (p --> q) -> (q --> r) -> p --> r
@@ -338,7 +353,9 @@ doubleNegation :: forall p. Decidable p => Not (Not p) --> p
 -- | If p implies q, then not q implies not p.
 contrapositive :: (p --> q) -> Not q --> Not p
 
--- | Reverse direction of <a>contrapositive</a>
+-- | Reverse direction of <a>contrapositive</a>. Only possible if
+--   <tt>q</tt> is <a>Decidable</a> on its own, without the help of
+--   <tt>p</tt>, which makes this much less useful.
 contrapositive' :: forall p q. Decidable q => (Not q --> Not p) -> p --> q
 instance forall k1 (p :: Data.Type.Predicate.Predicate k1). Data.Type.Predicate.Decidable (Data.Type.Predicate.Impossible Data.Type.Predicate.Logic.==> p)
 instance forall k1 (p :: Data.Type.Predicate.Predicate k1). Data.Type.Predicate.Provable (Data.Type.Predicate.Impossible Data.Type.Predicate.Logic.==> p)
