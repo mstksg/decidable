@@ -34,6 +34,7 @@ import           Data.Singletons.Decide
 import           Data.Singletons.Prelude hiding        (Elem, Any, All, Snd, Null, Not)
 import           Data.Singletons.Sigma
 import           Data.Type.Predicate
+import           Data.Type.Predicate.Logic
 import           Prelude hiding                        (any, all)
 import qualified Data.Singletons.Prelude.List.NonEmpty as NE
 

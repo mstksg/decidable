@@ -22,10 +22,11 @@ module Data.Type.Universe.Subset (
 
 import           Control.Applicative
 import           Data.Kind
-import           Data.Monoid            (Alt(..))
+import           Data.Monoid               (Alt(..))
 import           Data.Singletons
 import           Data.Singletons.Decide
 import           Data.Type.Predicate
+import           Data.Type.Predicate.Logic
 import           Data.Type.Universe
 
 -- | A @'Subset' p as@ describes a /decidable/ subset of type-level
