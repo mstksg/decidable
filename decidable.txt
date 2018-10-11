@@ -533,7 +533,7 @@ decideAll :: forall f k (p :: k ~> Type). Universe f => Decide p -> Decide (All 
 --   
 --   In practice, this can be used to iterate and traverse and sequence
 --   actions over all "items" in <tt>as</tt>.
-genAllA :: forall k (p :: k ~> Type) (as :: f k) h. (Universe f, Applicative h) => (forall a. Sing a -> h (p @@ a)) -> Sing as -> h (All f p @@ as)
+genAllA :: forall f k (p :: k ~> Type) (as :: f k) h. (Universe f, Applicative h) => (forall a. Sing a -> h (p @@ a)) -> Sing as -> h (All f p @@ as)
 
 -- | If <tt>p a</tt> is true for all values <tt>a</tt> in <tt>as</tt>, then
 --   we have <tt><a>All</a> p as</tt>. Basically witnesses the definition
