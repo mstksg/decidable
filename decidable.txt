@@ -5,8 +5,8 @@
 -- | Combinators for manipulating dependently-typed predicates.
 --   
 --   Please see the README on GitHub at
---   <a>https://github.com/mstksg/decidable-predicates#readme</a>
-@package decidable-predicates
+--   <a>https://github.com/mstksg/decidable#readme</a>
+@package decidable
 @version 0.1.0.0
 
 
@@ -308,6 +308,14 @@ infixr 2 |||
 --   <tt>q</tt>.
 decideOr :: forall p q a. () => Decision (p @@ a) -> Decision (q @@ a) -> Decision ((p ||| q) @@ a)
 
+-- | Left-biased "or". In proofs, prioritize a proof of the left side over
+--   a proof of the right side.
+type p ^|| q = p ||| Not p &&& q
+
+-- | Right-biased "or". In proofs, prioritize a proof of the right side
+--   over a proof of the left side.
+type p ||^ q = p &&& Not q ||| q
+
 -- | <tt>p <a>^^^</a> q</tt> is a predicate that either <tt>p</tt> and
 --   <tt>q</tt> are true, but not both.
 type p ^^^ q = (p &&& Not q) ||| (Not p &&& q)
@@ -387,7 +395,7 @@ instance forall k1 (p :: Data.Type.Predicate.Predicate k1). Data.Type.Predicate.
 instance forall k1 (p :: Data.Type.Predicate.Predicate k1) (q :: Data.Type.Predicate.Predicate k1). (Data.Type.Predicate.Decidable (p Data.Type.Predicate.Logic.==> q), Data.Type.Predicate.Decidable q) => Data.Type.Predicate.Decidable (Data.Type.Predicate.Not q Data.Type.Predicate.Logic.==> Data.Type.Predicate.Not p)
 instance forall k1 (p :: Data.Type.Predicate.Predicate k1) (q :: Data.Type.Predicate.Predicate k1). Data.Type.Predicate.Provable (p Data.Type.Predicate.Logic.==> q) => Data.Type.Predicate.Provable (Data.Type.Predicate.Not q Data.Type.Predicate.Logic.==> Data.Type.Predicate.Not p)
 instance forall k1 (p :: k1 Data.Singletons.Internal.~> *) (q :: k1 Data.Singletons.Internal.~> *). (Data.Type.Predicate.Decidable p, Data.Type.Predicate.Decidable q) => Data.Type.Predicate.Decidable (p Data.Type.Predicate.Logic.||| q)
-instance forall k1 (p :: k1 Data.Singletons.Internal.~> *) (q :: k1 Data.Singletons.Internal.~> *). (Data.Type.Predicate.Provable p, Data.Type.Predicate.Provable q) => Data.Type.Predicate.Provable (p Data.Type.Predicate.Logic.||| q)
+instance forall k1 (p :: k1 Data.Singletons.Internal.~> *) (q :: Data.Type.Predicate.Predicate k1). Data.Type.Predicate.Provable p => Data.Type.Predicate.Provable (p Data.Type.Predicate.Logic.||| q)
 instance forall k1 (p :: k1 Data.Singletons.Internal.~> *) (q :: k1 Data.Singletons.Internal.~> *). (Data.Type.Predicate.Decidable p, Data.Type.Predicate.Decidable q) => Data.Type.Predicate.Decidable (p Data.Type.Predicate.Logic.&&& q)
 instance forall k1 (p :: k1 Data.Singletons.Internal.~> *) (q :: k1 Data.Singletons.Internal.~> *). (Data.Type.Predicate.Provable p, Data.Type.Predicate.Provable q) => Data.Type.Predicate.Provable (p Data.Type.Predicate.Logic.&&& q)
 
@@ -555,7 +563,7 @@ instance Data.Type.Universe.Universe GHC.Maybe.Maybe
 instance forall k (as :: [k]). (Data.Singletons.Internal.SingI as, Data.Singletons.Decide.SDecide k) => Data.Type.Predicate.Decidable (Data.Type.Predicate.TyPred (Data.Type.Universe.Index as))
 instance Data.Type.Universe.Universe []
 instance forall k (f :: * -> *) (p :: k Data.Singletons.Internal.~> *). (Data.Type.Universe.Universe f, Data.Type.Predicate.Provable p) => Data.Type.Predicate.Decidable (Data.Type.Universe.NotNull f Data.Type.Predicate.Logic.==> Data.Type.Universe.Any f p)
-instance forall k (f :: * -> *) (p :: k Data.Singletons.Internal.~> *). (Data.Type.Universe.Universe f, Data.Type.Predicate.Provable p) => Data.Type.Predicate.Provable (Data.Type.Universe.NotNull f Data.Type.Predicate.Logic.==> Data.Type.Universe.Any f p)
+instance forall k (p :: k Data.Singletons.Internal.~> *) (f :: * -> *). Data.Type.Predicate.Provable p => Data.Type.Predicate.Provable (Data.Type.Universe.NotNull f Data.Type.Predicate.Logic.==> Data.Type.Universe.Any f p)
 instance forall k (f :: * -> *) (p :: k Data.Singletons.Internal.~> *). (Data.Type.Universe.Universe f, Data.Type.Predicate.Decidable p) => Data.Type.Predicate.Decidable (Data.Type.Universe.Any f p)
 instance forall k (f :: * -> *) (p :: k Data.Singletons.Internal.~> *). (Data.Type.Universe.Universe f, Data.Type.Predicate.Decidable p) => Data.Type.Predicate.Decidable (Data.Type.Universe.All f p)
 instance forall k (f :: * -> *) (p :: k Data.Singletons.Internal.~> *). (Data.Type.Universe.Universe f, Data.Type.Predicate.Provable p) => Data.Type.Predicate.Provable (Data.Type.Universe.All f p)
