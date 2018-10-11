@@ -75,6 +75,8 @@ makeSubset f xs = WitSubset $ \i -> f i (index i xs)
 
 -- | Turn a 'Subset' into a list (or any 'Alternative') of satisfied
 -- predicates.
+--
+-- List is meant to include no duplicates.
 subsetToList
     :: forall f p t. (Universe f, Alternative t)
     => (Subset f p --># Any f p) t
@@ -156,7 +158,7 @@ imapSubset f g s = WitSubset $ \i ->
 -- | Map a bidirectional implication over a subset described by that
 -- implication.
 --
--- Implication needs to be bidirection, or otherwise we can't produce
+-- Implication needs to be bidirectional, or otherwise we can't produce
 -- a /decidable/ subset as a result.
 mapSubset
     :: Universe f

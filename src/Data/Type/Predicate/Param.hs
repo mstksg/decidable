@@ -35,7 +35,6 @@ module Data.Type.Predicate.Param (
   ) where
 
 import           Data.Singletons
-import           Data.Singletons.Decide
 import           Data.Singletons.Sigma
 import           Data.Type.Predicate
 import           Data.Type.Predicate.Logic
@@ -82,9 +81,10 @@ data PPMap :: (k ~> j) -> ParamPred j v -> ParamPred k v
 type instance Apply (PPMap f p x) y = p (f @@ x) @@ y
 
 instance (Decidable (Found (p :: ParamPred j v)), SingI (f :: k ~> j)) => Decidable (Found (PPMap f p)) where
-    decide (x :: Sing a) = case decide @(Found p) ((sing :: Sing f) @@ x) of
-        Proved (i :&: p) -> Proved $ i :&: p
-        Disproved v      -> Disproved $ \case i :&: p -> v (i :&: p)
+    decide = mapDecision (\case i :&: p -> i :&: p)
+                         (\case i :&: p -> i :&: p)
+           . decide @(Found p)
+           . applySing (sing :: Sing f)     -- can just be sing @f in singletons 2.5, ghc 8.6+
 
 instance (Provable (Found (p :: ParamPred j v)), SingI (f :: k ~> j)) => Provable (Found (PPMap f p)) where
     prove (x :: Sing a) = case prove @(Found p) ((sing :: Sing f) @@ x) of
@@ -132,10 +132,9 @@ select = prove @(Found p)
 type InP f = (ElemSym1 f :: ParamPred (f k) k)
 
 instance Universe f => Decidable (Found (InP f)) where
-    decide xs = case decide @(NotNull f) xs of
-      Proved (WitAny i s) -> Proved $ s :&: i
-      Disproved v         -> Disproved $ \case
-        s :&: i -> v $ WitAny i s
+    decide = mapDecision (\case WitAny i s -> s :&: i    )
+                         (\case s :&: i     -> WitAny i s)
+           . decide @(NotNull f)
 
 instance Decidable (NotNull f ==> Found (InP f))
 instance Provable (NotNull f ==> Found (InP f)) where
@@ -159,8 +158,6 @@ data AnyMatch f :: ParamPred k v -> ParamPred (f k) v
 type instance Apply (AnyMatch f p as) a = Any f (FlipPP p a) @@ as
 
 instance (Universe f, Decidable (Found p)) => Decidable (Found (AnyMatch f p)) where
-    decide xs = case decide @(Any f (Found p)) xs of
-      Proved (WitAny i (x :&: p)) -> Proved $ x :&: WitAny i p
-      Disproved v                 -> Disproved $ \case
-        x :&: WitAny i p -> v $ WitAny i (x :&: p)
-
+    decide = mapDecision (\case WitAny i (x :&: p) -> x :&: WitAny i p  )
+                         (\case x :&: WitAny i p   -> WitAny i (x :&: p))
+           . decide @(Any f (Found p))

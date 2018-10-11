@@ -230,9 +230,10 @@ splitSing = igenAll @f @_ @(TyPred Sing) (\_ x -> x)
 pickElem
     :: forall f k (as :: f k) a. (Universe f, SingI as, SingI a, SDecide k)
     => Decision (Elem f as a)
-pickElem = case decide @(Any f (TyPred ((:~:) a))) sing of
-    Proved (WitAny i Refl) -> Proved i
-    Disproved v            -> Disproved $ \i -> v $ WitAny i Refl
+pickElem = mapDecision (\case WitAny i Refl -> i)
+                       (\case i -> WitAny i Refl)
+         . decide @(Any f (TyPred ((:~:) a)))
+         $ sing
 
 -- | 'foldMapUni' but with access to the index.
 ifoldMapUni
