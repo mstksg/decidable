@@ -22,14 +22,13 @@
 --
 -- Logical and algebraic connectives for predicates, as well as common
 -- logical combinators.
-
 module Data.Type.Predicate.Logic (
   -- * Top and bottom
     Evident, Impossible
   -- * Logical connectives
   , type Not, decideNot
   , type (&&&), decideAnd
-  , type (|||), decideOr
+  , type (|||), decideOr, type (^||), type (||^)
   , type (^^^), decideXor
   , type (==>), proveImplies, Implies
   , type (<==>), Equiv
@@ -96,6 +95,14 @@ decideOr = \case
       Disproved w -> Disproved $ \case
         Left p  -> v p
         Right q -> w q
+
+-- | Left-biased "or".  In proofs, prioritize a proof of the left side over
+-- a proof of the right side.
+type p ^|| q = p ||| Not p &&& q
+
+-- | Right-biased "or".  In proofs, prioritize a proof of the right side over
+-- a proof of the left side.
+type p ||^ q = p &&& Not q ||| q
 
 -- | @p '^^^' q@ is a predicate that either @p@ and @q@ are true, but not
 -- both.
