@@ -16,8 +16,8 @@ module Data.Type.Predicate
 
 -- | A type-level predicate in Haskell. We say that the predicate <tt>P ::
 --   <a>Predicate</a> k</tt> is true/satisfied by input <tt>x :: k</tt> if
---   there exists a value of type <tt>P '@</tt>' x<tt>, and that it
---   false/disproved if such a value cannot exist. (Where '</tt>@' is
+--   there exists a value of type <tt>P '</tt><tt>' x</tt>, and that it
+--   false/disproved if such a value cannot exist. (Where <a>@@</a> is
 --   <a>Apply</a>, the singleton library's type-level function application
 --   for mathcable functions)
 --   
@@ -77,9 +77,9 @@ module Data.Type.Predicate
 --   possible.
 type Predicate k = k ~> Type
 
--- | A <tt><a>Wit</a> p a</tt> is a value of type <tt>p <tt>\@\@</tt>
---   a</tt> --- that is, it is a proof or witness that <tt>p</tt> is
---   satisfied for <tt>a</tt>.
+-- | A <tt><a>Wit</a> p a</tt> is a value of type <tt>p '@</tt>' a<tt> ---
+--   that is, it is a proof or witness that </tt>p<tt> is satisfied for
+--   </tt>a@.
 newtype Wit p a
 Wit :: (p @@ a) -> Wit p a
 [getWit] :: Wit p a -> p @@ a
@@ -134,8 +134,8 @@ decideNot :: forall p a. () => Decision (p @@ a) -> Decision (Not p @@ a)
 type Prove p = forall a. Sing a -> p @@ a
 
 -- | We say that <tt>p</tt> implies <tt>q</tt> (<tt>p <a>--&gt;</a> q</tt>)
---   if, given <tt>p </tt><tt> a</tt>, we can always prove <tt>q
---   <tt>\@\@</tt> a</tt>.
+--   if, given <tt>p </tt><tt> a</tt>, we can always prove <tt>q '@</tt>'
+--   a@.
 type p --> q = forall a. Sing a -> p @@ a -> q @@ a
 infixr 1 -->
 
@@ -147,8 +147,8 @@ infixr 1 -->#
 -- | A typeclass for provable predicates (constructivist tautologies).
 --   
 --   A predicate is provable if, given any input <tt>a</tt>, you can
---   generate a proof of <tt>p <tt>\@\@</tt> a</tt>. Essentially, it means
---   that a predicate is "always true".
+--   generate a proof of <tt>p '@</tt>' a@. Essentially, it means that a
+--   predicate is "always true".
 --   
 --   This typeclass associates a canonical proof function for every
 --   provable predicate.
@@ -201,9 +201,8 @@ compImpl :: forall p q r. () => (p --> q) -> (q --> r) -> p --> r
 --   more information.
 type Decide p = forall a. Sing a -> Decision (p @@ a)
 
--- | Like implication <a>--&gt;</a>, but knowing <tt>p <tt>\@\@</tt> a</tt>
---   can only let us decidably prove <tt>q </tt><tt> a</tt> is true or
---   false.
+-- | Like implication <a>--&gt;</a>, but knowing <tt>p '@</tt>' a<tt> can
+--   only let us decidably prove </tt>q @<tt> a</tt> is true or false.
 type p -?> q = forall a. Sing a -> p @@ a -> Decision (q @@ a)
 infixr 1 -?>
 
@@ -214,10 +213,9 @@ infixr 1 -?>#
 -- | A typeclass for decidable predicates.
 --   
 --   A predicate is decidable if, given any input <tt>a</tt>, you can
---   either prove or disprove <tt>p <tt>\@\@</tt> a</tt>. A
---   <tt><a>Decision</a> (p <tt>\@\@</tt> a)</tt> is a data type that has a
---   branch <tt>p <tt>\@\@</tt> a</tt> and <tt><a>Refuted</a> (p
---   <tt>\@\@</tt> a)</tt>.
+--   either prove or disprove <tt>p '@</tt>' a<tt>. A </tt><a>Decision</a>
+--   (p <tt>\@@</tt> a)<tt> is a data type that has a branch </tt>p
+--   <tt>\@@</tt> a<tt> and </tt><a>Refuted</a> (p <tt>\@@</tt> a)@.
 --   
 --   This typeclass associates a canonical decision function for every
 --   decidable predicate.
