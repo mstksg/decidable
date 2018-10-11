@@ -16,8 +16,8 @@ module Data.Type.Predicate
 
 -- | A type-level predicate in Haskell. We say that the predicate <tt>P ::
 --   <a>Predicate</a> k</tt> is true/satisfied by input <tt>x :: k</tt> if
---   there exists a value of type <tt>P @@ x</tt>, and that it
---   false/disproved if such a value cannot exist. (Where <a>@@</a> is
+--   there exists a value of type <tt>P </tt>@ x<tt>, and that it
+--   false/disproved if such a value cannot exist. (Where '</tt>@' is
 --   <a>Apply</a>, the singleton library's type-level function application
 --   for mathcable functions)
 --   
