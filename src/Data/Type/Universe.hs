@@ -105,7 +105,7 @@ instance (Universe f, Decidable p) => Decidable (All f p) where
 
 instance (Universe f, Provable p) => Decidable (NotNull f ==> Any f p) where
 
-instance (Universe f, Provable p) => Provable (NotNull f ==> Any f p) where
+instance Provable p => Provable (NotNull f ==> Any f p) where
     prove _ (WitAny i s) = WitAny i (prove @p s)
 
 instance (Universe f, Provable p) => Provable (All f p) where

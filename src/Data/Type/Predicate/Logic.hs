@@ -79,7 +79,7 @@ instance (Decidable p, Decidable q) => Decidable (p ||| q) where
 -- | Picks the proof of @p@.  Note that this is instance has stronger
 -- constraints than is strictly necessary; we should really only have to
 -- require that either @p@ or @q@ is true.
-instance (Provable p, Provable q) => Provable (p ||| q) where
+instance Provable p => Provable (p ||| q) where
     prove x = Left (prove @p x)
 
 -- | Decide @p '|||' q@ based on decisions of @p@ and @q@.

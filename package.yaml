@@ -19,11 +19,13 @@ category:            Dependent Types
 # common to point users to the README.md file.
 description:         Please see the README on GitHub at <https://github.com/mstksg/decidable#readme>
 
-dependencies:
-- base >= 4.7 && < 5
-- singletons
 ghc-options:
 - -Wall
+- -Wredundant-constraints
+
+dependencies:
+- base >= 4.7 && < 5
+- singletons >= 2.4
 
 library:
   source-dirs: src
