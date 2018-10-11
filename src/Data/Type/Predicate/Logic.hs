@@ -207,14 +207,18 @@ doubleNegation x vvp = case decide @p x of
     Proved    p  -> p
     Disproved vp -> absurd $ vvp vp
 
+-- | If @p '&&&' q@ is true, then so is @p@.
 projAndFst :: (p &&& q) --> p
 projAndFst _ = fst
 
+-- | If @p '&&&' q@ is true, then so is @q@.
 projAndSnd :: (p &&& q) --> q
 projAndSnd _ = snd
 
+-- | If @p@ is true, then so is @p '|||' q@.
 injOrLeft :: forall p q. p --> (p ||| q)
 injOrLeft _ = Left
 
+-- | If @q@ is true, then so is @p '|||' q@.
 injOrRight :: forall p q. q --> (p ||| q)
 injOrRight _ = Right

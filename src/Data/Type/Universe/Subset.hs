@@ -31,17 +31,23 @@ module Data.Type.Universe.Subset (
   , makeSubset
   -- ** Subset manipulation
   , intersection, union, symDiff, mergeSubset, imergeSubset
+  , mapSubset, imapSubset
   -- ** Subset extraction
-  , subsetToList, subsetToAny, subsetToAll
+  , subsetToList
+  -- ** Subset tests
+  , subsetToAny, subsetToAll, subsetToNone
+  -- ** Subset construction
+  , emptySubset, fullSubset
   ) where
 
 import           Control.Applicative
 import           Data.Kind
-import           Data.Monoid               (Alt(..))
+import           Data.Monoid                        (Alt(..))
 import           Data.Singletons
 import           Data.Singletons.Decide
 import           Data.Type.Predicate
 import           Data.Type.Predicate.Logic
+import           Data.Type.Predicate.Quantification
 import           Data.Type.Universe
 
 -- | A @'WitSubset' f p @@ as@ describes a /decidable/ subset of type-level
@@ -82,6 +88,18 @@ subsetToAny
     :: forall f p. Universe f
     => Subset f p -?> Any f p
 subsetToAny xs s = idecideAny (\i _ -> runWitSubset s i) xs
+
+-- | Construct an empty subset.
+emptySubset :: forall f as. (Universe f, SingI as) => Subset f Impossible @@ as
+emptySubset = prove @(Subset f Impossible) sing
+
+-- | Construct a full subset
+fullSubset :: forall f as. (Universe f, SingI as) => Subset f Evident @@ as
+fullSubset = prove @(Subset f Evident) sing
+
+-- | Test if a subset is empty.
+subsetToNone :: forall f p. Universe f => Subset f p -?> None f p
+subsetToNone xs s = idecideNone (\i _ -> runWitSubset s i) xs
 
 -- | Combine two subsets based on a decision function
 imergeSubset
@@ -126,3 +144,25 @@ subsetToAll
     => Subset f p -?> All f p
 subsetToAll xs s = idecideAll (\i _ -> runWitSubset s i) xs
 
+-- | 'mapSubset', but providing an 'Elem'.
+imapSubset
+    :: (forall a. Elem f as a -> p @@ a -> q @@ a)
+    -> (forall a. Elem f as a -> q @@ a -> p @@ a)
+    -> Subset f p @@ as
+    -> Subset f q @@ as
+imapSubset f g s = WitSubset $ \i ->
+    mapDecision (f i) (g i) (runWitSubset s i)
+
+-- | Map a bidirectional implication over a subset described by that
+-- implication.
+--
+-- Implication needs to be bidirection, or otherwise we can't produce
+-- a /decidable/ subset as a result.
+mapSubset
+    :: Universe f
+    => (p --> q)
+    -> (q --> p)
+    -> (Subset f p --> Subset f q)
+mapSubset f g xs@Sing = withSingI xs $
+    imapSubset (\i -> f (index i xs))
+               (\i -> g (index i xs))

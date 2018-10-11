@@ -45,6 +45,7 @@ module Data.Type.Predicate (
   , Decide, type (-?>), type (-?>#)
   , Decidable(..)
   , DFunctor(..)
+  , mapDecision
   ) where
 
 import           Data.Kind
@@ -301,3 +302,13 @@ decideNot
 decideNot = \case
     Proved p    -> Disproved ($ p)
     Disproved v -> Proved v
+
+-- | Map over the value inside a 'Decision'.
+mapDecision
+    :: (a -> b)
+    -> (b -> a)
+    -> Decision a
+    -> Decision b
+mapDecision f g = \case
+    Proved    p -> Proved $ f p
+    Disproved v -> Disproved $ v . g

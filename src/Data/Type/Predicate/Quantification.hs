@@ -29,17 +29,43 @@
 module Data.Type.Predicate.Quantification (
   -- * Any
     Any, WitAny(..), None
+  -- ** Decision
+  , decideAny, idecideAny, decideNone, idecideNone
+  -- ** Entailment
   , entailAny, ientailAny, entailAnyF, ientailAnyF
   -- * All
   , All, WitAll(..)
+  -- ** Decision
+  , decideAll, idecideAll
+  -- ** Entailment
   , entailAll, ientailAll, entailAllF, ientailAllF
   , decideEntailAll, idecideEntailAll
   ) where
 
+import           Data.Kind
 import           Data.Singletons
 import           Data.Singletons.Decide
 import           Data.Type.Predicate
 import           Data.Type.Universe
+
+-- | 'decideNone', but providing an 'Elem'.
+idecideNone
+    :: forall f k (p :: k ~> Type) (as :: f k). Universe f
+    => (forall a. Elem f as a -> Sing a -> Decision (p @@ a))    -- ^ predicate on value
+    -> (Sing as -> Decision (None f p @@ as))                    -- ^ predicate on collection
+idecideNone f xs = decideNot @(Any f p) $ idecideAny f xs
+
+-- | Lifts a predicate @p@ on an individual @a@ into a predicate that on
+-- a collection @as@ that is true if and only if /no/ item in @as@
+-- satisfies the original predicate.
+--
+-- That is, it turns a predicate of kind @k ~> Type@ into a predicate
+-- of kind @f k ~> Type@.
+decideNone
+    :: forall f k (p :: k ~> Type). Universe f
+    => Decide p                         -- ^ predicate on value
+    -> Decide (None f p)                -- ^ predicate on collection
+decideNone f = idecideNone (const f)
 
 -- | 'entailAny', but providing an 'Elem'.
 ientailAny

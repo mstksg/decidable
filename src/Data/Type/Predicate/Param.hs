@@ -30,8 +30,8 @@ module Data.Type.Predicate.Param (
   , FlipPP, ConstPP, PPMap, InP, AnyMatch
   -- * Deciding and Proving
   , Found
-  , Searchable, search
   , Selectable, select
+  , Searchable, search
   ) where
 
 import           Data.Singletons
