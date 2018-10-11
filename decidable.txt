@@ -7,7 +7,7 @@
 --   Please see the README on GitHub at
 --   <a>https://github.com/mstksg/decidable#readme</a>
 @package decidable
-@version 0.1.0.0
+@version 0.1.1.0
 
 
 -- | Combinators for working with type-level predicates, along with
@@ -258,8 +258,40 @@ decide :: (Decidable p, Provable p) => Decide p
 class DFunctor f
 dmap :: forall p q. DFunctor f => (p -?> q) -> f p -?> f q
 
+-- | A <a>Decision</a> about a type <tt>a</tt> is either a proof of
+--   existence or a proof that <tt>a</tt> cannot exist.
+data Decision a
+
+-- | Witness for <tt>a</tt>
+Proved :: a -> Decision a
+
+-- | Proof that no <tt>a</tt> exists
+Disproved :: Refuted a -> Decision a
+
+-- | Flip the contents of a decision. Turn a proof of <tt>a</tt> into a
+--   disproof of not-<tt>a</tt>.
+--   
+--   Note that this is not reversible in general in Haskell. See
+--   <tt>doubleNegation</tt> for a situation where it is.
+flipDecision :: Decision a -> Decision (Refuted a)
+
 -- | Map over the value inside a <a>Decision</a>.
 mapDecision :: (a -> b) -> (b -> a) -> Decision a -> Decision b
+
+-- | Converts a <a>Decision</a> to a <a>Maybe</a>. Drop the witness of
+--   disproof of <tt>a</tt>, returning <a>Just</a> if <a>Proved</a> (with
+--   the proof) and <a>Nothing</a> if <a>Disproved</a>.
+forgetDisproof :: Decision a -> Maybe a
+
+-- | Drop the witness of proof of <tt>a</tt>, returning <a>Nothing</a> if
+--   <a>Proved</a> and <a>Just</a> if <a>Disproved</a> (with the disproof).
+forgetProof :: Decision a -> Maybe (Refuted a)
+
+-- | Boolean test if a <a>Decision</a> is <a>Proved</a>.
+isProved :: Decision a -> Bool
+
+-- | Boolean test if a <a>Decision</a> is <a>Disproved</a>.
+isDisproved :: Decision a -> Bool
 instance Data.Type.Predicate.Provable (Data.Type.Predicate.Not Data.Type.Predicate.Impossible)
 instance forall k1 (p :: k1 Data.Singletons.Internal.~> *). Data.Type.Predicate.Decidable p => Data.Type.Predicate.Decidable (Data.Type.Predicate.Not p)
 instance forall k (a :: k). (Data.Singletons.Decide.SDecide k, Data.Singletons.Internal.SingI a) => Data.Type.Predicate.Decidable (Data.Type.Predicate.EqualTo a)
