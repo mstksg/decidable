@@ -5,6 +5,7 @@ license:             BSD3
 author:              "Justin Le"
 maintainer:          "justin@jle.im"
 copyright:           "(c) Justin Le 2018"
+tested-with:         GHC >= 8.4 && < 8.8
 
 extra-source-files:
 - README.md
@@ -24,7 +25,7 @@ ghc-options:
 - -Wredundant-constraints
 
 dependencies:
-- base >= 4.7 && < 5
+- base >= 4.11 && < 5
 - singletons >= 2.4
 
 library:
