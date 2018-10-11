@@ -848,7 +848,7 @@ imergeSubset :: forall f k p q r (as :: f k). () => (forall a. Elem f as a -> De
 -- | Map a bidirectional implication over a subset described by that
 --   implication.
 --   
---   Implication needs to be bidirection, or otherwise we can't produce a
+--   Implication needs to be bidirectional, or otherwise we can't produce a
 --   <i>decidable</i> subset as a result.
 mapSubset :: Universe f => (p --> q) -> (q --> p) -> Subset f p --> Subset f q
 
@@ -857,6 +857,8 @@ imapSubset :: (forall a. Elem f as a -> (p @@ a) -> q @@ a) -> (forall a. Elem f
 
 -- | Turn a <a>Subset</a> into a list (or any <a>Alternative</a>) of
 --   satisfied predicates.
+--   
+--   List is meant to include no duplicates.
 subsetToList :: forall f p t. (Universe f, Alternative t) => (Subset f p --># Any f p) t
 
 -- | Restrict a <a>Subset</a> to a single (arbitrary) member, or fail if
