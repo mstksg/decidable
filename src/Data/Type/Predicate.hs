@@ -45,10 +45,14 @@ module Data.Type.Predicate (
   , Decide, type (-?>), type (-?>#)
   , Decidable(..)
   , DFunctor(..)
-  , mapDecision
+  -- * Manipulate Decisions
+  , Decision(..)
+  , flipDecision, mapDecision
+  , forgetDisproof, forgetProof, isProved, isDisproved
   ) where
 
 import           Data.Kind
+import           Data.Maybe
 import           Data.Singletons
 import           Data.Singletons.Decide
 import           Data.Singletons.Prelude hiding (Not)
@@ -299,8 +303,20 @@ decideNot
     :: forall p a. ()
     => Decision (p @@ a)
     -> Decision (Not p @@ a)
-decideNot = \case
-    Proved p    -> Disproved ($ p)
+decideNot = flipDecision
+
+-- | Flip the contents of a decision.  Turn a proof of @a@ into a disproof
+-- of not-@a@.
+--
+-- Note that this is not reversible in general in Haskell.  See
+-- 'doubleNegation' for a situation where it is.
+--
+-- @since 0.1.1.0
+flipDecision
+    :: Decision a
+    -> Decision (Refuted a)
+flipDecision = \case
+    Proved    p -> Disproved ($ p)
     Disproved v -> Proved v
 
 -- | Map over the value inside a 'Decision'.
@@ -312,3 +328,36 @@ mapDecision
 mapDecision f g = \case
     Proved    p -> Proved $ f p
     Disproved v -> Disproved $ v . g
+
+-- | Converts a 'Decision' to a 'Maybe'.  Drop the witness of disproof of
+-- @a@, returning 'Just' if 'Proved' (with the proof) and 'Nothing' if
+-- 'Disproved'.
+--
+-- @since 0.1.1.0
+forgetDisproof
+    :: Decision a
+    -> Maybe a
+forgetDisproof = \case
+    Proved    p -> Just p
+    Disproved _ -> Nothing
+
+-- | Drop the witness of proof of @a@, returning 'Nothing' if 'Proved' and
+-- 'Just' if 'Disproved' (with the disproof).
+--
+-- @since 0.1.1.0
+forgetProof
+    :: Decision a
+    -> Maybe (Refuted a)
+forgetProof = forgetDisproof . flipDecision
+
+-- | Boolean test if a 'Decision' is 'Proved'.
+--
+-- @since 0.1.1.0
+isProved :: Decision a -> Bool
+isProved = isJust . forgetDisproof
+
+-- | Boolean test if a 'Decision' is 'Disproved'.
+--
+-- @since 0.1.1.0
+isDisproved :: Decision a -> Bool
+isDisproved = isNothing . forgetDisproof
