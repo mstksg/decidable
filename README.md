@@ -1,5 +1,7 @@
 # [decidable][]
 
+[![decidable on Hackage](https://img.shields.io/hackage/v/decidable.svg?maxAge=86400)](https://hackage.haskell.org/package/decidable)
+[![Build Status](https://travis-ci.org/mstksg/decidable.svg?branch=master)](https://travis-ci.org/mstksg/decidable)
 [decidable]: https://mstksg.github.io/decidable/
 
 This library provides combinators and typeclasses for working and manipulating
