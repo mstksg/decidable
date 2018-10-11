@@ -191,7 +191,7 @@ decideAll f = idecideAll (const f)
 -- In practice, this can be used to iterate and traverse and sequence
 -- actions over all "items" in @as@.
 genAllA
-    :: forall k (p :: k ~> Type) (as :: f k) h. (Universe f, Applicative h)
+    :: forall f k (p :: k ~> Type) (as :: f k) h. (Universe f, Applicative h)
     => (forall a. Sing a -> h (p @@ a))        -- ^ predicate on value in context
     -> (Sing as -> h (All f p @@ as))               -- ^ predicate on collection in context
 genAllA f = igenAllA (const f)
@@ -221,7 +221,7 @@ index i = (`runWitAll` i) . splitSing
 
 -- | Split a @'Sing' as@ into a proof that all @a@ in @as@ exist.
 splitSing
-    :: forall f (as :: f k). Universe f
+    :: forall f k (as :: f k). Universe f
     => Sing as
     -> All f (TyPred Sing) @@ as
 splitSing = igenAll @f @_ @(TyPred Sing) (\_ x -> x)
@@ -294,7 +294,7 @@ instance Universe [] where
         Disproved v -> Disproved $ \a -> v $ runWitAll a IZ
 
     igenAllA
-        :: forall (p :: k ~> Type) (as :: [k]) h. Applicative h
+        :: forall k (p :: k ~> Type) (as :: [k]) h. Applicative h
         => (forall a. Elem [] as a -> Sing a -> h (p @@ a))
         -> Sing as
         -> h (All [] p @@ as)
@@ -406,7 +406,7 @@ instance Universe NonEmpty where
       Disproved v -> Disproved $ \a -> v $ runWitAll a NEHead
 
     igenAllA
-        :: forall (p :: k ~> Type) (as :: NonEmpty k) h. Applicative h
+        :: forall k (p :: k ~> Type) (as :: NonEmpty k) h. Applicative h
         => (forall a. Elem NonEmpty as a -> Sing a -> h (p @@ a))
         -> Sing as
         -> h (All NonEmpty p @@ as)

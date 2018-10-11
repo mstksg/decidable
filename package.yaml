@@ -23,6 +23,7 @@ description:         Please see the README on GitHub at <https://github.com/mstk
 ghc-options:
 - -Wall
 - -Wredundant-constraints
+- -Wcompat
 
 dependencies:
 - base >= 4.11 && < 5
