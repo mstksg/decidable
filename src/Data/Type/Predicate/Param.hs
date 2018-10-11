@@ -92,13 +92,13 @@ instance (Provable (Found (p :: ParamPred j v)), SingI (f :: k ~> j)) => Provabl
 
 -- | A constraint that a @'ParamPred' k v@ is "searchable".  It means that
 -- for any input @x :: k@, we can prove or disprove that there exists a @y
--- :: v@ that satisfies @P x '\@\@' y@.  We can "search" for that @y@, and
+-- :: v@ that satisfies @P x \@\@ y@.  We can "search" for that @y@, and
 -- prove that it can or cannot be found.
 type Searchable p = Decidable (Found p)
 
 -- | A constraint that a @'ParamPred' k v@ s "selectable".  It means that
 -- for any input @x :: k@, we can always find a @y :: v@ that satisfies @P
--- x '\@\@' y@.  We can "select" that @y@, no matter what.
+-- x \@\@ y@.  We can "select" that @y@, no matter what.
 type Selectable p = Provable  (Found p)
 
 -- | The deciding/searching function for @'Searchable' p@.

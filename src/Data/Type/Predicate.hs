@@ -55,7 +55,7 @@ import           Data.Void
 
 -- | A type-level predicate in Haskell.  We say that the predicate @P ::
 -- 'Predicate' k@ is true/satisfied by input @x :: k@ if there exists
--- a value of type @P '\@\@' x@, and that it false/disproved if such a value
+-- a value of type @P \@\@ x@, and that it false/disproved if such a value
 -- cannot exist. (Where '@@' is 'Apply', the singleton library's type-level
 -- function application for mathcable functions)
 --
@@ -147,7 +147,7 @@ type BoolPred (p :: k ~> Bool) = (EqualTo 'True .@#@$$$ p :: Predicate k)
 -- @
 type PMap (f :: k ~> j) (p :: Predicate j) = (p .@#@$$$ f :: Predicate k)
 
--- | A @'Wit' p a@ is a value of type @p '\@\@' a@ --- that is, it is a proof
+-- | A @'Wit' p a@ is a value of type @p \@\@ a@ --- that is, it is a proof
 -- or witness that @p@ is satisfied for @a@.
 newtype Wit p a = Wit { getWit :: p @@ a }
 
@@ -155,7 +155,7 @@ newtype Wit p a = Wit { getWit :: p @@ a }
 -- information.
 type Decide p = forall a. Sing a -> Decision (p @@ a)
 
--- | Like implication '-->', but knowing @p '\@\@' a@ can only let us decidably
+-- | Like implication '-->', but knowing @p \@\@ a@ can only let us decidably
 -- prove @q @@ a@ is true or false.
 type p -?> q = forall a. Sing a -> p @@ a -> Decision (q @@ a)
 
@@ -167,7 +167,7 @@ type (p -?># q) h = forall a. Sing a -> p @@ a -> h (Decision (q @@ a))
 type Prove p = forall a. Sing a -> p @@ a
 
 -- | We say that @p@ implies @q@ (@p '-->' q@) if, given @p @@ a@, we can
--- always prove @q '\@\@' a@.
+-- always prove @q \@\@ a@.
 type p --> q = forall a. Sing a -> p @@ a -> q @@ a
 
 -- | This is implication '-->#', but only in a specific context @h@.
@@ -181,8 +181,8 @@ infixr 1 -->#
 -- | A typeclass for decidable predicates.
 --
 -- A predicate is decidable if, given any input @a@, you can either prove
--- or disprove @p '\@\@' a@.  A @'Decision' (p '\@\@' a)@ is a data type
--- that has a branch @p '\@\@' a@ and @'Refuted' (p '\@\@' a)@.
+-- or disprove @p \@\@ a@.  A @'Decision' (p \@\@ a)@ is a data type
+-- that has a branch @p \@\@ a@ and @'Refuted' (p \@\@ a)@.
 --
 -- This typeclass associates a canonical decision function for every
 -- decidable predicate.
@@ -213,7 +213,7 @@ class Decidable p where
 -- | A typeclass for provable predicates (constructivist tautologies).
 --
 -- A predicate is provable if, given any input @a@, you can generate
--- a proof of @p '\@\@' a@.  Essentially, it means that a predicate is "always
+-- a proof of @p \@\@ a@.  Essentially, it means that a predicate is "always
 -- true".
 --
 -- This typeclass associates a canonical proof function for every provable
