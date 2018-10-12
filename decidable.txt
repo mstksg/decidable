@@ -962,12 +962,22 @@ autoElem :: AutoElem f as a => Elem f as a
 --   
 --   <a>AutoProvable</a> is essentially the identity function.
 data AutoProvable :: Predicate k -> Predicate k
+instance forall k (p :: Data.Type.Predicate.Predicate k). Data.Type.Predicate.Auto.AutoAll [] p '[]
+instance forall a1 (p :: Data.Type.Predicate.Predicate a1) (a2 :: a1) (as :: [a1]). (Data.Type.Predicate.Auto.Auto p a2, Data.Type.Predicate.Auto.AutoAll [] p as) => Data.Type.Predicate.Auto.AutoAll [] p (a2 : as)
+instance forall k (p :: Data.Type.Predicate.Predicate k). Data.Type.Predicate.Auto.AutoAll GHC.Maybe.Maybe p 'GHC.Maybe.Nothing
+instance forall a1 (p :: Data.Type.Predicate.Predicate a1) (a2 :: a1). Data.Type.Predicate.Auto.Auto p a2 => Data.Type.Predicate.Auto.AutoAll GHC.Maybe.Maybe p ('GHC.Maybe.Just a2)
+instance forall k j (p :: Data.Type.Predicate.Predicate k) (e :: j). Data.Type.Predicate.Auto.AutoAll (Data.Either.Either j) p ('Data.Either.Left e)
+instance forall b (p :: Data.Type.Predicate.Predicate b) (a :: b) j. Data.Type.Predicate.Auto.Auto p a => Data.Type.Predicate.Auto.AutoAll (Data.Either.Either j) p ('Data.Either.Right a)
+instance forall a1 (p :: Data.Type.Predicate.Predicate a1) (a2 :: a1) (as :: [a1]). (Data.Type.Predicate.Auto.Auto p a2, Data.Type.Predicate.Auto.AutoAll [] p as) => Data.Type.Predicate.Auto.AutoAll GHC.Base.NonEmpty p (a2 'GHC.Base.:| as)
+instance forall k (p :: Data.Type.Predicate.Predicate k) (a :: k) j (w :: j). Data.Type.Predicate.Auto.Auto p a => Data.Type.Predicate.Auto.AutoAll ((,) j) p '(w, a)
+instance forall k (f :: * -> *) (p :: Data.Type.Predicate.Predicate k) (as :: f k). Data.Type.Predicate.Auto.AutoAll f p as => Data.Type.Predicate.Auto.Auto (Data.Type.Universe.All f p) as
 instance forall k (a :: k) (as :: [k]). Data.Type.Predicate.Auto.AutoElem [] (a : as) a
 instance forall k (as :: [k]) (a :: k) (b :: k). Data.Type.Predicate.Auto.AutoElem [] as a => Data.Type.Predicate.Auto.AutoElem [] (b : as) a
 instance forall k (a :: k). Data.Type.Predicate.Auto.AutoElem GHC.Maybe.Maybe ('GHC.Maybe.Just a) a
 instance forall k j (a :: k). Data.Type.Predicate.Auto.AutoElem (Data.Either.Either j) ('Data.Either.Right a) a
 instance forall k (a :: k) (as :: [k]). Data.Type.Predicate.Auto.AutoElem GHC.Base.NonEmpty (a 'GHC.Base.:| as) a
 instance forall k (as :: [k]) (a :: k) (b :: k). Data.Type.Predicate.Auto.AutoElem [] as a => Data.Type.Predicate.Auto.AutoElem GHC.Base.NonEmpty (b 'GHC.Base.:| as) a
+instance forall k j (w :: j) (a :: k). Data.Type.Predicate.Auto.AutoElem ((,) j) '(w, a) a
 instance forall k (f :: * -> *) (as :: f k) (a :: k). Data.Type.Predicate.Auto.AutoElem f as a => Data.Type.Predicate.Auto.Auto (Data.Type.Universe.In f as) a
 instance forall k (p :: k Data.Singletons.Internal.~> *) (a :: k). (Data.Type.Predicate.Provable p, Data.Singletons.Internal.SingI a) => Data.Type.Predicate.Auto.Auto (Data.Type.Predicate.Auto.AutoProvable p) a
 instance forall k (a :: k). Data.Singletons.Internal.SingI a => Data.Type.Predicate.Auto.Auto Data.Type.Predicate.Evident a
