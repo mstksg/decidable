@@ -314,6 +314,10 @@ flipDecision :: Decision a -> Decision (Refuted a)
 -- | Map over the value inside a <a>Decision</a>.
 mapDecision :: (a -> b) -> (b -> a) -> Decision a -> Decision b
 
+-- | Helper function for a common pattern of eliminating the disproved
+--   branch of <a>Decision</a> to certaintify the proof.
+elimDisproof :: Decision a -> Refuted (Refuted a) -> a
+
 -- | Converts a <a>Decision</a> to a <a>Maybe</a>. Drop the witness of
 --   disproof of <tt>a</tt>, returning <a>Just</a> if <a>Proved</a> (with
 --   the proof) and <a>Nothing</a> if <a>Disproved</a>.
@@ -554,6 +558,11 @@ newtype WitAll f p (as :: f k)
 WitAll :: (forall a. Elem f as a -> p @@ a) -> WitAll f p
 [runWitAll] :: WitAll f p -> forall a. Elem f as a -> p @@ a
 
+-- | A <tt><a>NotAll</a> f p</tt> is a predicate on a collection
+--   <tt>as</tt> that at least one <tt>a</tt> in <tt>as</tt> does not
+--   satisfy predicate <tt>p</tt>.
+type NotAll f p = (Not (All f p) :: Predicate (f k))
+
 -- | An <tt><a>Any</a> f p</tt> is a predicate testing a collection <tt>as
 --   :: f a</tt> for the fact that at least one item in <tt>as</tt>
 --   satisfies <tt>p</tt>. Represents the "exists" quantifier over a given
@@ -681,9 +690,9 @@ data Any f :: (k ~> Type) -> (f k ~> Type)
 data WitAny f :: (k ~> Type) -> f k -> Type
 [WitAny] :: Elem f as a -> (p @@ a) -> WitAny f p as
 
--- | A <tt><a>None</a> f p</tt> is a predicate on a collection <tt>as</tt>
---   that no <tt>a</tt> in <tt>as</tt> satisfies predicate <tt>p</tt>.
-type None f p = (Not (Any f p) :: Predicate (f k))
+-- | It is impossible for any value in a collection to be
+--   <a>Impossible</a>.
+anyImpossible :: Universe f => Any f Impossible --> Impossible
 
 -- | Lifts a predicate <tt>p</tt> on an individual <tt>a</tt> into a
 --   predicate that on a collection <tt>as</tt> that is true if and only if
@@ -708,6 +717,19 @@ decideNone :: forall f k (p :: k ~> Type). Universe f => Decide p -> Decide (Non
 
 -- | <a>decideNone</a>, but providing an <a>Elem</a>.
 idecideNone :: forall f k (p :: k ~> Type) (as :: f k). Universe f => (forall a. Elem f as a -> Sing a -> Decision (p @@ a)) -> Sing as -> Decision (None f p @@ as)
+
+-- | A <tt><a>None</a> f p</tt> is a predicate on a collection <tt>as</tt>
+--   that no <tt>a</tt> in <tt>as</tt> satisfies predicate <tt>p</tt>.
+type None f p = (Not (Any f p) :: Predicate (f k))
+
+-- | If <tt>p</tt> is false for all <tt>a</tt> in <tt>as</tt>, then no
+--   <tt>a</tt> in <tt>as</tt> satisfies <tt>p</tt>.
+allNotNone :: All f (Not p) --> None f p
+
+-- | If no <tt>a</tt> in <tt>as</tt> satisfies <tt>p</tt>, then <tt>p</tt>
+--   is false for all <tt>a</tt> in <tt>as</tt>. Requires
+--   <tt><a>Decidable</a> p</tt> to interrogate the input disproof.
+noneAllNot :: forall f p. (Universe f, Decidable p) => None f p --> All f (Not p)
 
 -- | If there exists an <tt>a</tt> s.t. <tt>p a</tt>, and if <tt>p</tt>
 --   implies <tt>q</tt>, then there must exist an <tt>a</tt> s.t. <tt>q
@@ -764,6 +786,21 @@ decideAll :: forall f k (p :: k ~> Type). Universe f => Decide p -> Decide (All 
 
 -- | <a>decideAll</a>, but providing an <a>Elem</a>.
 idecideAll :: forall k (p :: k ~> Type) (as :: f k). Universe f => (forall a. Elem f as a -> Sing a -> Decision (p @@ a)) -> Sing as -> Decision (All f p @@ as)
+
+-- | A <tt><a>NotAll</a> f p</tt> is a predicate on a collection
+--   <tt>as</tt> that at least one <tt>a</tt> in <tt>as</tt> does not
+--   satisfy predicate <tt>p</tt>.
+type NotAll f p = (Not (All f p) :: Predicate (f k))
+
+-- | If any <tt>a</tt> in <tt>as</tt> does not satisfy <tt>p</tt>, then not
+--   all <tt>a</tt> in <tt>as</tt> satisfy <tt>p</tt>.
+anyNotNotAll :: Any f (Not p) --> NotAll f p
+
+-- | If not all <tt>a</tt> in <tt>as</tt> satisfy <tt>p</tt>, then there
+--   must be at least one <tt>a</tt> in <tt>as</tt> that does not satisfy
+--   <tt>p</tt>. Requires <tt><a>Decidable</a> p</tt> in order to locate
+--   that specific <tt>a</tt>.
+notAllAnyNot :: forall f p. (Universe f, Decidable p) => NotAll f p --> Any f (Not p)
 
 -- | If for all <tt>a</tt> we have <tt>p a</tt>, and if <tt>p</tt> implies
 --   <tt>q</tt>, then for all <tt>a</tt> we must also have <tt>p a</tt>.
