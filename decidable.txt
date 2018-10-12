@@ -468,8 +468,19 @@ instance forall k1 (p :: Data.Type.Predicate.Predicate k1). Data.Type.Predicate.
 instance forall k1 (p :: Data.Type.Predicate.Predicate k1). Data.Type.Predicate.Provable (Data.Type.Predicate.Impossible Data.Type.Predicate.Logic.==> p)
 instance forall k1 (p :: Data.Type.Predicate.Predicate k1) (q :: Data.Type.Predicate.Predicate k1). (Data.Type.Predicate.Decidable (p Data.Type.Predicate.Logic.==> q), Data.Type.Predicate.Decidable q) => Data.Type.Predicate.Decidable (Data.Type.Predicate.Not q Data.Type.Predicate.Logic.==> Data.Type.Predicate.Not p)
 instance forall k1 (p :: Data.Type.Predicate.Predicate k1) (q :: Data.Type.Predicate.Predicate k1). Data.Type.Predicate.Provable (p Data.Type.Predicate.Logic.==> q) => Data.Type.Predicate.Provable (Data.Type.Predicate.Not q Data.Type.Predicate.Logic.==> Data.Type.Predicate.Not p)
+instance forall k1 (p :: Data.Type.Predicate.Predicate k1) (q :: Data.Type.Predicate.Predicate k1). Data.Type.Predicate.Decidable ((p Data.Type.Predicate.Logic.&&& q) Data.Type.Predicate.Logic.==> p)
+instance forall k1 (p :: Data.Type.Predicate.Predicate k1) (q :: Data.Type.Predicate.Predicate k1). Data.Type.Predicate.Provable ((p Data.Type.Predicate.Logic.&&& q) Data.Type.Predicate.Logic.==> p)
+instance forall k1 (p :: Data.Type.Predicate.Predicate k1) (q :: Data.Type.Predicate.Predicate k1). Data.Type.Predicate.Decidable ((p Data.Type.Predicate.Logic.&&& q) Data.Type.Predicate.Logic.==> q)
+instance forall k1 (p :: Data.Type.Predicate.Predicate k1) (q :: Data.Type.Predicate.Predicate k1). Data.Type.Predicate.Provable ((p Data.Type.Predicate.Logic.&&& q) Data.Type.Predicate.Logic.==> q)
+instance forall k1 (p :: Data.Type.Predicate.Predicate k1). Data.Type.Predicate.Decidable ((p Data.Type.Predicate.Logic.&&& p) Data.Type.Predicate.Logic.==> p)
+instance forall k1 (p :: Data.Type.Predicate.Predicate k1). Data.Type.Predicate.Provable ((p Data.Type.Predicate.Logic.&&& p) Data.Type.Predicate.Logic.==> p)
+instance forall k1 (p :: Data.Type.Predicate.Predicate k1) (q :: Data.Type.Predicate.Predicate k1). Data.Type.Predicate.Decidable (p Data.Type.Predicate.Logic.==> (p Data.Type.Predicate.Logic.||| q))
+instance forall k1 (p :: Data.Type.Predicate.Predicate k1) (q :: Data.Type.Predicate.Predicate k1). Data.Type.Predicate.Provable (p Data.Type.Predicate.Logic.==> (p Data.Type.Predicate.Logic.||| q))
+instance forall k1 (q :: Data.Type.Predicate.Predicate k1) (p :: Data.Type.Predicate.Predicate k1). Data.Type.Predicate.Decidable (q Data.Type.Predicate.Logic.==> (p Data.Type.Predicate.Logic.||| q))
+instance forall k1 (q :: Data.Type.Predicate.Predicate k1) (p :: Data.Type.Predicate.Predicate k1). Data.Type.Predicate.Provable (q Data.Type.Predicate.Logic.==> (p Data.Type.Predicate.Logic.||| q))
+instance forall k1 (p :: Data.Type.Predicate.Predicate k1). Data.Type.Predicate.Decidable (p Data.Type.Predicate.Logic.==> (p Data.Type.Predicate.Logic.||| p))
+instance forall k1 (p :: Data.Type.Predicate.Predicate k1). Data.Type.Predicate.Provable (p Data.Type.Predicate.Logic.==> (p Data.Type.Predicate.Logic.||| p))
 instance forall k1 (p :: k1 Data.Singletons.Internal.~> *) (q :: k1 Data.Singletons.Internal.~> *). (Data.Type.Predicate.Decidable p, Data.Type.Predicate.Decidable q) => Data.Type.Predicate.Decidable (p Data.Type.Predicate.Logic.||| q)
-instance forall k1 (p :: k1 Data.Singletons.Internal.~> *) (q :: Data.Type.Predicate.Predicate k1). Data.Type.Predicate.Provable p => Data.Type.Predicate.Provable (p Data.Type.Predicate.Logic.||| q)
 instance forall k1 (p :: k1 Data.Singletons.Internal.~> *) (q :: k1 Data.Singletons.Internal.~> *). (Data.Type.Predicate.Decidable p, Data.Type.Predicate.Decidable q) => Data.Type.Predicate.Decidable (p Data.Type.Predicate.Logic.&&& q)
 instance forall k1 (p :: k1 Data.Singletons.Internal.~> *) (q :: k1 Data.Singletons.Internal.~> *). (Data.Type.Predicate.Provable p, Data.Type.Predicate.Provable q) => Data.Type.Predicate.Provable (p Data.Type.Predicate.Logic.&&& q)
 
@@ -483,7 +494,7 @@ type family Elem (f :: Type -> Type) :: f k -> k -> Type
 
 -- | <tt><a>In</a> f as</tt> is a predicate that a given input <tt>a</tt>
 --   is a member of collection <tt>as</tt>.
-type In (f :: Type -> Type) (as :: f k) = TyCon1 (Elem f as)
+type In (f :: Type -> Type) (as :: f k) = ElemSym1 f as
 
 -- | Typeclass for a type-level container that you can quantify or lift
 --   type-level predicates over.
@@ -876,6 +887,58 @@ instance Data.Type.Predicate.Decidable (Data.Type.Predicate.Param.Found (Data.Ty
 instance Data.Type.Predicate.Provable (Data.Type.Predicate.Param.Found (Data.Type.Predicate.Param.InP f) Data.Type.Predicate.Logic.==> Data.Type.Universe.NotNull f)
 instance forall j v k (p :: Data.Type.Predicate.Param.ParamPred j v) (f :: k Data.Singletons.Internal.~> j). (Data.Type.Predicate.Decidable (Data.Type.Predicate.Param.Found p), Data.Singletons.Internal.SingI f) => Data.Type.Predicate.Decidable (Data.Type.Predicate.Param.Found (Data.Type.Predicate.Param.PPMap f p))
 instance forall j v k (p :: Data.Type.Predicate.Param.ParamPred j v) (f :: k Data.Singletons.Internal.~> j). (Data.Type.Predicate.Provable (Data.Type.Predicate.Param.Found p), Data.Singletons.Internal.SingI f) => Data.Type.Predicate.Provable (Data.Type.Predicate.Param.Found (Data.Type.Predicate.Param.PPMap f p))
+
+
+-- | Useful utilities for situations where you know that a predicate
+--   <tt>P</tt> is satisfied for a specific <tt>a</tt> at compile-time.
+module Data.Type.Predicate.Auto
+
+-- | Automatically generate a witness for predicate <tt>p</tt> applied to
+--   input <tt>a</tt>.
+--   
+--   Mostly useful for situations where you know <tt>a</tt> at
+--   compile-time, so you can just write <a>auto</a> directly in your
+--   source code. The choice is intended to mirror the <tt>auto</tt>
+--   keyword in languages like Idris.
+--   
+--   Very close in nature to the <tt>Known</tt> typeclass in the
+--   <i>type-combinators</i> library.
+class Auto (p :: Predicate k) (a :: k)
+
+-- | Have the compiler generate a witness for <tt>p @@ a</tt>.
+--   
+--   Must be called using type application syntax:
+--   
+--   <pre>
+--   <a>auto</a> <tt>_ </tt>p @a
+--   </pre>
+auto :: Auto p a => p @@ a
+
+-- | Typeclass representing <a>Elem</a>s pointing to an <tt>a :: k</tt>
+--   that can be generated automatically from type-level collection <tt>as
+--   :: f k</tt>.
+--   
+--   If GHC knows both the type-level collection and the element you want
+--   to find at compile-time, this instance should allow it to find it.
+--   
+--   Used to help in the instance of <a>Auto</a> for the <a>In</a>
+--   predicate.
+class AutoElem f (as :: f k) (a :: k)
+
+-- | Generate the <a>Elem</a> pointing to the <tt>a :: </tt> in a
+--   type-level collection <tt>as :: f k</tt>.
+autoElem :: AutoElem f as a => Elem f as a
+instance forall k (a :: k) (as :: [k]). Data.Type.Predicate.Auto.AutoElem [] (a : as) a
+instance forall k (as :: [k]) (a :: k) (b :: k). Data.Type.Predicate.Auto.AutoElem [] as a => Data.Type.Predicate.Auto.AutoElem [] (b : as) a
+instance forall k (a :: k). Data.Type.Predicate.Auto.AutoElem GHC.Maybe.Maybe ('GHC.Maybe.Just a) a
+instance forall k j (a :: k). Data.Type.Predicate.Auto.AutoElem (Data.Either.Either j) ('Data.Either.Right a) a
+instance forall k (a :: k) (as :: [k]). Data.Type.Predicate.Auto.AutoElem GHC.Base.NonEmpty (a 'GHC.Base.:| as) a
+instance forall k (as :: [k]) (a :: k) (b :: k). Data.Type.Predicate.Auto.AutoElem [] as a => Data.Type.Predicate.Auto.AutoElem GHC.Base.NonEmpty (b 'GHC.Base.:| as) a
+instance forall k (f :: * -> *) (as :: f k) (a :: k). Data.Type.Predicate.Auto.AutoElem f as a => Data.Type.Predicate.Auto.Auto (Data.Type.Universe.In f as) a
+instance forall k (a :: k). Data.Singletons.Internal.SingI a => Data.Type.Predicate.Auto.Auto Data.Type.Predicate.Evident a
+instance forall k (a :: k). Data.Type.Predicate.Auto.Auto (Data.Type.Predicate.EqualTo a) a
+instance forall k (p :: Data.Type.Predicate.Predicate k) (a :: k) (q :: Data.Type.Predicate.Predicate k). (Data.Type.Predicate.Auto.Auto p a, Data.Type.Predicate.Auto.Auto q a) => Data.Type.Predicate.Auto.Auto (p Data.Type.Predicate.Logic.&&& q) a
+instance forall k (q :: Data.Type.Predicate.Predicate k) (a :: k) (p :: Data.Type.Predicate.Predicate k). Data.Type.Predicate.Auto.Auto q a => Data.Type.Predicate.Auto.Auto (p Data.Type.Predicate.Logic.==> q) a
 
 
 -- | Represent a decidable subset of a type-level collection.
