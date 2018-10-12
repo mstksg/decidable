@@ -188,6 +188,22 @@ type Disprovable p = Provable (Not p)
 --   </pre>
 disprove :: forall p. Disprovable p => Prove (Not p)
 
+-- | If <tt>T :: k -&gt; <a>Type</a></tt> is a type constructor, then
+--   <tt><a>ProvableTC</a> T</tt> is a constraint that <tt>T</tt> is
+--   "decidable", in that you have a canonical function:
+--   
+--   <pre>
+--   proveTC :: Sing a -&gt; T a
+--   </pre>
+--   
+--   Is essentially <a>Provable</a>, except with <i>type constructors</i>
+--   <tt>k -&gt; <a>Type</a></tt> instead of matchable type-level functions
+--   (that are <tt>k ~&gt; <a>Type</a></tt>).
+type ProvableTC p = Provable (TyPred p)
+
+-- | The canonical proving function for <tt><a>DecidableTC</a> t</tt>.
+proveTC :: forall t a. ProvableTC t => Sing a -> t a
+
 -- | Implicatons <tt>p <a>--&gt;</a> q</tt> can be lifted "through" a
 --   <a>TFunctor</a> into an <tt>f p <a>--&gt;</a> f q</tt>.
 class TFunctor f
@@ -252,6 +268,22 @@ decide :: Decidable p => Decide p
 --   <a>decide</a> @MyPredicate
 --   </pre>
 decide :: (Decidable p, Provable p) => Decide p
+
+-- | If <tt>T :: k -&gt; <a>Type</a></tt> is a type constructor, then
+--   <tt><a>DecidableTC</a> T</tt> is a constraint that <tt>T</tt> is
+--   "decidable", in that you have a canonical function:
+--   
+--   <pre>
+--   decideTC :: Sing a -&gt; <a>Decision</a> (T a)
+--   </pre>
+--   
+--   Is essentially <a>Decidable</a>, except with <i>type constructors</i>
+--   <tt>k -&gt; <a>Type</a></tt> instead of matchable type-level functions
+--   (that are <tt>k ~&gt; <a>Type</a></tt>).
+type DecidableTC p = Decidable (TyPred p)
+
+-- | The canonical deciding function for <tt><a>DecidableTC</a> t</tt>.
+decideTC :: forall t a. DecidableTC t => Sing a -> Decision (t a)
 
 -- | Implicatons <tt>p <a>-?&gt;</a> q</tt> can be lifted "through" a
 --   <a>DFunctor</a> into an <tt>f p <a>-?&gt;</a> f q</tt>.
