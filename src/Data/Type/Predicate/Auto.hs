@@ -1,9 +1,11 @@
 {-# LANGUAGE AllowAmbiguousTypes   #-}
 {-# LANGUAGE DataKinds             #-}
+{-# LANGUAGE EmptyCase             #-}
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE GADTs                 #-}
 {-# LANGUAGE KindSignatures        #-}
+{-# LANGUAGE LambdaCase            #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PolyKinds             #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
@@ -91,7 +93,7 @@ instance (Provable p, SingI a) => Auto (AutoProvable p) a where
     auto = prove @p @a sing
 
 -- | Typeclass representing 'Elem's pointing to an @a :: k@ that can be
--- generated automatically from type-level collection @as :: f k@.  
+-- generated automatically from type-level collection @as :: f k@.
 --
 -- If GHC knows both the type-level collection and the element you want to
 -- find at compile-time, this instance should allow it to find it.
@@ -134,6 +136,53 @@ instance AutoElem NonEmpty (a ':| as) a where
 instance AutoElem [] as a => AutoElem NonEmpty (b ':| as) a where
     autoElem = NETail autoElem
 
+instance AutoElem ((,) j) '(w, a) a where
+    autoElem = Snd
+
 instance AutoElem f as a => Auto (In f as) a where
     auto = autoElem @f @as @a
 
+class AutoAll f (p :: Predicate k) (as :: f k) where
+    autoAll :: All f p @@ as
+
+instance AutoAll [] p '[] where
+    autoAll = WitAll $ \case {}
+
+instance (Auto p a, AutoAll [] p as) => AutoAll [] p (a ': as) where
+    autoAll = WitAll $ \case
+        IZ   -> auto @_ @p @a
+        IS i -> runWitAll (autoAll @[] @p @as) i
+
+instance AutoAll Maybe p 'Nothing where
+    autoAll = WitAll $ \case {}
+
+instance Auto p a => AutoAll Maybe p ('Just a) where
+    autoAll = WitAll $ \case IsJust -> auto @_ @p @a
+
+instance AutoAll (Either j) p ('Left e) where
+    autoAll = WitAll $ \case {}
+
+instance Auto p a => AutoAll (Either j) p ('Right a) where
+    autoAll = WitAll $ \case IsRight -> auto @_ @p @a
+
+instance (Auto p a, AutoAll [] p as) => AutoAll NonEmpty p (a ':| as) where
+    autoAll = WitAll $ \case
+        NEHead   -> auto @_ @p @a
+        NETail i -> runWitAll (autoAll @[] @p @as) i
+
+instance Auto p a => AutoAll ((,) j) p '(w, a) where
+    autoAll = WitAll $ \case Snd -> auto @_ @p @a
+
+instance AutoAll f p as => Auto (All f p) as where
+    auto = autoAll @f @p @as
+
+-- class AutoAny f (p :: Predicate k) (as :: f k) where
+--     autoAny :: Any f p @@ as
+
+-- instance {-# OVERLAPPING #-} Auto p a => AutoAny [] p (a ': as) where
+--     autoAny = WitAny IZ (auto @_ @p @a)
+
+-- instance {-# OVERLAPPING #-} AutoAny [] p as => AutoAny [] p (b ': as) where
+
+-- instance {-# OVERLAPPING #-} AutoElem [] as a => AutoElem [] (b ': as) a where
+--     autoElem = IS autoElem
