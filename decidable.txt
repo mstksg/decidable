@@ -80,6 +80,10 @@ type Predicate k = k ~> Type
 -- | A <tt><a>Wit</a> p a</tt> is a value of type <tt>p @@ a</tt> --- that
 --   is, it is a proof or witness that <tt>p</tt> is satisfied for
 --   <tt>a</tt>.
+--   
+--   It essentially turns a <tt>k ~&gt; <a>Type</a></tt> ("matchable"
+--   <tt><a>Predicate</a> k</tt>) /back into/ a <tt>k -&gt;
+--   <a>Type</a></tt> predicate.
 newtype Wit p a
 Wit :: (p @@ a) -> Wit p a
 [getWit] :: Wit p a -> p @@ a
@@ -923,11 +927,41 @@ auto :: Auto p a => p @@ a
 --   
 --   Used to help in the instance of <a>Auto</a> for the <a>In</a>
 --   predicate.
+--   
+--   Example usage:
+--   
+--   <pre>
+--   autoElem :: Index '[1,6,2,3] 2
+--   -- IS (IS IZ)        -- third spot
+--   </pre>
+--   
+--   And when used with <a>Auto</a>:
+--   
+--   <pre>
+--   auto <tt>_ </tt>(In [] '[1,6,2,3]) @2
+--   -- IS (IS IZ)
+--   </pre>
 class AutoElem f (as :: f k) (a :: k)
 
 -- | Generate the <a>Elem</a> pointing to the <tt>a :: </tt> in a
 --   type-level collection <tt>as :: f k</tt>.
 autoElem :: AutoElem f as a => Elem f as a
+
+-- | Helper "predicate transformer" that gives you an instant <a>auto</a>
+--   for any <a>Provable</a> instance.
+--   
+--   For example, say you have predicate <tt>P</tt> that you know is
+--   <a>Provable</a>, and you wish to generate a <tt>P @@ x</tt>, for some
+--   specific <tt>x</tt> you know at compile-time. You can use:
+--   
+--   <pre>
+--   <a>auto</a> <tt>_ </tt>(AutoProvable P) @x
+--   </pre>
+--   
+--   to obtain a <tt>P @@ x</tt>.
+--   
+--   <a>AutoProvable</a> is essentially the identity function.
+data AutoProvable :: Predicate k -> Predicate k
 instance forall k (a :: k) (as :: [k]). Data.Type.Predicate.Auto.AutoElem [] (a : as) a
 instance forall k (as :: [k]) (a :: k) (b :: k). Data.Type.Predicate.Auto.AutoElem [] as a => Data.Type.Predicate.Auto.AutoElem [] (b : as) a
 instance forall k (a :: k). Data.Type.Predicate.Auto.AutoElem GHC.Maybe.Maybe ('GHC.Maybe.Just a) a
@@ -935,6 +969,7 @@ instance forall k j (a :: k). Data.Type.Predicate.Auto.AutoElem (Data.Either.Eit
 instance forall k (a :: k) (as :: [k]). Data.Type.Predicate.Auto.AutoElem GHC.Base.NonEmpty (a 'GHC.Base.:| as) a
 instance forall k (as :: [k]) (a :: k) (b :: k). Data.Type.Predicate.Auto.AutoElem [] as a => Data.Type.Predicate.Auto.AutoElem GHC.Base.NonEmpty (b 'GHC.Base.:| as) a
 instance forall k (f :: * -> *) (as :: f k) (a :: k). Data.Type.Predicate.Auto.AutoElem f as a => Data.Type.Predicate.Auto.Auto (Data.Type.Universe.In f as) a
+instance forall k (p :: k Data.Singletons.Internal.~> *) (a :: k). (Data.Type.Predicate.Provable p, Data.Singletons.Internal.SingI a) => Data.Type.Predicate.Auto.Auto (Data.Type.Predicate.Auto.AutoProvable p) a
 instance forall k (a :: k). Data.Singletons.Internal.SingI a => Data.Type.Predicate.Auto.Auto Data.Type.Predicate.Evident a
 instance forall k (a :: k). Data.Type.Predicate.Auto.Auto (Data.Type.Predicate.EqualTo a) a
 instance forall k (p :: Data.Type.Predicate.Predicate k) (a :: k) (q :: Data.Type.Predicate.Predicate k). (Data.Type.Predicate.Auto.Auto p a, Data.Type.Predicate.Auto.Auto q a) => Data.Type.Predicate.Auto.Auto (p Data.Type.Predicate.Logic.&&& q) a
