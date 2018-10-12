@@ -28,15 +28,20 @@
 --
 module Data.Type.Predicate.Quantification (
   -- * Any
-    Any, WitAny(..), None
+    Any, WitAny(..), anyImpossible
   -- ** Decision
   , decideAny, idecideAny, decideNone, idecideNone
+  -- ** Negation
+  , None, allNotNone, noneAllNot
   -- ** Entailment
   , entailAny, ientailAny, entailAnyF, ientailAnyF
   -- * All
   , All, WitAll(..)
   -- ** Decision
   , decideAll, idecideAll
+  -- ** Negation
+  , NotAll
+  , anyNotNotAll, notAllAnyNot
   -- ** Entailment
   , entailAll, ientailAll, entailAllF, ientailAllF
   , decideEntailAll, idecideEntailAll
@@ -47,6 +52,7 @@ import           Data.Singletons
 import           Data.Singletons.Decide
 import           Data.Type.Predicate
 import           Data.Type.Universe
+import           Data.Void
 
 -- | 'decideNone', but providing an 'Elem'.
 idecideNone
@@ -157,3 +163,46 @@ decideEntailAll
     => p -?> q
     -> All f p -?> All f q
 decideEntailAll = dmap @(All f)
+
+-- | It is impossible for any value in a collection to be 'Impossible'.
+--
+-- @since 0.1.1.0
+anyImpossible :: Universe f => Any f Impossible --> Impossible
+anyImpossible _ (WitAny i p) = p . index i
+
+-- | If any @a@ in @as@ does not satisfy @p@, then not all @a@ in @as@
+-- satisfy @p@.
+--
+-- @since 0.1.1.0
+anyNotNotAll :: Any f (Not p) --> NotAll f p
+anyNotNotAll _ (WitAny i v) a = v $ runWitAll a i
+
+-- | If not all @a@ in @as@ satisfy @p@, then there must be at least one
+-- @a@ in @as@ that does not satisfy @p@.  Requires @'Decidable' p@ in
+-- order to locate that specific @a@.
+--
+-- @since 0.1.1.0
+notAllAnyNot
+    :: forall f p. (Universe f, Decidable p)
+    => NotAll f p --> Any f (Not p)
+notAllAnyNot xs vAll = elimDisproof (decide @(Any f (Not p)) xs) $ \vAny ->
+    vAll $ WitAll $ \i ->
+      elimDisproof (decide @p (index i xs)) $ \vP ->
+        vAny $ WitAny i vP
+
+-- | If @p@ is false for all @a@ in @as@, then no @a@ in @as@ satisfies
+-- @p@.
+--
+-- @since 0.1.1.0
+allNotNone :: All f (Not p) --> None f p
+allNotNone _ a (WitAny i v) = runWitAll a i v
+
+-- | If no @a@ in @as@ satisfies @p@, then @p@ is false for all @a@ in
+-- @as@.  Requires @'Decidable' p@ to interrogate the input disproof.
+--
+-- @since 0.1.1.0
+noneAllNot
+    :: forall f p. (Universe f, Decidable p)
+    => None f p --> All f (Not p)
+noneAllNot xs vAny = elimDisproof (decide @(All f (Not p)) xs) $ \vAll ->
+    vAll $ WitAll $ \i p -> vAny $ WitAny i p

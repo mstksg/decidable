@@ -6,6 +6,7 @@
 {-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE RankNTypes          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TupleSections       #-}
 {-# LANGUAGE TypeApplications    #-}
 {-# LANGUAGE TypeFamilies        #-}
 {-# LANGUAGE TypeInType          #-}
@@ -63,9 +64,7 @@ decideAnd
     -> Decision (q @@ a)
     -> Decision ((p &&& q) @@ a)
 decideAnd = \case
-    Proved p    -> \case
-      Proved q    -> Proved (p, q)
-      Disproved v -> Disproved $ \(_, q) -> v q
+    Proved p    -> mapDecision (p,) snd
     Disproved v -> \_ -> Disproved $ \(p, _) -> v p
 
 -- | @p '|||' q@ is a predicate that either @p@ and @q@ are true.
@@ -84,11 +83,7 @@ decideOr
     -> Decision ((p ||| q) @@ a)
 decideOr = \case
     Proved p    -> \_ -> Proved $ Left p
-    Disproved v -> \case
-      Proved q    -> Proved $ Right q
-      Disproved w -> Disproved $ \case
-        Left p  -> v p
-        Right q -> w q
+    Disproved v -> mapDecision Right (either (absurd . v) id)
 
 -- | Left-biased "or".  In proofs, prioritize a proof of the left side over
 -- a proof of the right side.
@@ -227,15 +222,13 @@ contrapositive'
     :: forall p q. Decidable q
     => (Not q --> Not p)
     -> (p --> q)
-contrapositive' f x p = case decide @q x of
-    Proved     q -> q
-    Disproved vq -> absurd $ f x vq p
+contrapositive' f x p = elimDisproof (decide @q x) $ \vQ ->
+    f x vQ p
 
 -- | Logical double negation.  Only possible if @p@ is 'Decidable'.
 doubleNegation :: forall p. Decidable p => Not (Not p) --> p
-doubleNegation x vvp = case decide @p x of
-    Proved    p  -> p
-    Disproved vp -> absurd $ vvp vp
+doubleNegation x vvP = elimDisproof (decide @p x) $ \vP ->
+    vvP vP
 
 -- | If @p '&&&' q@ is true, then so is @p@.
 projAndFst :: (p &&& q) --> p

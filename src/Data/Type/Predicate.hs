@@ -50,6 +50,7 @@ module Data.Type.Predicate (
   -- * Manipulate Decisions
   , Decision(..)
   , flipDecision, mapDecision
+  , elimDisproof
   , forgetDisproof, forgetProof, isProved, isDisproved
   ) where
 
@@ -407,3 +408,15 @@ isProved = isJust . forgetDisproof
 -- @since 0.1.1.0
 isDisproved :: Decision a -> Bool
 isDisproved = isNothing . forgetDisproof
+
+-- | Helper function for a common pattern of eliminating the disproved
+-- branch of 'Decision' to certaintify the proof.
+--
+-- @since 0.1.1.0
+elimDisproof
+    :: Decision a
+    -> Refuted (Refuted a)
+    -> a
+elimDisproof = \case
+    Proved    p -> const p
+    Disproved v -> absurd . ($ v)

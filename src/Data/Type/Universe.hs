@@ -33,7 +33,7 @@ module Data.Type.Universe (
   -- ** Instances
   , Index(..), IsJust(..), IsRight(..), NEIndex(..), Snd(..)
   -- ** Predicates
-  , All, WitAll(..)
+  , All, WitAll(..), NotAll
   , Any, WitAny(..), None
   , Null, NotNull
   -- * Decisions and manipulations
@@ -151,6 +151,10 @@ type NotNull f = (Any f Evident :: Predicate (f k))
 -- | A @'None' f p@ is a predicate on a collection @as@ that no @a@ in @as@
 -- satisfies predicate @p@.
 type None f p = (Not (Any f p) :: Predicate (f k))
+
+-- | A @'NotAll' f p@ is a predicate on a collection @as@ that at least one
+-- @a@ in @as@ does not satisfy predicate @p@.
+type NotAll f p = (Not (All f p) :: Predicate (f k))
 
 -- | Lifts a predicate @p@ on an individual @a@ into a predicate that on
 -- a collection @as@ that is true if and only if /any/ item in @as@
