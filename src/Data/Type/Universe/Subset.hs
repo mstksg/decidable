@@ -165,6 +165,6 @@ mapSubset
     => (p --> q)
     -> (q --> p)
     -> (Subset f p --> Subset f q)
-mapSubset f g xs@Sing = withSingI xs $
+mapSubset f g xs = withSingI xs $
     imapSubset (\i -> f (index i xs))
                (\i -> g (index i xs))

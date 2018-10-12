@@ -156,6 +156,9 @@ type PMap (f :: k ~> j) (p :: Predicate j) = (p .@#@$$$ f :: Predicate k)
 
 -- | A @'Wit' p a@ is a value of type @p \@\@ a@ --- that is, it is a proof
 -- or witness that @p@ is satisfied for @a@.
+--
+-- It essentially turns a @k ~> 'Type'@ ("matchable" @'Predicate' k@) /back
+-- into/ a @k -> 'Type'@ predicate.
 newtype Wit p a = Wit { getWit :: p @@ a }
 
 -- | A decision function for predicate @p@.  See 'Decidable' for more
