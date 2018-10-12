@@ -10,6 +10,8 @@ Version 0.1.1.0
 
 *   `flipDecision`, `forgetDisproof`, `forgetProof`, `isProved`, and
     `isDisproved` added to *Data.Type.Predicate* module.
+*   `ProvableTC`, `DeccidableTC`, `proveTC`, and `decideTC` helper functions
+    and constraints
 
 Version 0.1.0.0
 ---------------

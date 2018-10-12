@@ -39,11 +39,13 @@ module Data.Type.Predicate (
   , Prove, type (-->), type (-->#)
   , Provable(..)
   , Disprovable, disprove
+  , ProvableTC, proveTC
   , TFunctor(..)
   , compImpl
     -- * Decidable Predicates
   , Decide, type (-?>), type (-?>#)
   , Decidable(..)
+  , DecidableTC, decideTC
   , DFunctor(..)
   -- * Manipulate Decisions
   , Decision(..)
@@ -256,6 +258,47 @@ type Disprovable p = Provable (Not p)
 -- @
 disprove :: forall p. Disprovable p => Prove (Not p)
 disprove = prove @(Not p)
+
+-- | If @T :: k -> 'Type'@ is a type constructor, then @'DecidableTC' T@ is
+-- a constraint that @T@ is "decidable", in that you have a canonical
+-- function:
+--
+-- @
+-- decideTC :: Sing a -> 'Decision' (T a)
+-- @
+--
+-- Is essentially 'Decidable', except with /type constructors/ @k ->
+-- 'Type'@ instead of matchable type-level functions (that are @k ~>
+-- 'Type'@).
+--
+-- @since 0.1.1.0
+type DecidableTC p = Decidable (TyPred p)
+
+-- | The canonical deciding function for @'DecidableTC' t@.
+--
+-- @since 0.1.1.0
+decideTC :: forall t a. DecidableTC t => Sing a -> Decision (t a)
+decideTC = decide @(TyPred t)
+
+-- | If @T :: k -> 'Type'@ is a type constructor, then @'ProvableTC' T@ is
+-- a constraint that @T@ is "decidable", in that you have a canonical
+-- function:
+--
+-- @
+-- proveTC :: Sing a -> T a
+-- @
+--
+-- Is essentially 'Provable', except with /type constructors/ @k -> 'Type'@
+-- instead of matchable type-level functions (that are @k ~> 'Type'@).
+--
+-- @since 0.1.1.0
+type ProvableTC  p = Provable  (TyPred p)
+
+-- | The canonical proving function for @'DecidableTC' t@.
+--
+-- @since 0.1.1.0
+proveTC :: forall t a. ProvableTC t => Sing a -> t a
+proveTC = prove @(TyPred t)
 
 -- | Implicatons @p '-?>' q@ can be lifted "through" a 'DFunctor' into an
 -- @f p '-?>' f q@.
