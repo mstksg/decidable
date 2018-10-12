@@ -12,6 +12,10 @@ Version 0.1.1.0
     `isDisproved` added to *Data.Type.Predicate* module.
 *   `ProvableTC`, `DeccidableTC`, `proveTC`, and `decideTC` helper functions
     and constraints
+*   *Data.Type.Predicate.Auto* module, for generating witnesses at
+    compile-time.
+*   Instances for injection and projection out of `&&&` and `|||`, with some
+    tricks to prevent overlapping instance issues.
 
 Version 0.1.0.0
 ---------------

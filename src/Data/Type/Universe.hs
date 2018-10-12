@@ -67,7 +67,7 @@ type instance Apply (ElemSym1 f as) a = Elem f as a
 
 -- | @'In' f as@ is a predicate that a given input @a@ is a member of
 -- collection @as@.
-type In (f :: Type -> Type) (as :: f k) = TyCon1 (Elem f as)
+type In (f :: Type -> Type) (as :: f k) = ElemSym1 f as
 
 -- | A @'WitAny' p as@ is a witness that, for at least one item @a@ in the
 -- type-level collection @as@, the predicate @p a@ is true.

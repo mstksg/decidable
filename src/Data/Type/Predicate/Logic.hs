@@ -76,12 +76,6 @@ infixr 2 |||
 instance (Decidable p, Decidable q) => Decidable (p ||| q) where
     decide (x :: Sing a) = decideOr @p @q @a (decide @p x) (decide @q x)
 
--- | Picks the proof of @p@.  Note that this is instance has stronger
--- constraints than is strictly necessary; we should really only have to
--- require that either @p@ or @q@ is true.
-instance Provable p => Provable (p ||| q) where
-    prove x = Left (prove @p x)
-
 -- | Decide @p '|||' q@ based on decisions of @p@ and @q@.
 decideOr
     :: forall p q a. ()
@@ -137,6 +131,42 @@ instance (Decidable (p ==> q), Decidable q) => Decidable (Not q ==> Not p) where
         Disproved vq -> Disproved $ \vnpnq -> vpq (absurd . vnpnq vq)
 instance Provable (p ==> q) => Provable (Not q ==> Not p) where
     prove = contrapositive @p @q (prove @(p ==> q))
+
+-- | @since 0.1.1.0
+instance {-# OVERLAPPING #-} Decidable (p &&& q ==> p) where
+-- | @since 0.1.1.0
+instance {-# OVERLAPPING #-} Provable (p &&& q ==> p) where
+    prove = projAndFst @p @q
+
+-- | @since 0.1.1.0
+instance {-# OVERLAPPING #-} Decidable (p &&& q ==> q) where
+-- | @since 0.1.1.0
+instance {-# OVERLAPPING #-} Provable (p &&& q ==> q) where
+    prove = projAndSnd @p @q
+
+-- | @since 0.1.1.0
+instance {-# OVERLAPPING #-} Decidable (p &&& p ==> p) where
+-- | @since 0.1.1.0
+instance {-# OVERLAPPING #-} Provable (p &&& p ==> p) where
+    prove = projAndFst @p @p
+
+-- | @since 0.1.1.0
+instance {-# OVERLAPPING #-} Decidable (p ==> p ||| q)
+-- | @since 0.1.1.0
+instance {-# OVERLAPPING #-} Provable (p ==> p ||| q) where
+    prove = injOrLeft @p @q
+
+-- | @since 0.1.1.0
+instance {-# OVERLAPPING #-} Decidable (q ==> p ||| q)
+-- | @since 0.1.1.0
+instance {-# OVERLAPPING #-} Provable (q ==> p ||| q) where
+    prove = injOrRight @p @q
+
+-- | @since 0.1.1.0
+instance {-# OVERLAPPING #-} Decidable (p ==> p ||| p)
+-- | @since 0.1.1.0
+instance {-# OVERLAPPING #-} Provable (p ==> p ||| p) where
+    prove = injOrLeft @p @p
 
 -- | @'Implies' p q@ is a constraint that @p '==>' q@ is 'Provable'; that
 -- is, you can prove that @p@ implies @q@.
