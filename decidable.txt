@@ -541,12 +541,6 @@ data NEIndex :: NonEmpty k -> k -> Type
 -- | Trivially witness an item in the second field of a type-level tuple.
 data Snd :: (j, k) -> k -> Type
 [Snd] :: Snd '(a, b) b
-data ( f :.: g ) a
-
--- | The singleton kind-indexed data family.
-data family Sing (a :: k) :: Type
-sGetComp :: Sing a -> Sing (GetComp a)
-type family GetComp c
 data CompElem :: (f :.: g) k -> k -> Type
 [:?] :: Elem f ass as -> Elem g as a -> CompElem ( 'Comp ass) a
 
@@ -650,6 +644,18 @@ index :: forall f as a. Universe f => Elem f as a -> Sing as -> Sing a
 
 -- | Automatically generate a witness for a member, if possible
 pickElem :: forall f k (as :: f k) a. (Universe f, SingI as, SingI a, SDecide k) => Decision (Elem f as a)
+data ( f :.: g ) a
+Comp :: f (g a) -> (:.:) f g a
+[getComp] :: (:.:) f g a -> f (g a)
+
+-- | The singleton kind-indexed data family.
+data family Sing (a :: k) :: Type
+sGetComp :: Sing a -> Sing (GetComp a)
+type family GetComp c
+allComp :: (All f (All g p) @@ as) -> All (f :.: g) p @@  'Comp as
+compAll :: (All (f :.: g) p @@  'Comp as) -> All f (All g p) @@ as
+anyComp :: (Any f (Any g p) @@ as) -> Any (f :.: g) p @@  'Comp as
+compAny :: (Any (f :.: g) p @@  'Comp as) -> Any f (Any g p) @@ as
 data ElemSym0 (f :: Type -> Type) :: f k ~> k ~> Type
 data ElemSym1 (f :: Type -> Type) :: f k -> k ~> Type
 type ElemSym2 (f :: Type -> Type) (as :: f k) (a :: k) = Elem f as a
@@ -775,6 +781,8 @@ entailAnyF :: forall f p q h. (Universe f, Functor h) => (p --># q) h -> (Any f 
 
 -- | <a>entailAnyF</a>, but providing an <a>Elem</a>.
 ientailAnyF :: forall f p q as h. Functor h => (forall a. Elem f as a -> (p @@ a) -> h (q @@ a)) -> (Any f p @@ as) -> h (Any f q @@ as)
+allComp :: (All f (All g p) @@ as) -> All (f :.: g) p @@  'Comp as
+compAll :: (All (f :.: g) p @@  'Comp as) -> All f (All g p) @@ as
 
 -- | An <tt><a>All</a> f p</tt> is a predicate testing a collection <tt>as
 --   :: f a</tt> for the fact that <i>all</i> items in <tt>as</tt> satisfy
@@ -842,6 +850,8 @@ decideEntailAll :: forall f p q. Universe f => (p -?> q) -> All f p -?> All f q
 
 -- | <a>entailAllF</a>, but providing an <a>Elem</a>.
 idecideEntailAll :: forall f p q as. (Universe f, SingI as) => (forall a. Elem f as a -> (p @@ a) -> Decision (q @@ a)) -> (All f p @@ as) -> Decision (All f q @@ as)
+anyComp :: (Any f (Any g p) @@ as) -> Any (f :.: g) p @@  'Comp as
+compAny :: (Any (f :.: g) p @@  'Comp as) -> Any f (Any g p) @@ as
 
 
 -- | Manipulate "parameterized predicates". See <a>ParamPred</a> and
