@@ -37,12 +37,14 @@ module Data.Type.Universe (
   -- * Universe
     Elem, In, Universe(..)
   -- ** Instances
-  , Index(..), IsJust(..), IsRight(..), NEIndex(..), Snd(..)
+  , Index(..), IJust(..), IRight(..), NEIndex(..), ISnd(..)
   , CompElem(..)
   -- ** Predicates
   , All, WitAll(..), NotAll
   , Any, WitAny(..), None
   , Null, NotNull
+  -- *** Specialized
+  , IsJust, IsNothing, IsRight, IsLeft
   -- * Decisions and manipulations
   , decideAny, decideAll, genAllA, genAll, igenAll
   , foldMapUni, ifoldMapUni, index, pickElem
@@ -60,7 +62,7 @@ import           Data.Kind
 import           Data.List.NonEmpty                    (NonEmpty(..))
 import           Data.Singletons
 import           Data.Singletons.Decide
-import           Data.Singletons.Prelude hiding        (Elem, ElemSym0, ElemSym1, ElemSym2, Any, All, Snd, Null, Not)
+import           Data.Singletons.Prelude hiding        (Elem, ElemSym0, ElemSym1, ElemSym2, Any, All, Null, Not)
 import           Data.Singletons.TH hiding             (Elem, Null)
 import           Data.Type.Predicate
 import           Data.Type.Predicate.Logic
@@ -326,61 +328,65 @@ instance Universe [] where
 
 -- | Witness an item in a type-level 'Maybe' by proving the 'Maybe' is
 -- 'Just'.
-data IsJust :: Maybe k -> k -> Type where
-    IsJust :: IsJust ('Just a) a
+data IJust :: Maybe k -> k -> Type where
+    IJust :: IJust ('Just a) a
 
-deriving instance Show (IsJust as a)
-instance (SingI (as :: Maybe k), SDecide k) => Decidable (TyPred (IsJust as)) where
+deriving instance Show (IJust as a)
+instance (SingI (as :: Maybe k), SDecide k) => Decidable (TyPred (IJust as)) where
     decide x = withSingI x $ pickElem
 
-type instance Elem Maybe = IsJust
+type instance Elem Maybe = IJust
+type IsJust    = (NotNull Maybe :: Predicate (Maybe k))
+type IsNothing = (Null    Maybe :: Predicate (Maybe k))
 
 instance Universe Maybe where
     idecideAny f = \case
       SNothing -> Disproved $ \case WitAny i _ -> case i of {}
-      SJust x  -> case f IsJust x of
-        Proved p    -> Proved $ WitAny IsJust p
+      SJust x  -> case f IJust x of
+        Proved p    -> Proved $ WitAny IJust p
         Disproved v -> Disproved $ \case
-          WitAny IsJust p -> v p
+          WitAny IJust p -> v p
 
     idecideAll f = \case
       SNothing -> Proved $ WitAll $ \case {}
-      SJust x  -> case f IsJust x of
-        Proved p    -> Proved $ WitAll $ \case IsJust -> p
-        Disproved v -> Disproved $ \a -> v $ runWitAll a IsJust
+      SJust x  -> case f IJust x of
+        Proved p    -> Proved $ WitAll $ \case IJust -> p
+        Disproved v -> Disproved $ \a -> v $ runWitAll a IJust
 
     igenAllA f = \case
       SNothing -> pure $ WitAll $ \case {}
-      SJust x  -> (\p -> WitAll $ \case IsJust -> p) <$> f IsJust x
+      SJust x  -> (\p -> WitAll $ \case IJust -> p) <$> f IJust x
 
 -- | Witness an item in a type-level @'Either' j@ by proving the 'Either'
 -- is 'Right'.
-data IsRight :: Either j k -> k -> Type where
-    IsRight :: IsRight ('Right a) a
+data IRight :: Either j k -> k -> Type where
+    IRight :: IRight ('Right a) a
 
-deriving instance Show (IsRight as a)
-instance (SingI (as :: Either j k), SDecide k) => Decidable (TyPred (IsRight as)) where
+deriving instance Show (IRight as a)
+instance (SingI (as :: Either j k), SDecide k) => Decidable (TyPred (IRight as)) where
     decide x = withSingI x $ pickElem
 
-type instance Elem (Either j) = IsRight
+type instance Elem (Either j) = IRight
+type IsRight = (NotNull (Either j) :: Predicate (Either j k))
+type IsLeft  = (Null    (Either j) :: Predicate (Either j k))
 
 instance Universe (Either j) where
     idecideAny f = \case
       SLeft  _ -> Disproved $ \case WitAny i _ -> case i of {}
-      SRight x -> case f IsRight x of
-        Proved p    -> Proved $ WitAny IsRight p
+      SRight x -> case f IRight x of
+        Proved p    -> Proved $ WitAny IRight p
         Disproved v -> Disproved $ \case
-          WitAny IsRight p -> v p
+          WitAny IRight p -> v p
 
     idecideAll f = \case
       SLeft  _ -> Proved $ WitAll $ \case {}
-      SRight x -> case f IsRight x of
-        Proved p    -> Proved $ WitAll $ \case IsRight -> p
-        Disproved v -> Disproved $ \a -> v $ runWitAll a IsRight
+      SRight x -> case f IRight x of
+        Proved p    -> Proved $ WitAll $ \case IRight -> p
+        Disproved v -> Disproved $ \a -> v $ runWitAll a IRight
 
     igenAllA f = \case
       SLeft  _ -> pure $ WitAll $ \case {}
-      SRight x -> (\p -> WitAll $ \case IsRight -> p) <$> f IsRight x
+      SRight x -> (\p -> WitAll $ \case IRight -> p) <$> f IRight x
 
 -- | Witness an item in a type-level 'NonEmpty' by either indicating that
 -- it is the "head", or by providing an index in the "tail".
@@ -435,26 +441,26 @@ instance Universe NonEmpty where
           NETail i -> runWitAll ps i
 
 -- | Trivially witness an item in the second field of a type-level tuple.
-data Snd :: (j, k) -> k -> Type where
-    Snd :: Snd '(a, b) b
+data ISnd :: (j, k) -> k -> Type where
+    ISnd :: ISnd '(a, b) b
 
-deriving instance Show (Snd as a)
+deriving instance Show (ISnd as a)
 -- TODO: does this interfere with NonNull stuff?
-instance (SingI (as :: (j, k)), SDecide k) => Decidable (TyPred (Snd as)) where
+instance (SingI (as :: (j, k)), SDecide k) => Decidable (TyPred (ISnd as)) where
     decide x = withSingI x $ pickElem
 
-type instance Elem ((,) j) = Snd
+type instance Elem ((,) j) = ISnd
 
 instance Universe ((,) j) where
-    idecideAny f (STuple2 _ x) = case f Snd x of
-      Proved p    -> Proved $ WitAny Snd p
-      Disproved v -> Disproved $ \case WitAny Snd p -> v p
+    idecideAny f (STuple2 _ x) = case f ISnd x of
+      Proved p    -> Proved $ WitAny ISnd p
+      Disproved v -> Disproved $ \case WitAny ISnd p -> v p
 
-    idecideAll f (STuple2 _ x) = case f Snd x of
-      Proved p    -> Proved $ WitAll $ \case Snd -> p
-      Disproved v -> Disproved $ \a -> v $ runWitAll a Snd
+    idecideAll f (STuple2 _ x) = case f ISnd x of
+      Proved p    -> Proved $ WitAll $ \case ISnd -> p
+      Disproved v -> Disproved $ \a -> v $ runWitAll a ISnd
 
-    igenAllA f (STuple2 _ x) = (\p -> WitAll $ \case Snd -> p) <$> f Snd x
+    igenAllA f (STuple2 _ x) = (\p -> WitAll $ \case ISnd -> p) <$> f ISnd x
 
 data (f :.: g) a = Comp { getComp :: f (g a) }
     deriving (Show, Eq, Ord, Functor, Foldable)

@@ -35,7 +35,6 @@ module Data.Type.Predicate.Auto (
   , AutoElem(..)
   , AutoAll(..)
   , autoAny
-  , AutoParam(..)
   , AutoNot, autoNot
   , AutoProvable
   ) where
@@ -138,10 +137,10 @@ instance {-# OVERLAPPING #-} AutoElem [] as a => AutoElem [] (b ': as) a where
     autoElem = IS autoElem
 
 instance AutoElem Maybe ('Just a) a where
-    autoElem = IsJust
+    autoElem = IJust
 
 instance AutoElem (Either j) ('Right a) a where
-    autoElem = IsRight
+    autoElem = IRight
 
 instance AutoElem NonEmpty (a ':| as) a where
     autoElem = NEHead
@@ -150,7 +149,7 @@ instance AutoElem [] as a => AutoElem NonEmpty (b ':| as) a where
     autoElem = NETail autoElem
 
 instance AutoElem ((,) j) '(w, a) a where
-    autoElem = Snd
+    autoElem = ISnd
 
 -- TODO: ???
 -- instance AutoElem (f :.: g) p ('Comp ass) where
@@ -173,13 +172,13 @@ instance AutoAll Maybe p 'Nothing where
     autoAll = WitAll $ \case {}
 
 instance Auto p a => AutoAll Maybe p ('Just a) where
-    autoAll = WitAll $ \case IsJust -> auto @_ @p @a
+    autoAll = WitAll $ \case IJust -> auto @_ @p @a
 
 instance AutoAll (Either j) p ('Left e) where
     autoAll = WitAll $ \case {}
 
 instance Auto p a => AutoAll (Either j) p ('Right a) where
-    autoAll = WitAll $ \case IsRight -> auto @_ @p @a
+    autoAll = WitAll $ \case IRight -> auto @_ @p @a
 
 instance (Auto p a, AutoAll [] p as) => AutoAll NonEmpty p (a ':| as) where
     autoAll = WitAll $ \case
@@ -191,7 +190,7 @@ instance AutoAll f (All g p) ass => AutoAll (f :.: g) p ('Comp ass) where
       runWitAll (runWitAll (autoAll @f @(All g p) @ass) i) j
 
 instance Auto p a => AutoAll ((,) j) p '(w, a) where
-    autoAll = WitAll $ \case Snd -> auto @_ @p @a
+    autoAll = WitAll $ \case ISnd -> auto @_ @p @a
 
 instance AutoAll f p as => Auto (All f p) as where
     auto = autoAll @f @p @as
@@ -199,74 +198,32 @@ instance AutoAll f p as => Auto (All f p) as where
 instance SingI a => Auto (NotNull []) (a ': as) where
     auto = WitAny IZ sing
 
-instance SingI a => Auto (NotNull Maybe) ('Just a) where
-    auto = WitAny IsJust sing
+instance SingI a => Auto IsJust ('Just a) where
+    auto = WitAny IJust sing
 
-instance SingI a => Auto (NotNull (Either j)) ('Right a) where
-    auto = WitAny IsRight sing
+instance SingI a => Auto IsRight ('Right a) where
+    auto = WitAny IRight sing
 
 instance SingI a => Auto (NotNull NonEmpty) (a ':| as) where
     auto = WitAny NEHead sing
 
 instance SingI a => Auto (NotNull ((,) j)) '(w, a) where
-    auto = WitAny Snd sing
+    auto = WitAny ISnd sing
 
 type AutoNot (p :: Predicate k) = Auto (Not p)
 
 autoNot :: forall k (p :: Predicate k) (a :: k). AutoNot p a => Not p @@ a
 autoNot = auto @k @(Not p) @a
 
--- class AutoNotAll f (p :: Predicate k) (as :: f k) where
---     autoNotAll :: Not (All f p) @@ as
-
--- instance Auto p a => AutoNotAll [] p (a ': as) where
---     autoNotAll a = _ $ runWitAll a IZ
-
-class AutoParam (p :: ParamPred k v) (a :: k) where
-    autoParam :: Σ v (p a)
-
-instance AutoParam p a => Auto (Found p) a where
-    auto = autoParam @_ @_ @p @a
+instance Auto (Found p) (f @@ a) => Auto (Found (PPMap f p)) a where
+    auto = case auto @_ @(Found p) @(f @@ a) of
+        i :&: p -> i :&: p
 
 instance Auto p (f @@ a) => Auto (p .@#@$$$ f) a where
     auto = auto @_ @p @(f @@ a)
 
--- class AutoAny f p as a where
---     autoAny :: Elem f as a -> Any f p @@ as
-
 autoAny :: forall f p as a. Auto p a => Elem f as a -> Any f p @@ as
 autoAny i = WitAny i (auto @_ @p @a)
 
--- class AutoAny f (p :: Predicate k) (a :: k) where
---     autoAny :: Elem f p as a -> Any f p @@ as
-
--- instance (Decidable f, SingI g) => Decidable (f .@#@$$$ g) where
---     decide = decide @f . ((sing :: Sing g) @@)
-
--- instance (Provable f, SingI g) => Provable (f .@#@$$$ g) where
---     prove = prove @f . ((sing :: Sing g) @@)
-
--- class AutoAny f (p :: Predicate k) (as :: f k) where
---     autoAny :: Any f p @@ as
-
--- instance {-# OVERLAPPING #-} Auto p a => AutoAny [] p (a ': as) where
---     autoAny = WitAny IZ (auto @_ @p @a)
-
--- instance {-# OVERLAPPING #-} AutoAny [] p as => AutoAny [] p (b ': as) where
-
--- instance {-# OVERLAPPING #-} AutoElem [] as a => AutoElem [] (b ': as) a where
---     autoElem = IS autoElem
-
-instance (SingI as, AutoAll f (Not (Found p)) as) => Auto (Not (Found (AnyMatch f p))) as where
-    auto = allNotNone sing (autoAll @f @(Not (Found p)) @as)
-         . (\case s :&: WitAny i p -> WitAny i (s :&: p))
-
 instance (SingI as, AutoAll f (Not p) as) => Auto (Not (Any f p)) as where
     auto = allNotNone sing $ autoAll @f @(Not p) @as
-
--- type instance Apply (AnyMatch f p as) a = Any f (FlipPP p a) @@ as
-
--- data AnyMatch f :: ParamPred k v -> ParamPred (f k) v
--- type instance Apply (AnyMatch f p as) a = Any f (FlipPP p a) @@ as
-
--- instance (Universe f, Decidable (Found p)) => Decidable (Found (AnyMatch f p)) where

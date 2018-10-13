@@ -52,10 +52,12 @@ module Data.Type.Predicate (
   , flipDecision, mapDecision
   , elimDisproof
   , forgetDisproof, forgetProof, isProved, isDisproved
+  , mapRefuted
   ) where
 
 import           Data.Kind
 import           Data.Maybe
+import           Data.Profunctor
 import           Data.Singletons
 import           Data.Singletons.Decide
 import           Data.Singletons.Prelude hiding (Not)
@@ -373,8 +375,8 @@ mapDecision
     -> Decision a
     -> Decision b
 mapDecision f g = \case
-    Proved    p -> Proved $ f p
-    Disproved v -> Disproved $ v . g
+    Proved    p -> Proved    $ f p
+    Disproved v -> Disproved $ mapRefuted g v
 
 -- | Converts a 'Decision' to a 'Maybe'.  Drop the witness of disproof of
 -- @a@, returning 'Just' if 'Proved' (with the proof) and 'Nothing' if
@@ -420,3 +422,9 @@ elimDisproof
 elimDisproof = \case
     Proved    p -> const p
     Disproved v -> absurd . ($ v)
+
+mapRefuted
+    :: (a -> b)
+    -> Refuted b
+    -> Refuted a
+mapRefuted = lmap
