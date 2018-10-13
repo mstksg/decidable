@@ -308,7 +308,7 @@ Disproved :: Refuted a -> Decision a
 --   disproof of not-<tt>a</tt>.
 --   
 --   Note that this is not reversible in general in Haskell. See
---   <tt>doubleNegation</tt> for a situation where it is.
+--   <a>doubleNegation</a> for a situation where it is.
 flipDecision :: Decision a -> Decision (Refuted a)
 
 -- | Map over the value inside a <a>Decision</a>.
@@ -332,6 +332,9 @@ isProved :: Decision a -> Bool
 
 -- | Boolean test if a <a>Decision</a> is <a>Disproved</a>.
 isDisproved :: Decision a -> Bool
+
+-- | Change the target of a <a>Refuted</a> with a contravariant mapping
+--   function.
 mapRefuted :: (a -> b) -> Refuted b -> Refuted a
 instance Data.Type.Predicate.Provable (Data.Type.Predicate.Not Data.Type.Predicate.Impossible)
 instance forall k1 (p :: k1 Data.Singletons.Internal.~> *). Data.Type.Predicate.Decidable p => Data.Type.Predicate.Decidable (Data.Type.Predicate.Not p)
@@ -542,6 +545,8 @@ data NEIndex :: NonEmpty k -> k -> Type
 -- | Trivially witness an item in the second field of a type-level tuple.
 data ISnd :: (j, k) -> k -> Type
 [ISnd] :: ISnd '(a, b) b
+
+-- | A pair of indices allows you to index into a nested structure.
 data CompElem :: (f :.: g) k -> k -> Type
 [:?] :: Elem f ass as -> Elem g as a -> CompElem ( 'Comp ass) a
 
@@ -593,9 +598,17 @@ type Null f = (None f Evident :: Predicate (f k))
 -- | Predicate that a given <tt>as :: f k</tt> is not empty, and has at
 --   least one item in it.
 type NotNull f = (Any f Evident :: Predicate (f k))
+
+-- | Test that a <a>Maybe</a> is <a>Just</a>.
 type IsJust = (NotNull Maybe :: Predicate (Maybe k))
+
+-- | Test that a <a>Maybe</a> is <a>Nothing</a>.
 type IsNothing = (Null Maybe :: Predicate (Maybe k))
+
+-- | Test that an <a>Either</a> is <a>Right</a>
 type IsRight = (NotNull (Either j) :: Predicate (Either j k))
+
+-- | Test that an <a>Either</a> is <a>Left</a>
 type IsLeft = (Null (Either j) :: Predicate (Either j k))
 
 -- | Lifts a predicate <tt>p</tt> on an individual <tt>a</tt> into a
@@ -649,17 +662,39 @@ index :: forall f as a. Universe f => Elem f as a -> Sing as -> Sing a
 
 -- | Automatically generate a witness for a member, if possible
 pickElem :: forall f k (as :: f k) a. (Universe f, SingI as, SingI a, SDecide k) => Decision (Elem f as a)
+
+-- | Compose two Functors. Is the same as <a>Compose</a> and <a>:.:</a>,
+--   except with a singleton and meant to be used at the type level. Will
+--   be redundant if either of the above gets brought into the singletons
+--   library.
+--   
+--   Note that because this is a higher-kinded data constructor, there is
+--   no <a>SingKind</a> instance; if you need <a>fromSing</a> and
+--   <a>toSing</a>, try going through <a>Comp</a> and <a>getComp</a> and
+--   <a>SComp</a> and <a>sGetComp</a>.
 data ( f :.: g ) a
 Comp :: f (g a) -> (:.:) f g a
 [getComp] :: (:.:) f g a -> f (g a)
 
 -- | The singleton kind-indexed data family.
 data family Sing (a :: k) :: Type
+
+-- | Singletonized witness for <a>GetComp</a>
 sGetComp :: Sing a -> Sing (GetComp a)
+
+-- | <a>getComp</a> lifted to the type level
 type family GetComp c
+
+-- | Turn a composition of <a>All</a> into an <a>All</a> of a composition.
 allComp :: (All f (All g p) @@ as) -> All (f :.: g) p @@  'Comp as
+
+-- | Turn an <a>All</a> of a composition into a composition of <a>All</a>.
 compAll :: (All (f :.: g) p @@  'Comp as) -> All f (All g p) @@ as
+
+-- | Turn a composition of <a>Any</a> into an <a>Any</a> of a composition.
 anyComp :: (Any f (Any g p) @@ as) -> Any (f :.: g) p @@  'Comp as
+
+-- | Turn an <a>Any</a> of a composition into a composition of <a>Any</a>.
 compAny :: (Any (f :.: g) p @@  'Comp as) -> Any f (Any g p) @@ as
 data ElemSym0 (f :: Type -> Type) :: f k ~> k ~> Type
 data ElemSym1 (f :: Type -> Type) :: f k -> k ~> Type
@@ -786,7 +821,11 @@ entailAnyF :: forall f p q h. (Universe f, Functor h) => (p --># q) h -> (Any f 
 
 -- | <a>entailAnyF</a>, but providing an <a>Elem</a>.
 ientailAnyF :: forall f p q as h. Functor h => (forall a. Elem f as a -> (p @@ a) -> h (q @@ a)) -> (Any f p @@ as) -> h (Any f q @@ as)
+
+-- | Turn a composition of <a>All</a> into an <a>All</a> of a composition.
 allComp :: (All f (All g p) @@ as) -> All (f :.: g) p @@  'Comp as
+
+-- | Turn an <a>All</a> of a composition into a composition of <a>All</a>.
 compAll :: (All (f :.: g) p @@  'Comp as) -> All f (All g p) @@ as
 
 -- | An <tt><a>All</a> f p</tt> is a predicate testing a collection <tt>as
@@ -855,7 +894,11 @@ decideEntailAll :: forall f p q. Universe f => (p -?> q) -> All f p -?> All f q
 
 -- | <a>entailAllF</a>, but providing an <a>Elem</a>.
 idecideEntailAll :: forall f p q as. (Universe f, SingI as) => (forall a. Elem f as a -> (p @@ a) -> Decision (q @@ a)) -> (All f p @@ as) -> Decision (All f q @@ as)
+
+-- | Turn a composition of <a>Any</a> into an <a>Any</a> of a composition.
 anyComp :: (Any f (Any g p) @@ as) -> Any (f :.: g) p @@  'Comp as
+
+-- | Turn an <a>Any</a> of a composition into a composition of <a>Any</a>.
 compAny :: (Any (f :.: g) p @@  'Comp as) -> Any f (Any g p) @@ as
 
 
@@ -953,8 +996,14 @@ type Searchable p = Decidable (Found p)
 --   <a>search</a> @p
 --   </pre>
 search :: forall p. Searchable p => Decide (Found p)
-inPNotNull :: NotNull f --> Found (InP f)
-notNullInP :: Found (InP f) --> NotNull f
+
+-- | <tt><a>NotNull</a> f</tt> is basically <tt><a>Found</a> (<a>InP</a>
+--   f)</tt>.
+inPNotNull :: Found (InP f) --> NotNull f
+
+-- | <tt><a>NotNull</a> f</tt> is basically <tt><a>Found</a> (<a>InP</a>
+--   f)</tt>.
+notNullInP :: NotNull f --> Found (InP f)
 instance forall k v (f :: * -> *) (p :: Data.Type.Predicate.Param.ParamPred k v). (Data.Type.Universe.Universe f, Data.Type.Predicate.Decidable (Data.Type.Predicate.Param.Found p)) => Data.Type.Predicate.Decidable (Data.Type.Predicate.Param.Found (Data.Type.Predicate.Param.AnyMatch f p))
 instance Data.Type.Universe.Universe f => Data.Type.Predicate.Decidable (Data.Type.Predicate.Param.Found (Data.Type.Predicate.Param.InP f))
 instance Data.Type.Predicate.Decidable (Data.Type.Universe.NotNull f Data.Type.Predicate.Logic.==> Data.Type.Predicate.Param.Found (Data.Type.Predicate.Param.InP f))
@@ -990,6 +1039,33 @@ class Auto (p :: Predicate k) (a :: k)
 --   </pre>
 auto :: Auto p a => p @@ a
 
+-- | An <tt><a>AutoNot</a> p a</tt> constraint means that <tt>p @@ a</tt>
+--   can be proven to not be true at compiletime.
+type AutoNot (p :: Predicate k) = Auto (Not p)
+
+-- | Disprove <tt>p @@ a</tt> at compiletime.
+--   
+--   <pre>
+--   autoNot <tt>_ </tt>p <tt>a :: Not p </tt>@ a
+--   </pre>
+autoNot :: forall k (p :: Predicate k) (a :: k). AutoNot p a => Not p @@ a
+
+-- | Helper "predicate transformer" that gives you an instant <a>auto</a>
+--   for any <a>Provable</a> instance.
+--   
+--   For example, say you have predicate <tt>P</tt> that you know is
+--   <a>Provable</a>, and you wish to generate a <tt>P @@ x</tt>, for some
+--   specific <tt>x</tt> you know at compile-time. You can use:
+--   
+--   <pre>
+--   <a>auto</a> <tt>_ </tt>(AutoProvable P) @x
+--   </pre>
+--   
+--   to obtain a <tt>P @@ x</tt>.
+--   
+--   <a>AutoProvable</a> is essentially the identity function.
+data AutoProvable :: Predicate k -> Predicate k
+
 -- | Typeclass representing <a>Elem</a>s pointing to an <tt>a :: k</tt>
 --   that can be generated automatically from type-level collection <tt>as
 --   :: f k</tt>.
@@ -1018,27 +1094,26 @@ class AutoElem f (as :: f k) (a :: k)
 -- | Generate the <a>Elem</a> pointing to the <tt>a :: </tt> in a
 --   type-level collection <tt>as :: f k</tt>.
 autoElem :: AutoElem f as a => Elem f as a
-class AutoAll f (p :: Predicate k) (as :: f k)
-autoAll :: AutoAll f p as => All f p @@ as
-autoAny :: forall f p as a. Auto p a => Elem f as a -> Any f p @@ as
-type AutoNot (p :: Predicate k) = Auto (Not p)
-autoNot :: forall k (p :: Predicate k) (a :: k). AutoNot p a => Not p @@ a
 
--- | Helper "predicate transformer" that gives you an instant <a>auto</a>
---   for any <a>Provable</a> instance.
---   
---   For example, say you have predicate <tt>P</tt> that you know is
---   <a>Provable</a>, and you wish to generate a <tt>P @@ x</tt>, for some
---   specific <tt>x</tt> you know at compile-time. You can use:
---   
---   <pre>
---   <a>auto</a> <tt>_ </tt>(AutoProvable P) @x
---   </pre>
---   
---   to obtain a <tt>P @@ x</tt>.
---   
---   <a>AutoProvable</a> is essentially the identity function.
-data AutoProvable :: Predicate k -> Predicate k
+-- | Helper class for deriving <a>Auto</a> instances for <a>All</a>
+--   predicates; each <a>Universe</a> instance is expected to implement
+--   these if possible, to get free <a>Auto</a> instaces for their
+--   <a>All</a> predicates.
+class AutoAll f (p :: Predicate k) (as :: f k)
+
+-- | Generate an <a>All</a> for a given predicate over all items in
+--   <tt>as</tt>.
+autoAll :: AutoAll f p as => All f p @@ as
+
+-- | Helper function to generate an <tt><a>Any</a> f p</tt> if you can pick
+--   out a specific <tt>a</tt> in <tt>as</tt> where the predicate is
+--   provable at compile-time.
+autoAny :: forall f p as a. Auto p a => Elem f as a -> Any f p @@ as
+
+-- | Helper function to generate a <tt><a>Not</a> (<a>All</a> f p)</tt> if
+--   you can pick out a specific <tt>a</tt> in <tt>as</tt> where the
+--   predicate is disprovable at compile-time.
+autoNotAll :: (AutoNot p a, SingI as) => Elem f as a -> Not (All f p) @@ as
 instance forall k (p :: Data.Type.Predicate.Predicate k). Data.Type.Predicate.Auto.AutoAll [] p '[]
 instance forall a1 (p :: Data.Type.Predicate.Predicate a1) (a2 :: a1) (as :: [a1]). (Data.Type.Predicate.Auto.Auto p a2, Data.Type.Predicate.Auto.AutoAll [] p as) => Data.Type.Predicate.Auto.AutoAll [] p (a2 : as)
 instance forall k (p :: Data.Type.Predicate.Predicate k). Data.Type.Predicate.Auto.AutoAll GHC.Maybe.Maybe p 'GHC.Maybe.Nothing
