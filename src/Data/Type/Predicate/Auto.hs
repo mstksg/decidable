@@ -31,12 +31,15 @@
 --
 -- @since 0.1.1.0
 module Data.Type.Predicate.Auto (
+  -- * Automatically generate witnesses at compile-time
     Auto(..)
-  , AutoElem(..)
-  , AutoAll(..)
-  , autoAny
   , AutoNot, autoNot
   , AutoProvable
+  -- ** Helper classes
+  , AutoElem(..)
+  , AutoAll(..)
+  -- * Auto with help
+  , autoAny, autoNotAll
   ) where
 
 import           Data.List.NonEmpty                 (NonEmpty(..))
@@ -157,7 +160,11 @@ instance AutoElem ((,) j) '(w, a) a where
 instance AutoElem f as a => Auto (In f as) a where
     auto = autoElem @f @as @a
 
+-- | Helper class for deriving 'Auto' instances for 'All' predicates; each
+-- 'Universe' instance is expected to implement these if possible, to get
+-- free 'Auto' instaces for their 'All' predicates.
 class AutoAll f (p :: Predicate k) (as :: f k) where
+    -- | Generate an 'All' for a given predicate over all items in @as@.
     autoAll :: All f p @@ as
 
 instance AutoAll [] p '[] where
@@ -210,8 +217,15 @@ instance SingI a => Auto (NotNull NonEmpty) (a ':| as) where
 instance SingI a => Auto (NotNull ((,) j)) '(w, a) where
     auto = WitAny ISnd sing
 
+-- | An @'AutoNot' p a@ constraint means that @p \@\@ a@ can be proven to not be
+-- true at compiletime.
 type AutoNot (p :: Predicate k) = Auto (Not p)
 
+-- | Disprove @p \@\@ a@ at compiletime.
+--
+-- @
+-- autoNot @_ @p @a :: Not p @@ a
+-- @
 autoNot :: forall k (p :: Predicate k) (a :: k). AutoNot p a => Not p @@ a
 autoNot = auto @k @(Not p) @a
 
@@ -222,8 +236,15 @@ instance Auto (Found p) (f @@ a) => Auto (Found (PPMap f p)) a where
 instance Auto p (f @@ a) => Auto (p .@#@$$$ f) a where
     auto = auto @_ @p @(f @@ a)
 
+-- | Helper function to generate an @'Any' f p@ if you can pick out
+-- a specific @a@ in @as@ where the predicate is provable at compile-time.
 autoAny :: forall f p as a. Auto p a => Elem f as a -> Any f p @@ as
 autoAny i = WitAny i (auto @_ @p @a)
 
 instance (SingI as, AutoAll f (Not p) as) => Auto (Not (Any f p)) as where
     auto = allNotNone sing $ autoAll @f @(Not p) @as
+
+-- | Helper function to generate a @'Not' ('All' f p)@ if you can pick out
+-- a specific @a@ in @as@ where the predicate is disprovable at compile-time.
+autoNotAll :: (AutoNot p a, SingI as) => Elem f as a -> Not (All f p) @@ as
+autoNotAll = anyNotNotAll sing . autoAny

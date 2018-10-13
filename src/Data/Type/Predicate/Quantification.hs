@@ -56,7 +56,6 @@ import           Data.Singletons
 import           Data.Singletons.Decide
 import           Data.Type.Predicate
 import           Data.Type.Universe
-import           Data.Void
 
 -- | 'decideNone', but providing an 'Elem'.
 idecideNone

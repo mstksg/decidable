@@ -132,11 +132,17 @@ select = prove @(Found p)
 -- Essentially 'NotNull'.
 type InP f = (ElemSym1 f :: ParamPred (f k) k)
 
-inPNotNull :: NotNull f --> Found (InP f)
-inPNotNull _ (WitAny i s) = s :&: i
+-- | @'NotNull' f@ is basically @'Found' ('InP' f)@.
+--
+-- @since 0.1.2.0
+notNullInP :: NotNull f --> Found (InP f)
+notNullInP _ (WitAny i s) = s :&: i
 
-notNullInP :: Found (InP f) --> NotNull f
-notNullInP _ (s :&: i) = WitAny i s
+-- | @'NotNull' f@ is basically @'Found' ('InP' f)@.
+--
+-- @since 0.1.2.0
+inPNotNull :: Found (InP f) --> NotNull f
+inPNotNull _ (s :&: i) = WitAny i s
 
 instance Universe f => Decidable (Found (InP f)) where
     decide = mapDecision (\case WitAny i s -> s :&: i    )
@@ -145,11 +151,11 @@ instance Universe f => Decidable (Found (InP f)) where
 
 instance Decidable (NotNull f ==> Found (InP f))
 instance Provable (NotNull f ==> Found (InP f)) where
-    prove _ (WitAny i s) = s :&: i
+    prove = notNullInP
 
 instance Decidable (Found (InP f) ==> NotNull f)
 instance Provable (Found (InP f) ==> NotNull f) where
-    prove _ (s :&: i) = WitAny i s
+    prove = inPNotNull
 
 -- | @'AnyMatch' f@ takes a parmaeterized predicate on @k@ (testing for
 -- a @v@) and turns it into a parameterized predicate on @f k@ (testing for

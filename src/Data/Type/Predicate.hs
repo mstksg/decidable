@@ -358,7 +358,7 @@ decideNot = flipDecision
 -- of not-@a@.
 --
 -- Note that this is not reversible in general in Haskell.  See
--- 'doubleNegation' for a situation where it is.
+-- 'Data.Type.Predicate.Logic.doubleNegation' for a situation where it is.
 --
 -- @since 0.1.1.0
 flipDecision
@@ -423,6 +423,10 @@ elimDisproof = \case
     Proved    p -> const p
     Disproved v -> absurd . ($ v)
 
+-- | Change the target of a 'Refuted' with a contravariant mapping
+-- function.
+--
+-- @since 0.1.2.0
 mapRefuted
     :: (a -> b)
     -> Refuted b

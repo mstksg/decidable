@@ -55,7 +55,6 @@ module Data.Type.Universe (
   , ElemSym0, ElemSym1, ElemSym2, GetCompSym0, GetCompSym1
   ) where
 
--- import           Data.Functor.Compose
 import           Control.Applicative
 import           Data.Functor.Identity
 import           Data.Kind
@@ -63,7 +62,6 @@ import           Data.List.NonEmpty                    (NonEmpty(..))
 import           Data.Singletons
 import           Data.Singletons.Decide
 import           Data.Singletons.Prelude hiding        (Elem, ElemSym0, ElemSym1, ElemSym2, Any, All, Null, Not)
-import           Data.Singletons.TH hiding             (Elem, Null)
 import           Data.Type.Predicate
 import           Data.Type.Predicate.Logic
 import           Prelude hiding                        (any, all)
@@ -336,7 +334,11 @@ instance (SingI (as :: Maybe k), SDecide k) => Decidable (TyPred (IJust as)) whe
     decide x = withSingI x $ pickElem
 
 type instance Elem Maybe = IJust
+
+-- | Test that a 'Maybe' is 'Just'.
 type IsJust    = (NotNull Maybe :: Predicate (Maybe k))
+
+-- | Test that a 'Maybe' is 'Nothing'.
 type IsNothing = (Null    Maybe :: Predicate (Maybe k))
 
 instance Universe Maybe where
@@ -367,7 +369,11 @@ instance (SingI (as :: Either j k), SDecide k) => Decidable (TyPred (IRight as))
     decide x = withSingI x $ pickElem
 
 type instance Elem (Either j) = IRight
+
+-- | Test that an 'Either' is 'Right'
 type IsRight = (NotNull (Either j) :: Predicate (Either j k))
+
+-- | Test that an 'Either' is 'Left'
 type IsLeft  = (Null    (Either j) :: Predicate (Either j k))
 
 instance Universe (Either j) where
@@ -462,16 +468,35 @@ instance Universe ((,) j) where
 
     igenAllA f (STuple2 _ x) = (\p -> WitAll $ \case ISnd -> p) <$> f ISnd x
 
+-- | Compose two Functors.  Is the same as 'Data.Functor.Compose.Compose'
+-- and 'GHC.Generics.:.:', except with a singleton and meant to be used at
+-- the type level.  Will be redundant if either of the above gets brought
+-- into the singletons library.
+--
+-- Note that because this is a higher-kinded data constructor, there is no
+-- 'SingKind'  instance; if you need 'fromSing' and 'toSing', try going
+-- through 'Comp' and 'getComp' and 'SComp' and 'sGetComp'.
+--
+-- @since 0.1.2.0
 data (f :.: g) a = Comp { getComp :: f (g a) }
     deriving (Show, Eq, Ord, Functor, Foldable)
 deriving instance (Traversable f, Traversable g) => Traversable (f :.: g)
 
 data instance Sing (k :: (f :.: g) a) where
     SComp :: Sing x -> Sing ('Comp x)
+
+-- | 'getComp' lifted to the type level
+--
+-- @since 0.1.2.0
 type family GetComp c where
     GetComp ('Comp a) = a
+
+-- | Singletonized witness for 'GetComp'
+--
+-- @since 0.1.2.0
 sGetComp :: Sing a -> Sing (GetComp a)
 sGetComp (SComp x) = x
+ 
 instance SingI ass => SingI ('Comp ass) where
     sing = SComp sing
 
@@ -482,6 +507,9 @@ type GetCompSym1 a = GetComp a
 -- instance forall f g a f' g' a'. (SingKind (f (g a)), Demote (f (g a)) ~ f' (g' a')) => SingKind ((f :.: g) a) where
 --     type Demote ((f :.: g) a) = (:.:) f' g' a'
 
+-- | A pair of indices allows you to index into a nested structure.
+--
+-- @since 0.1.2.0
 data CompElem :: (f :.: g) k -> k -> Type where
     (:?) :: Elem f ass as
          -> Elem g as  a
@@ -535,14 +563,26 @@ instance (Universe f, Universe g) => Universe (f :.: g) where
             -> h (All g p @@ as)
         go i = igenAllA $ \j -> f (i :? j)
 
+-- | Turn a composition of 'Any' into an 'Any' of a composition.
+--
+-- @since 0.1.2.0
 anyComp :: Any f (Any g p) @@ as -> Any (f :.: g) p @@ 'Comp as
 anyComp (WitAny i (WitAny j p)) = WitAny (i :? j) p
 
+-- | Turn an 'Any' of a composition into a composition of 'Any'.
+--
+-- @since 0.1.2.0
 compAny :: Any (f :.: g) p @@ 'Comp as -> Any f (Any g p) @@ as
 compAny (WitAny (i :? j) p) = WitAny i (WitAny j p)
 
+-- | Turn a composition of 'All' into an 'All' of a composition.
+--
+-- @since 0.1.2.0
 allComp :: All f (All g p) @@ as -> All (f :.: g) p @@ 'Comp as
 allComp a = WitAll $ \(i :? j) -> runWitAll (runWitAll a i) j
 
+-- | Turn an 'All' of a composition into a composition of 'All'.
+--
+-- @since 0.1.2.0
 compAll :: All (f :.: g) p @@ 'Comp as -> All f (All g p) @@ as
 compAll a = WitAll $ \i -> WitAll $ \j -> runWitAll a (i :? j)
