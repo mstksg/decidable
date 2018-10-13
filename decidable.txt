@@ -332,6 +332,7 @@ isProved :: Decision a -> Bool
 
 -- | Boolean test if a <a>Decision</a> is <a>Disproved</a>.
 isDisproved :: Decision a -> Bool
+mapRefuted :: (a -> b) -> Refuted b -> Refuted a
 instance Data.Type.Predicate.Provable (Data.Type.Predicate.Not Data.Type.Predicate.Impossible)
 instance forall k1 (p :: k1 Data.Singletons.Internal.~> *). Data.Type.Predicate.Decidable p => Data.Type.Predicate.Decidable (Data.Type.Predicate.Not p)
 instance forall k (a :: k). (Data.Singletons.Decide.SDecide k, Data.Singletons.Internal.SingI a) => Data.Type.Predicate.Decidable (Data.Type.Predicate.EqualTo a)
@@ -524,13 +525,13 @@ data Index :: [k] -> k -> Type
 
 -- | Witness an item in a type-level <a>Maybe</a> by proving the
 --   <a>Maybe</a> is <a>Just</a>.
-data IsJust :: Maybe k -> k -> Type
-[IsJust] :: IsJust ( 'Just a) a
+data IJust :: Maybe k -> k -> Type
+[IJust] :: IJust ( 'Just a) a
 
 -- | Witness an item in a type-level <tt><a>Either</a> j</tt> by proving
 --   the <a>Either</a> is <a>Right</a>.
-data IsRight :: Either j k -> k -> Type
-[IsRight] :: IsRight ( 'Right a) a
+data IRight :: Either j k -> k -> Type
+[IRight] :: IRight ( 'Right a) a
 
 -- | Witness an item in a type-level <a>NonEmpty</a> by either indicating
 --   that it is the "head", or by providing an index in the "tail".
@@ -539,8 +540,8 @@ data NEIndex :: NonEmpty k -> k -> Type
 [NETail] :: Index as a -> NEIndex (b :| as) a
 
 -- | Trivially witness an item in the second field of a type-level tuple.
-data Snd :: (j, k) -> k -> Type
-[Snd] :: Snd '(a, b) b
+data ISnd :: (j, k) -> k -> Type
+[ISnd] :: ISnd '(a, b) b
 data CompElem :: (f :.: g) k -> k -> Type
 [:?] :: Elem f ass as -> Elem g as a -> CompElem ( 'Comp ass) a
 
@@ -592,6 +593,10 @@ type Null f = (None f Evident :: Predicate (f k))
 -- | Predicate that a given <tt>as :: f k</tt> is not empty, and has at
 --   least one item in it.
 type NotNull f = (Any f Evident :: Predicate (f k))
+type IsJust = (NotNull Maybe :: Predicate (Maybe k))
+type IsNothing = (Null Maybe :: Predicate (Maybe k))
+type IsRight = (NotNull (Either j) :: Predicate (Either j k))
+type IsLeft = (Null (Either j) :: Predicate (Either j k))
 
 -- | Lifts a predicate <tt>p</tt> on an individual <tt>a</tt> into a
 --   predicate that on a collection <tt>as</tt> that is true if and only if
@@ -667,20 +672,20 @@ instance forall k1 (f :: k1 -> *) k2 (g :: k2 -> k1) (a :: k2). GHC.Classes.Ord 
 instance forall k1 (f :: k1 -> *) k2 (g :: k2 -> k1) (a :: k2). GHC.Classes.Eq (f (g a)) => GHC.Classes.Eq ((Data.Type.Universe.:.:) f g a)
 instance forall k1 (f :: k1 -> *) k2 (g :: k2 -> k1) (a :: k2). GHC.Show.Show (f (g a)) => GHC.Show.Show ((Data.Type.Universe.:.:) f g a)
 instance forall k (as :: [k]) (a :: k). GHC.Show.Show (Data.Type.Universe.Index as a)
-instance forall k (as :: GHC.Maybe.Maybe k) (a :: k). GHC.Show.Show (Data.Type.Universe.IsJust as a)
-instance forall j k (as :: Data.Either.Either j k) (a :: k). GHC.Show.Show (Data.Type.Universe.IsRight as a)
+instance forall k (as :: GHC.Maybe.Maybe k) (a :: k). GHC.Show.Show (Data.Type.Universe.IJust as a)
+instance forall j k (as :: Data.Either.Either j k) (a :: k). GHC.Show.Show (Data.Type.Universe.IRight as a)
 instance forall k (as :: GHC.Base.NonEmpty k) (a :: k). GHC.Show.Show (Data.Type.Universe.NEIndex as a)
-instance forall j k (as :: (j, k)) (a :: k). GHC.Show.Show (Data.Type.Universe.Snd as a)
+instance forall j k (as :: (j, k)) (a :: k). GHC.Show.Show (Data.Type.Universe.ISnd as a)
 instance (Data.Traversable.Traversable f, Data.Traversable.Traversable g) => Data.Traversable.Traversable (f Data.Type.Universe.:.: g)
 instance (Data.Type.Universe.Universe f, Data.Type.Universe.Universe g) => Data.Type.Universe.Universe (f Data.Type.Universe.:.: g)
 instance forall k1 (f :: k1 -> *) k2 (g :: k2 -> k1) (a :: k2) (ass :: f (g a)). Data.Singletons.Internal.SingI ass => Data.Singletons.Internal.SingI ('Data.Type.Universe.Comp ass)
-instance forall j k (as :: (j, k)). (Data.Singletons.Internal.SingI as, Data.Singletons.Decide.SDecide k) => Data.Type.Predicate.Decidable (Data.Type.Predicate.TyPred (Data.Type.Universe.Snd as))
+instance forall j k (as :: (j, k)). (Data.Singletons.Internal.SingI as, Data.Singletons.Decide.SDecide k) => Data.Type.Predicate.Decidable (Data.Type.Predicate.TyPred (Data.Type.Universe.ISnd as))
 instance Data.Type.Universe.Universe ((,) j)
 instance forall k (as :: GHC.Base.NonEmpty k). (Data.Singletons.Internal.SingI as, Data.Singletons.Decide.SDecide k) => Data.Type.Predicate.Decidable (Data.Type.Predicate.TyPred (Data.Type.Universe.NEIndex as))
 instance Data.Type.Universe.Universe GHC.Base.NonEmpty
-instance forall j k (as :: Data.Either.Either j k). (Data.Singletons.Internal.SingI as, Data.Singletons.Decide.SDecide k) => Data.Type.Predicate.Decidable (Data.Type.Predicate.TyPred (Data.Type.Universe.IsRight as))
+instance forall j k (as :: Data.Either.Either j k). (Data.Singletons.Internal.SingI as, Data.Singletons.Decide.SDecide k) => Data.Type.Predicate.Decidable (Data.Type.Predicate.TyPred (Data.Type.Universe.IRight as))
 instance Data.Type.Universe.Universe (Data.Either.Either j)
-instance forall k (as :: GHC.Maybe.Maybe k). (Data.Singletons.Internal.SingI as, Data.Singletons.Decide.SDecide k) => Data.Type.Predicate.Decidable (Data.Type.Predicate.TyPred (Data.Type.Universe.IsJust as))
+instance forall k (as :: GHC.Maybe.Maybe k). (Data.Singletons.Internal.SingI as, Data.Singletons.Decide.SDecide k) => Data.Type.Predicate.Decidable (Data.Type.Predicate.TyPred (Data.Type.Universe.IJust as))
 instance Data.Type.Universe.Universe GHC.Maybe.Maybe
 instance forall k (as :: [k]). (Data.Singletons.Internal.SingI as, Data.Singletons.Decide.SDecide k) => Data.Type.Predicate.Decidable (Data.Type.Predicate.TyPred (Data.Type.Universe.Index as))
 instance Data.Type.Universe.Universe []
@@ -1016,8 +1021,6 @@ autoElem :: AutoElem f as a => Elem f as a
 class AutoAll f (p :: Predicate k) (as :: f k)
 autoAll :: AutoAll f p as => All f p @@ as
 autoAny :: forall f p as a. Auto p a => Elem f as a -> Any f p @@ as
-class AutoParam (p :: ParamPred k v) (a :: k)
-autoParam :: AutoParam p a => Σ v (p a)
 type AutoNot (p :: Predicate k) = Auto (Not p)
 autoNot :: forall k (p :: Predicate k) (a :: k). AutoNot p a => Not p @@ a
 
@@ -1036,7 +1039,6 @@ autoNot :: forall k (p :: Predicate k) (a :: k). AutoNot p a => Not p @@ a
 --   
 --   <a>AutoProvable</a> is essentially the identity function.
 data AutoProvable :: Predicate k -> Predicate k
-instance forall k v (p :: Data.Type.Predicate.Param.ParamPred k v) (a :: k). Data.Type.Predicate.Auto.AutoParam p a => Data.Type.Predicate.Auto.Auto (Data.Type.Predicate.Param.Found p) a
 instance forall k (p :: Data.Type.Predicate.Predicate k). Data.Type.Predicate.Auto.AutoAll [] p '[]
 instance forall a1 (p :: Data.Type.Predicate.Predicate a1) (a2 :: a1) (as :: [a1]). (Data.Type.Predicate.Auto.Auto p a2, Data.Type.Predicate.Auto.AutoAll [] p as) => Data.Type.Predicate.Auto.AutoAll [] p (a2 : as)
 instance forall k (p :: Data.Type.Predicate.Predicate k). Data.Type.Predicate.Auto.AutoAll GHC.Maybe.Maybe p 'GHC.Maybe.Nothing
@@ -1047,7 +1049,6 @@ instance forall a1 (p :: Data.Type.Predicate.Predicate a1) (a2 :: a1) (as :: [a1
 instance forall a (f :: * -> *) (g :: * -> *) (p :: a Data.Singletons.Internal.~> *) (ass :: f (g a)). Data.Type.Predicate.Auto.AutoAll f (Data.Type.Universe.All g p) ass => Data.Type.Predicate.Auto.AutoAll (f Data.Type.Universe.:.: g) p ('Data.Type.Universe.Comp ass)
 instance forall k (p :: Data.Type.Predicate.Predicate k) (a :: k) j (w :: j). Data.Type.Predicate.Auto.Auto p a => Data.Type.Predicate.Auto.AutoAll ((,) j) p '(w, a)
 instance forall k (f :: * -> *) (p :: Data.Type.Predicate.Predicate k) (as :: f k). Data.Type.Predicate.Auto.AutoAll f p as => Data.Type.Predicate.Auto.Auto (Data.Type.Universe.All f p) as
-instance forall v k (f :: * -> *) (as :: f k) (p :: Data.Type.Predicate.Param.ParamPred k v). (Data.Singletons.Internal.SingI as, Data.Type.Predicate.Auto.AutoAll f (Data.Type.Predicate.Not (Data.Type.Predicate.Param.Found p)) as) => Data.Type.Predicate.Auto.Auto (Data.Type.Predicate.Not (Data.Type.Predicate.Param.Found (Data.Type.Predicate.Param.AnyMatch f p))) as
 instance forall k (f :: * -> *) (as :: f k) (p :: Data.Type.Predicate.Predicate k). (Data.Singletons.Internal.SingI as, Data.Type.Predicate.Auto.AutoAll f (Data.Type.Predicate.Not p) as) => Data.Type.Predicate.Auto.Auto (Data.Type.Predicate.Not (Data.Type.Universe.Any f p)) as
 instance forall k (a :: k) (as :: [k]). Data.Type.Predicate.Auto.AutoElem [] (a : as) a
 instance forall k (as :: [k]) (a :: k) (b :: k). Data.Type.Predicate.Auto.AutoElem [] as a => Data.Type.Predicate.Auto.AutoElem [] (b : as) a
@@ -1064,10 +1065,11 @@ instance forall k (a :: k). Data.Type.Predicate.Auto.Auto (Data.Type.Predicate.E
 instance forall k (p :: Data.Type.Predicate.Predicate k) (a :: k) (q :: Data.Type.Predicate.Predicate k). (Data.Type.Predicate.Auto.Auto p a, Data.Type.Predicate.Auto.Auto q a) => Data.Type.Predicate.Auto.Auto (p Data.Type.Predicate.Logic.&&& q) a
 instance forall k (q :: Data.Type.Predicate.Predicate k) (a :: k) (p :: Data.Type.Predicate.Predicate k). Data.Type.Predicate.Auto.Auto q a => Data.Type.Predicate.Auto.Auto (p Data.Type.Predicate.Logic.==> q) a
 instance forall k (a :: k) (as :: [k]). Data.Singletons.Internal.SingI a => Data.Type.Predicate.Auto.Auto (Data.Type.Universe.NotNull []) (a : as)
-instance forall k (a :: k). Data.Singletons.Internal.SingI a => Data.Type.Predicate.Auto.Auto (Data.Type.Universe.NotNull GHC.Maybe.Maybe) ('GHC.Maybe.Just a)
-instance forall k (a :: k) j. Data.Singletons.Internal.SingI a => Data.Type.Predicate.Auto.Auto (Data.Type.Universe.NotNull (Data.Either.Either j)) ('Data.Either.Right a)
+instance forall k (a :: k). Data.Singletons.Internal.SingI a => Data.Type.Predicate.Auto.Auto Data.Type.Universe.IsJust ('GHC.Maybe.Just a)
+instance forall j k (a :: k). Data.Singletons.Internal.SingI a => Data.Type.Predicate.Auto.Auto Data.Type.Universe.IsRight ('Data.Either.Right a)
 instance forall k (a :: k) (as :: [k]). Data.Singletons.Internal.SingI a => Data.Type.Predicate.Auto.Auto (Data.Type.Universe.NotNull GHC.Base.NonEmpty) (a 'GHC.Base.:| as)
 instance forall k (a :: k) j (w :: j). Data.Singletons.Internal.SingI a => Data.Type.Predicate.Auto.Auto (Data.Type.Universe.NotNull ((,) j)) '(w, a)
+instance forall k j v (p :: Data.Type.Predicate.Param.ParamPred j v) (f :: k Data.Singletons.Internal.~> j) (a :: k). Data.Type.Predicate.Auto.Auto (Data.Type.Predicate.Param.Found p) (f Data.Singletons.Internal.@@ a) => Data.Type.Predicate.Auto.Auto (Data.Type.Predicate.Param.Found (Data.Type.Predicate.Param.PPMap f p)) a
 instance forall k b6989586621679919354 (p :: Data.Type.Predicate.Predicate b6989586621679919354) (f :: k Data.Singletons.Internal.~> b6989586621679919354) (a :: k). Data.Type.Predicate.Auto.Auto p (f Data.Singletons.Internal.@@ a) => Data.Type.Predicate.Auto.Auto (p Data.Singletons.Prelude.Base..@#@$$$ f) a
 
 
