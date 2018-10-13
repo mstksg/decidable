@@ -1099,6 +1099,9 @@ autoElem :: AutoElem f as a => Elem f as a
 --   predicates; each <a>Universe</a> instance is expected to implement
 --   these if possible, to get free <a>Auto</a> instaces for their
 --   <a>All</a> predicates.
+--   
+--   Also helps for <a>Not</a> <a>Any</a> predicates and <a>Not</a>
+--   <a>Found</a> <a>AnyMatch</a> predicates.
 class AutoAll f (p :: Predicate k) (as :: f k)
 
 -- | Generate an <a>All</a> for a given predicate over all items in
@@ -1113,7 +1116,7 @@ autoAny :: forall f p as a. Auto p a => Elem f as a -> Any f p @@ as
 -- | Helper function to generate a <tt><a>Not</a> (<a>All</a> f p)</tt> if
 --   you can pick out a specific <tt>a</tt> in <tt>as</tt> where the
 --   predicate is disprovable at compile-time.
-autoNotAll :: (AutoNot p a, SingI as) => Elem f as a -> Not (All f p) @@ as
+autoNotAll :: forall p f as a. (AutoNot p a, SingI as) => Elem f as a -> Not (All f p) @@ as
 instance forall k (p :: Data.Type.Predicate.Predicate k). Data.Type.Predicate.Auto.AutoAll [] p '[]
 instance forall a1 (p :: Data.Type.Predicate.Predicate a1) (a2 :: a1) (as :: [a1]). (Data.Type.Predicate.Auto.Auto p a2, Data.Type.Predicate.Auto.AutoAll [] p as) => Data.Type.Predicate.Auto.AutoAll [] p (a2 : as)
 instance forall k (p :: Data.Type.Predicate.Predicate k). Data.Type.Predicate.Auto.AutoAll GHC.Maybe.Maybe p 'GHC.Maybe.Nothing
@@ -1125,6 +1128,7 @@ instance forall a (f :: * -> *) (g :: * -> *) (p :: a Data.Singletons.Internal.~
 instance forall k (p :: Data.Type.Predicate.Predicate k) (a :: k) j (w :: j). Data.Type.Predicate.Auto.Auto p a => Data.Type.Predicate.Auto.AutoAll ((,) j) p '(w, a)
 instance forall k (f :: * -> *) (p :: Data.Type.Predicate.Predicate k) (as :: f k). Data.Type.Predicate.Auto.AutoAll f p as => Data.Type.Predicate.Auto.Auto (Data.Type.Universe.All f p) as
 instance forall k (f :: * -> *) (as :: f k) (p :: Data.Type.Predicate.Predicate k). (Data.Singletons.Internal.SingI as, Data.Type.Predicate.Auto.AutoAll f (Data.Type.Predicate.Not p) as) => Data.Type.Predicate.Auto.Auto (Data.Type.Predicate.Not (Data.Type.Universe.Any f p)) as
+instance forall v k (f :: * -> *) (as :: f k) (p :: Data.Type.Predicate.Param.ParamPred k v). (Data.Singletons.Internal.SingI as, Data.Type.Predicate.Auto.AutoAll f (Data.Type.Predicate.Not (Data.Type.Predicate.Param.Found p)) as) => Data.Type.Predicate.Auto.Auto (Data.Type.Predicate.Not (Data.Type.Predicate.Param.Found (Data.Type.Predicate.Param.AnyMatch f p))) as
 instance forall k (a :: k) (as :: [k]). Data.Type.Predicate.Auto.AutoElem [] (a : as) a
 instance forall k (as :: [k]) (a :: k) (b :: k). Data.Type.Predicate.Auto.AutoElem [] as a => Data.Type.Predicate.Auto.AutoElem [] (b : as) a
 instance forall k (a :: k). Data.Type.Predicate.Auto.AutoElem GHC.Maybe.Maybe ('GHC.Maybe.Just a) a
