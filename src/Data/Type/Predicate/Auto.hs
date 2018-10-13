@@ -34,6 +34,7 @@ module Data.Type.Predicate.Auto (
     Auto(..)
   , AutoElem(..)
   , AutoAll(..)
+  , AutoParam(..)
   , AutoNot, autoNot
   , AutoProvable
   ) where
@@ -185,6 +186,21 @@ instance Auto p a => AutoAll ((,) j) p '(w, a) where
 
 instance AutoAll f p as => Auto (All f p) as where
     auto = autoAll @f @p @as
+
+instance SingI a => Auto (NotNull []) (a ': as) where
+    auto = WitAny IZ sing
+
+instance SingI a => Auto (NotNull Maybe) ('Just a) where
+    auto = WitAny IsJust sing
+
+instance SingI a => Auto (NotNull (Either j)) ('Right a) where
+    auto = WitAny IsRight sing
+
+instance SingI a => Auto (NotNull NonEmpty) (a ':| as) where
+    auto = WitAny NEHead sing
+
+instance SingI a => Auto (NotNull ((,) j)) '(w, a) where
+    auto = WitAny Snd sing
 
 -- class AutoAny f (p :: Predicate k) (as :: f k) where
 --     autoAny :: Any f p @@ as
