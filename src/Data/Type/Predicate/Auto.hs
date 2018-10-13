@@ -41,7 +41,7 @@ module Data.Type.Predicate.Auto (
 
 import           Data.List.NonEmpty             (NonEmpty(..))
 import           Data.Singletons
-import           Data.Singletons.Prelude hiding (Not, All, Elem)
+import           Data.Singletons.Prelude hiding (Not, All, Any, Elem)
 import           Data.Singletons.Sigma
 import           Data.Type.Equality
 import           Data.Type.Predicate
@@ -201,18 +201,7 @@ instance SingI a => Auto (NotNull NonEmpty) (a ':| as) where
 
 instance SingI a => Auto (NotNull ((,) j)) '(w, a) where
     auto = WitAny Snd sing
-
--- class AutoAny f (p :: Predicate k) (as :: f k) where
---     autoAny :: Any f p @@ as
-
--- instance {-# OVERLAPPING #-} Auto p a => AutoAny [] p (a ': as) where
---     autoAny = WitAny IZ (auto @_ @p @a)
-
--- instance {-# OVERLAPPING #-} AutoAny [] p as => AutoAny [] p (b ': as) where
-
--- instance {-# OVERLAPPING #-} AutoElem [] as a => AutoElem [] (b ': as) a where
---     autoElem = IS autoElem
-
+     
 type AutoNot (p :: Predicate k) = Auto (Not p)
 
 autoNot :: forall k (p :: Predicate k) (a :: k). AutoNot p a => Not p @@ a
@@ -233,8 +222,28 @@ instance AutoParam p a => Auto (Found p) a where
 instance Auto p (f @@ a) => Auto (p .@#@$$$ f) a where
     auto = auto @_ @p @(f @@ a)
 
+-- class AutoAny f p as a where
+--     autoAny :: Elem f as a -> Any f p @@ as
+
+-- autoAny :: forall f p as a. Auto p a => Elem f as a -> Any f p @@ as
+-- autoAny i = WitAny i (auto @_ @p @a)
+-- class AutoAny f (p :: Predicate k) (a :: k) where
+--     autoAny :: Elem f p as a -> Any f p @@ as
+
 -- instance (Decidable f, SingI g) => Decidable (f .@#@$$$ g) where
 --     decide = decide @f . ((sing :: Sing g) @@)
 
 -- instance (Provable f, SingI g) => Provable (f .@#@$$$ g) where
 --     prove = prove @f . ((sing :: Sing g) @@)
+
+-- class AutoAny f (p :: Predicate k) (as :: f k) where
+--     autoAny :: Any f p @@ as
+
+-- instance {-# OVERLAPPING #-} Auto p a => AutoAny [] p (a ': as) where
+--     autoAny = WitAny IZ (auto @_ @p @a)
+
+-- instance {-# OVERLAPPING #-} AutoAny [] p as => AutoAny [] p (b ': as) where
+
+-- instance {-# OVERLAPPING #-} AutoElem [] as a => AutoElem [] (b ': as) a where
+--     autoElem = IS autoElem
+

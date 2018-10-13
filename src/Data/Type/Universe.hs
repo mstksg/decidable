@@ -1,3 +1,6 @@
+{-# LANGUAGE AllowAmbiguousTypes   #-}
+{-# LANGUAGE DeriveFunctor         #-}
+{-# LANGUAGE DeriveTraversable     #-}
 {-# LANGUAGE EmptyCase             #-}
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
@@ -5,9 +8,12 @@
 {-# LANGUAGE InstanceSigs          #-}
 {-# LANGUAGE LambdaCase            #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE PolyKinds             #-}
+{-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE RankNTypes            #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
 {-# LANGUAGE StandaloneDeriving    #-}
+{-# LANGUAGE TemplateHaskell       #-}
 {-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE TypeInType            #-}
@@ -32,6 +38,7 @@ module Data.Type.Universe (
     Elem, In, Universe(..)
   -- ** Instances
   , Index(..), IsJust(..), IsRight(..), NEIndex(..), Snd(..)
+  , (:.:), Sing(SComp), sGetComp, GetComp, CompElem(..)
   -- ** Predicates
   , All, WitAll(..), NotAll
   , Any, WitAny(..), None
@@ -40,10 +47,10 @@ module Data.Type.Universe (
   , decideAny, decideAll, genAllA, genAll, igenAll
   , foldMapUni, ifoldMapUni, index, pickElem
   -- * Defunctionalization symbols
-  , ElemSym0, ElemSym1, ElemSym2
+  , ElemSym0, ElemSym1, ElemSym2, GetCompSym0, GetCompSym1
   ) where
 
-import           Data.Type.Predicate.Logic
+-- import           Data.Functor.Compose
 import           Control.Applicative
 import           Data.Functor.Identity
 import           Data.Kind
@@ -51,7 +58,9 @@ import           Data.List.NonEmpty                    (NonEmpty(..))
 import           Data.Singletons
 import           Data.Singletons.Decide
 import           Data.Singletons.Prelude hiding        (Elem, ElemSym0, ElemSym1, ElemSym2, Any, All, Snd, Null, Not)
+import           Data.Singletons.TH hiding             (Elem, Null)
 import           Data.Type.Predicate
+import           Data.Type.Predicate.Logic
 import           Prelude hiding                        (any, all)
 import qualified Data.Singletons.Prelude.List.NonEmpty as NE
 
@@ -427,6 +436,7 @@ data Snd :: (j, k) -> k -> Type where
     Snd :: Snd '(a, b) b
 
 deriving instance Show (Snd as a)
+-- TODO: does this interfere with NonNull stuff?
 instance (SingI (as :: (j, k)), SDecide k) => Decidable (TyPred (Snd as)) where
     decide x = withSingI x $ pickElem
 
@@ -442,3 +452,80 @@ instance Universe ((,) j) where
       Disproved v -> Disproved $ \a -> v $ runWitAll a Snd
 
     igenAllA f (STuple2 _ x) = (\p -> WitAll $ \case Snd -> p) <$> f Snd x
+
+data (f :.: g) a = Comp { getComp :: f (g a) }
+    deriving (Show, Eq, Ord, Functor, Foldable)
+deriving instance (Traversable f, Traversable g) => Traversable (f :.: g)
+
+data instance Sing (k :: (f :.: g) a) where
+    SComp :: Sing x -> Sing ('Comp x)
+type family GetComp c where
+    GetComp ('Comp a) = a
+sGetComp :: Sing a -> Sing (GetComp a)
+sGetComp (SComp x) = x
+instance SingI ass => SingI ('Comp ass) where
+    sing = SComp sing
+
+data GetCompSym0 :: (f :.: g) k ~> f (g k)
+type instance Apply GetCompSym0 ('Comp ass) = ass
+type GetCompSym1 a = GetComp a
+
+-- instance forall f g a f' g' a'. (SingKind (f (g a)), Demote (f (g a)) ~ f' (g' a')) => SingKind ((f :.: g) a) where
+--     type Demote ((f :.: g) a) = (:.:) f' g' a'
+
+data CompElem :: (f :.: g) k -> k -> Type where
+    (:?) :: Elem f ass as
+         -> Elem g as  a
+         -> CompElem ('Comp ass) a
+
+-- deriving instance ((forall as. Show (Elem f ass as)), (forall as. Show (Elem g as a)))
+--     => Show (CompElem ('Comp ass :: (f :.: g) k) a)
+
+type instance Elem (f :.: g) = CompElem
+
+instance (Universe f, Universe g) => Universe (f :.: g) where
+    idecideAny
+        :: forall k (p :: k ~> Type) (ass :: (f :.: g) k). ()
+        => (forall a. Elem (f :.: g) ass a -> Sing a -> Decision (p @@ a))
+        -> Sing ass
+        -> Decision (Any (f :.: g) p @@ ass)
+    idecideAny f (SComp xss)
+        = mapDecision (\(WitAny i (WitAny j p)) -> WitAny (i :? j) p)
+                      (\(WitAny (i :? j) p) -> WitAny i (WitAny j p))
+        . idecideAny @f @_ @(Any g p) go
+        $ xss
+      where
+        go  :: Elem f (GetComp ass) as
+            -> Sing as
+            -> Decision (Any g p @@ as)
+        go i = idecideAny $ \j -> f (i :? j)
+
+    idecideAll
+        :: forall k (p :: k ~> Type) (ass :: (f :.: g) k). ()
+        => (forall a. Elem (f :.: g) ass a -> Sing a -> Decision (p @@ a))
+        -> Sing ass
+        -> Decision (All (f :.: g) p @@ ass)
+    idecideAll f (SComp xss)
+        = mapDecision (\a -> WitAll $ \(i :? j) -> runWitAll (runWitAll a i) j)
+                      (\a -> WitAll $ \i -> WitAll $ \j -> runWitAll a (i :? j))
+        . idecideAll @f @_ @(All g p) go
+        $ xss
+      where
+        go  :: Elem f (GetComp ass) as
+            -> Sing as
+            -> Decision (All g p @@ as)
+        go i = idecideAll $ \j -> f (i :? j)
+
+    igenAllA
+        :: forall k (p :: k ~> Type) (ass :: (f :.: g) k) h. Applicative h
+        => (forall a. Elem (f :.: g) ass a -> Sing a -> h (p @@ a))
+        -> Sing ass
+        -> h (All (f :.: g) p @@ ass)
+    igenAllA f (SComp ass) =
+            (\a -> WitAll $ \(i :? j) -> runWitAll (runWitAll a i) j)
+        <$> igenAllA @f @_ @(All g p) go ass
+      where
+        go  :: Elem f (GetComp ass) (as :: g k)
+            -> Sing as
+            -> h (All g p @@ as)
+        go i = igenAllA $ \j -> f (i :? j)
