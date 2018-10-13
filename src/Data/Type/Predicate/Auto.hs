@@ -196,14 +196,8 @@ instance Auto p a => AutoAll ((,) j) p '(w, a) where
 instance AutoAll f p as => Auto (All f p) as where
     auto = autoAll @f @p @as
 
-instance Auto (Null []) '[] where
-    auto (WitAny i _) = case i of {}
-
 instance SingI a => Auto (NotNull []) (a ': as) where
     auto = WitAny IZ sing
-
-instance Auto (Null Maybe) 'Nothing where
-    auto (WitAny i _ ) = case i of {}
 
 instance SingI a => Auto (NotNull Maybe) ('Just a) where
     auto = WitAny IsJust sing
