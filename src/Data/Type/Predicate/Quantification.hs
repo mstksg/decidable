@@ -166,14 +166,14 @@ decideEntailAll = dmap @(All f)
 
 -- | It is impossible for any value in a collection to be 'Impossible'.
 --
--- @since 0.1.1.0
+-- @since 0.1.2.0
 anyImpossible :: Universe f => Any f Impossible --> Impossible
 anyImpossible _ (WitAny i p) = p . index i
 
 -- | If any @a@ in @as@ does not satisfy @p@, then not all @a@ in @as@
 -- satisfy @p@.
 --
--- @since 0.1.1.0
+-- @since 0.1.2.0
 anyNotNotAll :: Any f (Not p) --> NotAll f p
 anyNotNotAll _ (WitAny i v) a = v $ runWitAll a i
 
@@ -181,7 +181,7 @@ anyNotNotAll _ (WitAny i v) a = v $ runWitAll a i
 -- @a@ in @as@ that does not satisfy @p@.  Requires @'Decidable' p@ in
 -- order to locate that specific @a@.
 --
--- @since 0.1.1.0
+-- @since 0.1.2.0
 notAllAnyNot
     :: forall f p. (Universe f, Decidable p)
     => NotAll f p --> Any f (Not p)
@@ -193,14 +193,14 @@ notAllAnyNot xs vAll = elimDisproof (decide @(Any f (Not p)) xs) $ \vAny ->
 -- | If @p@ is false for all @a@ in @as@, then no @a@ in @as@ satisfies
 -- @p@.
 --
--- @since 0.1.1.0
+-- @since 0.1.2.0
 allNotNone :: All f (Not p) --> None f p
 allNotNone _ a (WitAny i v) = runWitAll a i v
 
 -- | If no @a@ in @as@ satisfies @p@, then @p@ is false for all @a@ in
 -- @as@.  Requires @'Decidable' p@ to interrogate the input disproof.
 --
--- @since 0.1.1.0
+-- @since 0.1.2.0
 noneAllNot
     :: forall f p. (Universe f, Decidable p)
     => None f p --> All f (Not p)

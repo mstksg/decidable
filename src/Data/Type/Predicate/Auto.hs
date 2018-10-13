@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes   #-}
+{-# LANGUAGE ConstraintKinds       #-}
 {-# LANGUAGE DataKinds             #-}
 {-# LANGUAGE EmptyCase             #-}
 {-# LANGUAGE FlexibleContexts      #-}
@@ -14,6 +15,7 @@
 {-# LANGUAGE TypeInType            #-}
 {-# LANGUAGE TypeOperators         #-}
 {-# LANGUAGE TypeSynonymInstances  #-}
+{-# LANGUAGE UndecidableInstances  #-}
 
 -- |
 -- Module      : Data.Type.Predicate.Auto
@@ -31,14 +33,19 @@
 module Data.Type.Predicate.Auto (
     Auto(..)
   , AutoElem(..)
+  , AutoAll(..)
+  , AutoNot, autoNot
   , AutoProvable
   ) where
 
-import           Data.List.NonEmpty        (NonEmpty(..))
+import           Data.List.NonEmpty             (NonEmpty(..))
 import           Data.Singletons
+import           Data.Singletons.Prelude hiding (Not, All, Elem)
+import           Data.Singletons.Sigma
 import           Data.Type.Equality
 import           Data.Type.Predicate
 import           Data.Type.Predicate.Logic
+import           Data.Type.Predicate.Param
 import           Data.Type.Universe
 
 -- | Automatically generate a witness for predicate @p@ applied to input
@@ -62,6 +69,9 @@ class Auto (p :: Predicate k) (a :: k) where
 
 instance SingI a => Auto Evident a where
     auto = sing
+
+instance SingI a => Auto (Not Impossible) a where
+    auto = ($ sing)
 
 instance Auto (EqualTo a) a where
     auto = Refl
@@ -186,3 +196,29 @@ instance AutoAll f p as => Auto (All f p) as where
 
 -- instance {-# OVERLAPPING #-} AutoElem [] as a => AutoElem [] (b ': as) a where
 --     autoElem = IS autoElem
+
+type AutoNot (p :: Predicate k) = Auto (Not p)
+
+autoNot :: forall k (p :: Predicate k) (a :: k). AutoNot p a => Not p @@ a
+autoNot = auto @k @(Not p) @a
+
+-- class AutoNotAll f (p :: Predicate k) (as :: f k) where
+--     autoNotAll :: Not (All f p) @@ as
+
+-- instance Auto p a => AutoNotAll [] p (a ': as) where
+--     autoNotAll a = _ $ runWitAll a IZ
+
+class AutoParam (p :: ParamPred k v) (a :: k) where
+    autoParam :: Σ v (p a)
+
+instance AutoParam p a => Auto (Found p) a where
+    auto = autoParam @_ @_ @p @a
+
+instance Auto p (f @@ a) => Auto (p .@#@$$$ f) a where
+    auto = auto @_ @p @(f @@ a)
+
+-- instance (Decidable f, SingI g) => Decidable (f .@#@$$$ g) where
+--     decide = decide @f . ((sing :: Sing g) @@)
+
+-- instance (Provable f, SingI g) => Provable (f .@#@$$$ g) where
+--     prove = prove @f . ((sing :: Sing g) @@)

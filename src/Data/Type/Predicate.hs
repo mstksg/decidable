@@ -412,7 +412,7 @@ isDisproved = isNothing . forgetDisproof
 -- | Helper function for a common pattern of eliminating the disproved
 -- branch of 'Decision' to certaintify the proof.
 --
--- @since 0.1.1.0
+-- @since 0.1.2.0
 elimDisproof
     :: Decision a
     -> Refuted (Refuted a)
