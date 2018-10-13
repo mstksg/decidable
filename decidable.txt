@@ -1063,9 +1063,7 @@ instance forall k (a :: k). Data.Singletons.Internal.SingI a => Data.Type.Predic
 instance forall k (a :: k). Data.Type.Predicate.Auto.Auto (Data.Type.Predicate.EqualTo a) a
 instance forall k (p :: Data.Type.Predicate.Predicate k) (a :: k) (q :: Data.Type.Predicate.Predicate k). (Data.Type.Predicate.Auto.Auto p a, Data.Type.Predicate.Auto.Auto q a) => Data.Type.Predicate.Auto.Auto (p Data.Type.Predicate.Logic.&&& q) a
 instance forall k (q :: Data.Type.Predicate.Predicate k) (a :: k) (p :: Data.Type.Predicate.Predicate k). Data.Type.Predicate.Auto.Auto q a => Data.Type.Predicate.Auto.Auto (p Data.Type.Predicate.Logic.==> q) a
-instance Data.Type.Predicate.Auto.Auto (Data.Type.Universe.Null []) '[]
 instance forall k (a :: k) (as :: [k]). Data.Singletons.Internal.SingI a => Data.Type.Predicate.Auto.Auto (Data.Type.Universe.NotNull []) (a : as)
-instance Data.Type.Predicate.Auto.Auto (Data.Type.Universe.Null GHC.Maybe.Maybe) 'GHC.Maybe.Nothing
 instance forall k (a :: k). Data.Singletons.Internal.SingI a => Data.Type.Predicate.Auto.Auto (Data.Type.Universe.NotNull GHC.Maybe.Maybe) ('GHC.Maybe.Just a)
 instance forall k (a :: k) j. Data.Singletons.Internal.SingI a => Data.Type.Predicate.Auto.Auto (Data.Type.Universe.NotNull (Data.Either.Either j)) ('Data.Either.Right a)
 instance forall k (a :: k) (as :: [k]). Data.Singletons.Internal.SingI a => Data.Type.Predicate.Auto.Auto (Data.Type.Universe.NotNull GHC.Base.NonEmpty) (a 'GHC.Base.:| as)
