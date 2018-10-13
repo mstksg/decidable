@@ -34,6 +34,7 @@ module Data.Type.Predicate.Auto (
     Auto(..)
   , AutoElem(..)
   , AutoAll(..)
+  , autoAny
   , AutoParam(..)
   , AutoNot, autoNot
   , AutoProvable
@@ -225,8 +226,9 @@ instance Auto p (f @@ a) => Auto (p .@#@$$$ f) a where
 -- class AutoAny f p as a where
 --     autoAny :: Elem f as a -> Any f p @@ as
 
--- autoAny :: forall f p as a. Auto p a => Elem f as a -> Any f p @@ as
--- autoAny i = WitAny i (auto @_ @p @a)
+autoAny :: forall f p as a. Auto p a => Elem f as a -> Any f p @@ as
+autoAny i = WitAny i (auto @_ @p @a)
+
 -- class AutoAny f (p :: Predicate k) (a :: k) where
 --     autoAny :: Elem f p as a -> Any f p @@ as
 
