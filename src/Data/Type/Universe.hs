@@ -38,7 +38,7 @@ module Data.Type.Universe (
     Elem, In, Universe(..)
   -- ** Instances
   , Index(..), IsJust(..), IsRight(..), NEIndex(..), Snd(..)
-  , (:.:), Sing(SComp), sGetComp, GetComp, CompElem(..)
+  , CompElem(..)
   -- ** Predicates
   , All, WitAll(..), NotAll
   , Any, WitAny(..), None
@@ -46,6 +46,9 @@ module Data.Type.Universe (
   -- * Decisions and manipulations
   , decideAny, decideAll, genAllA, genAll, igenAll
   , foldMapUni, ifoldMapUni, index, pickElem
+  -- * Universe Composition
+  , (:.:)(..), Sing(SComp), sGetComp, GetComp
+  , allComp, compAll, anyComp, compAny
   -- * Defunctionalization symbols
   , ElemSym0, ElemSym1, ElemSym2, GetCompSym0, GetCompSym1
   ) where
@@ -490,8 +493,7 @@ instance (Universe f, Universe g) => Universe (f :.: g) where
         -> Sing ass
         -> Decision (Any (f :.: g) p @@ ass)
     idecideAny f (SComp xss)
-        = mapDecision (\(WitAny i (WitAny j p)) -> WitAny (i :? j) p)
-                      (\(WitAny (i :? j) p) -> WitAny i (WitAny j p))
+        = mapDecision anyComp compAny
         . idecideAny @f @_ @(Any g p) go
         $ xss
       where
@@ -506,8 +508,7 @@ instance (Universe f, Universe g) => Universe (f :.: g) where
         -> Sing ass
         -> Decision (All (f :.: g) p @@ ass)
     idecideAll f (SComp xss)
-        = mapDecision (\a -> WitAll $ \(i :? j) -> runWitAll (runWitAll a i) j)
-                      (\a -> WitAll $ \i -> WitAll $ \j -> runWitAll a (i :? j))
+        = mapDecision allComp compAll
         . idecideAll @f @_ @(All g p) go
         $ xss
       where
@@ -521,11 +522,21 @@ instance (Universe f, Universe g) => Universe (f :.: g) where
         => (forall a. Elem (f :.: g) ass a -> Sing a -> h (p @@ a))
         -> Sing ass
         -> h (All (f :.: g) p @@ ass)
-    igenAllA f (SComp ass) =
-            (\a -> WitAll $ \(i :? j) -> runWitAll (runWitAll a i) j)
-        <$> igenAllA @f @_ @(All g p) go ass
+    igenAllA f (SComp ass) = allComp <$> igenAllA @f @_ @(All g p) go ass
       where
         go  :: Elem f (GetComp ass) (as :: g k)
             -> Sing as
             -> h (All g p @@ as)
         go i = igenAllA $ \j -> f (i :? j)
+
+anyComp :: Any f (Any g p) @@ as -> Any (f :.: g) p @@ 'Comp as
+anyComp (WitAny i (WitAny j p)) = WitAny (i :? j) p
+
+compAny :: Any (f :.: g) p @@ 'Comp as -> Any f (Any g p) @@ as
+compAny (WitAny (i :? j) p) = WitAny i (WitAny j p)
+
+allComp :: All f (All g p) @@ as -> All (f :.: g) p @@ 'Comp as
+allComp a = WitAll $ \(i :? j) -> runWitAll (runWitAll a i) j
+
+compAll :: All (f :.: g) p @@ 'Comp as -> All f (All g p) @@ as
+compAll a = WitAll $ \i -> WitAll $ \j -> runWitAll a (i :? j)

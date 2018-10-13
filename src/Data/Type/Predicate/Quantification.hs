@@ -35,6 +35,8 @@ module Data.Type.Predicate.Quantification (
   , None, allNotNone, noneAllNot
   -- ** Entailment
   , entailAny, ientailAny, entailAnyF, ientailAnyF
+  -- ** Composition
+  , allComp, compAll
   -- * All
   , All, WitAll(..)
   -- ** Decision
@@ -45,6 +47,8 @@ module Data.Type.Predicate.Quantification (
   -- ** Entailment
   , entailAll, ientailAll, entailAllF, ientailAllF
   , decideEntailAll, idecideEntailAll
+  -- ** Composition
+  , anyComp, compAny
   ) where
 
 import           Data.Kind
