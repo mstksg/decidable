@@ -163,6 +163,9 @@ instance AutoElem f as a => Auto (In f as) a where
 -- | Helper class for deriving 'Auto' instances for 'All' predicates; each
 -- 'Universe' instance is expected to implement these if possible, to get
 -- free 'Auto' instaces for their 'All' predicates.
+--
+-- Also helps for 'Not' 'Any' predicates and 'Not' 'Found' 'AnyMatch'
+-- predicates.
 class AutoAll f (p :: Predicate k) (as :: f k) where
     -- | Generate an 'All' for a given predicate over all items in @as@.
     autoAll :: All f p @@ as
@@ -246,5 +249,9 @@ instance (SingI as, AutoAll f (Not p) as) => Auto (Not (Any f p)) as where
 
 -- | Helper function to generate a @'Not' ('All' f p)@ if you can pick out
 -- a specific @a@ in @as@ where the predicate is disprovable at compile-time.
-autoNotAll :: (AutoNot p a, SingI as) => Elem f as a -> Not (All f p) @@ as
+autoNotAll :: forall p f as a. (AutoNot p a, SingI as) => Elem f as a -> Not (All f p) @@ as
 autoNotAll = anyNotNotAll sing . autoAny
+
+instance (SingI as, AutoAll f (Not (Found p)) as) => Auto (Not (Found (AnyMatch f p))) as where
+    auto = mapRefuted (\(s :&: WitAny i p) -> WitAny i (s :&: p))
+         $ auto @_ @(Not (Any f (Found p))) @as
