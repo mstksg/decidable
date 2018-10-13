@@ -42,7 +42,7 @@ module Data.Type.Predicate.Auto (
 
 import           Data.List.NonEmpty             (NonEmpty(..))
 import           Data.Singletons
-import           Data.Singletons.Prelude hiding (Not, All, Any, Elem)
+import           Data.Singletons.Prelude hiding (Not, All, Any, Elem, Null)
 import           Data.Singletons.Sigma
 import           Data.Type.Equality
 import           Data.Type.Predicate
@@ -151,6 +151,9 @@ instance AutoElem [] as a => AutoElem NonEmpty (b ':| as) a where
 instance AutoElem ((,) j) '(w, a) a where
     autoElem = Snd
 
+-- TODO: ???
+-- instance AutoElem (f :.: g) p ('Comp ass) where
+
 instance AutoElem f as a => Auto (In f as) a where
     auto = autoElem @f @as @a
 
@@ -182,14 +185,24 @@ instance (Auto p a, AutoAll [] p as) => AutoAll NonEmpty p (a ':| as) where
         NEHead   -> auto @_ @p @a
         NETail i -> runWitAll (autoAll @[] @p @as) i
 
+instance AutoAll f (All g p) ass => AutoAll (f :.: g) p ('Comp ass) where
+    autoAll = WitAll $ \(i :? j) ->
+      runWitAll (runWitAll (autoAll @f @(All g p) @ass) i) j
+
 instance Auto p a => AutoAll ((,) j) p '(w, a) where
     autoAll = WitAll $ \case Snd -> auto @_ @p @a
 
 instance AutoAll f p as => Auto (All f p) as where
     auto = autoAll @f @p @as
 
+instance Auto (Null []) '[] where
+    auto (WitAny i _) = case i of {}
+
 instance SingI a => Auto (NotNull []) (a ': as) where
     auto = WitAny IZ sing
+
+instance Auto (Null Maybe) 'Nothing where
+    auto (WitAny i _ ) = case i of {}
 
 instance SingI a => Auto (NotNull Maybe) ('Just a) where
     auto = WitAny IsJust sing

@@ -32,6 +32,7 @@ module Data.Type.Predicate.Param (
   , Found
   , Selectable, select
   , Searchable, search
+  , inPNotNull, notNullInP
   ) where
 
 import           Data.Singletons
@@ -130,6 +131,12 @@ select = prove @(Found p)
 --
 -- Essentially 'NotNull'.
 type InP f = (ElemSym1 f :: ParamPred (f k) k)
+
+inPNotNull :: NotNull f --> Found (InP f)
+inPNotNull _ (WitAny i s) = s :&: i
+
+notNullInP :: Found (InP f) --> NotNull f
+notNullInP _ (s :&: i) = WitAny i s
 
 instance Universe f => Decidable (Found (InP f)) where
     decide = mapDecision (\case WitAny i s -> s :&: i    )
