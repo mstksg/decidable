@@ -263,14 +263,9 @@ autoAny i = WitAny i (auto @_ @p @a)
 -- instance {-# OVERLAPPING #-} AutoElem [] as a => AutoElem [] (b ': as) a where
 --     autoElem = IS autoElem
 
-instance Auto (Not (Found (AnyMatch [] p))) '[] where
-    auto (_ :&: WitAny i _) = case i of {}
-
-instance (AutoNot (Found p) a, AutoNot (Found (AnyMatch [] p)) as)
-      => Auto (Not (Found (AnyMatch [] p))) (a ': as) where
-    auto (s :&: WitAny i p) = case i of
-      IZ    -> autoNot @_ @(Found p              ) @a  $ s :&: p
-      IS i' -> autoNot @_ @(Found (AnyMatch [] p)) @as $ s :&: WitAny i' p
+instance (SingI as, AutoAll f (Not (Found p)) as) => Auto (Not (Found (AnyMatch f p))) as where
+    auto = allNotNone sing (autoAll @f @(Not (Found p)) @as)
+         . (\case s :&: WitAny i p -> WitAny i (s :&: p))
 
 instance (SingI as, AutoAll f (Not p) as) => Auto (Not (Any f p)) as where
     auto = allNotNone sing $ autoAll @f @(Not p) @as
