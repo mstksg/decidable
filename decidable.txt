@@ -11,7 +11,7 @@
 --   starting point, and the documentation for <a>Predicate</a> on how to
 --   define predicates.
 @package decidable
-@version 0.1.1.0
+@version 0.1.2.0
 
 
 -- | Combinators for working with type-level predicates, along with
