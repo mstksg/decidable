@@ -340,9 +340,9 @@ instance Data.Type.Predicate.Provable (Data.Type.Predicate.Not Data.Type.Predica
 instance forall k1 (p :: k1 Data.Singletons.Internal.~> *). Data.Type.Predicate.Decidable p => Data.Type.Predicate.Decidable (Data.Type.Predicate.Not p)
 instance forall k (a :: k). (Data.Singletons.Decide.SDecide k, Data.Singletons.Internal.SingI a) => Data.Type.Predicate.Decidable (Data.Type.Predicate.EqualTo a)
 instance Data.Type.Predicate.Decidable Data.Type.Predicate.Evident
-instance forall k1 b6989586621679919354 (f :: b6989586621679919354 Data.Singletons.Internal.~> *) (g :: k1 Data.Singletons.Internal.~> b6989586621679919354). (Data.Type.Predicate.Decidable f, Data.Singletons.Internal.SingI g) => Data.Type.Predicate.Decidable (f Data.Singletons.Prelude.Base..@#@$$$ g)
+instance forall k1 j (p :: j Data.Singletons.Internal.~> *) (f :: k1 Data.Singletons.Internal.~> j). (Data.Type.Predicate.Decidable p, Data.Singletons.Internal.SingI f) => Data.Type.Predicate.Decidable (Data.Type.Predicate.PMap f p)
 instance Data.Type.Predicate.Provable Data.Type.Predicate.Evident
-instance forall k1 b6989586621679919354 (f :: b6989586621679919354 Data.Singletons.Internal.~> *) (g :: k1 Data.Singletons.Internal.~> b6989586621679919354). (Data.Type.Predicate.Provable f, Data.Singletons.Internal.SingI g) => Data.Type.Predicate.Provable (f Data.Singletons.Prelude.Base..@#@$$$ g)
+instance forall k1 j (p :: j Data.Singletons.Internal.~> *) (f :: k1 Data.Singletons.Internal.~> j). (Data.Type.Predicate.Provable p, Data.Singletons.Internal.SingI f) => Data.Type.Predicate.Provable (Data.Type.Predicate.PMap f p)
 
 
 -- | Logical and algebraic connectives for predicates, as well as common
@@ -1117,6 +1117,8 @@ autoAny :: forall f p as a. Auto p a => Elem f as a -> Any f p @@ as
 --   you can pick out a specific <tt>a</tt> in <tt>as</tt> where the
 --   predicate is disprovable at compile-time.
 autoNotAll :: forall p f as a. (AutoNot p a, SingI as) => Elem f as a -> Not (All f p) @@ as
+instance forall k j v (p :: Data.Type.Predicate.Param.ParamPred j v) (f :: k Data.Singletons.Internal.~> j) (a :: k). Data.Type.Predicate.Auto.AutoNot (Data.Type.Predicate.Param.Found p) (f Data.Singletons.Internal.@@ a) => Data.Type.Predicate.Auto.Auto (Data.Type.Predicate.Not (Data.Type.Predicate.Param.Found (Data.Type.Predicate.Param.PPMap f p))) a
+instance forall k j (p :: Data.Type.Predicate.Predicate j) (f :: k Data.Singletons.Internal.~> j) (a :: k). Data.Type.Predicate.Auto.AutoNot p (f Data.Singletons.Internal.@@ a) => Data.Type.Predicate.Auto.Auto (Data.Type.Predicate.Not (Data.Type.Predicate.PMap f p)) a
 instance forall k (p :: Data.Type.Predicate.Predicate k). Data.Type.Predicate.Auto.AutoAll [] p '[]
 instance forall a1 (p :: Data.Type.Predicate.Predicate a1) (a2 :: a1) (as :: [a1]). (Data.Type.Predicate.Auto.Auto p a2, Data.Type.Predicate.Auto.AutoAll [] p as) => Data.Type.Predicate.Auto.AutoAll [] p (a2 : as)
 instance forall k (p :: Data.Type.Predicate.Predicate k). Data.Type.Predicate.Auto.AutoAll GHC.Maybe.Maybe p 'GHC.Maybe.Nothing
@@ -1149,7 +1151,7 @@ instance forall j k (a :: k). Data.Singletons.Internal.SingI a => Data.Type.Pred
 instance forall k (a :: k) (as :: [k]). Data.Singletons.Internal.SingI a => Data.Type.Predicate.Auto.Auto (Data.Type.Universe.NotNull GHC.Base.NonEmpty) (a 'GHC.Base.:| as)
 instance forall k (a :: k) j (w :: j). Data.Singletons.Internal.SingI a => Data.Type.Predicate.Auto.Auto (Data.Type.Universe.NotNull ((,) j)) '(w, a)
 instance forall k j v (p :: Data.Type.Predicate.Param.ParamPred j v) (f :: k Data.Singletons.Internal.~> j) (a :: k). Data.Type.Predicate.Auto.Auto (Data.Type.Predicate.Param.Found p) (f Data.Singletons.Internal.@@ a) => Data.Type.Predicate.Auto.Auto (Data.Type.Predicate.Param.Found (Data.Type.Predicate.Param.PPMap f p)) a
-instance forall k b6989586621679919354 (p :: Data.Type.Predicate.Predicate b6989586621679919354) (f :: k Data.Singletons.Internal.~> b6989586621679919354) (a :: k). Data.Type.Predicate.Auto.Auto p (f Data.Singletons.Internal.@@ a) => Data.Type.Predicate.Auto.Auto (p Data.Singletons.Prelude.Base..@#@$$$ f) a
+instance forall k j (p :: Data.Type.Predicate.Predicate j) (f :: k Data.Singletons.Internal.~> j) (a :: k). Data.Type.Predicate.Auto.Auto p (f Data.Singletons.Internal.@@ a) => Data.Type.Predicate.Auto.Auto (Data.Type.Predicate.PMap f p) a
 
 
 -- | Represent a decidable subset of a type-level collection.
