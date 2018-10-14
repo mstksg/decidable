@@ -323,11 +323,11 @@ instance Decidable Evident
 instance Provable Evident where
     prove = id
 
-instance (Decidable f, SingI g) => Decidable (f .@#@$$$ g) where
-    decide = decide @f . ((sing :: Sing g) @@)
+instance (Decidable p, SingI f) => Decidable (PMap f p) where
+    decide = decide @p . ((sing :: Sing f) @@)
 
-instance (Provable f, SingI g) => Provable (f .@#@$$$ g) where
-    prove = prove @f . ((sing :: Sing g) @@)
+instance (Provable p, SingI f) => Provable (PMap f p) where
+    prove = prove @p . ((sing :: Sing f) @@)
 
 -- | Compose two implications.
 compImpl

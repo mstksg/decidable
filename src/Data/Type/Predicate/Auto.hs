@@ -44,7 +44,6 @@ module Data.Type.Predicate.Auto (
 
 import           Data.List.NonEmpty                 (NonEmpty(..))
 import           Data.Singletons
-import           Data.Singletons.Prelude hiding     (Not, All, Any, Elem, Null)
 import           Data.Singletons.Sigma
 import           Data.Type.Equality
 import           Data.Type.Predicate
@@ -236,8 +235,15 @@ instance Auto (Found p) (f @@ a) => Auto (Found (PPMap f p)) a where
     auto = case auto @_ @(Found p) @(f @@ a) of
         i :&: p -> i :&: p
 
-instance Auto p (f @@ a) => Auto (p .@#@$$$ f) a where
+instance AutoNot (Found p) (f @@ a) => Auto (Not (Found (PPMap f p))) a where
+    auto = mapRefuted (\(i :&: p) -> i :&: p)
+         $ autoNot @_ @(Found p) @(f @@ a)
+
+instance Auto p (f @@ a) => Auto (PMap f p) a where
     auto = auto @_ @p @(f @@ a)
+
+instance AutoNot p (f @@ a) => Auto (Not (PMap f p)) a where
+    auto = autoNot @_ @p @(f @@ a)
 
 -- | Helper function to generate an @'Any' f p@ if you can pick out
 -- a specific @a@ in @as@ where the predicate is provable at compile-time.
