@@ -1,20 +1,16 @@
 {-# LANGUAGE AllowAmbiguousTypes   #-}
 {-# LANGUAGE ConstraintKinds       #-}
-{-# LANGUAGE DataKinds             #-}
 {-# LANGUAGE EmptyCase             #-}
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
-{-# LANGUAGE GADTs                 #-}
 {-# LANGUAGE KindSignatures        #-}
 {-# LANGUAGE LambdaCase            #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE PolyKinds             #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
 {-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE TypeInType            #-}
 {-# LANGUAGE TypeOperators         #-}
-{-# LANGUAGE TypeSynonymInstances  #-}
 {-# LANGUAGE UndecidableInstances  #-}
 
 -- |
@@ -61,6 +57,21 @@ import           Data.Type.Universe
 --
 -- Very close in nature to the @Known@ typeclass in the /type-combinators/
 -- library.
+--
+-- Admittedly this interface is a bit clunky and ad-hoc; at this point you
+-- can just try writing 'auto' in your code and praying that it works.  You
+-- always have the option, of course, to just manually write proofs.  If
+-- you have any inference rules to suggest, feel free to submit a PR!
+--
+-- An important limitation of 'Auto' is the Haskell type system prevents
+-- "either-or" constraints; this could potentially be implemented using
+-- compiler plugins.
+--
+-- One consequence of this is that it is impossible to automatically derive
+-- @'Any' f p@ and @'Not' ('All' f p)@.
+--
+-- For these, the compiler needs help; you can use 'autoAny' and
+-- 'autoNotAll' for these situations.
 class Auto (p :: Predicate k) (a :: k) where
     -- | Have the compiler generate a witness for @p \@\@ a@.
     --
@@ -74,6 +85,7 @@ class Auto (p :: Predicate k) (a :: k) where
 instance SingI a => Auto Evident a where
     auto = sing
 
+-- | @since 0.1.2.0
 instance SingI a => Auto (Not Impossible) a where
     auto = ($ sing)
 
@@ -150,6 +162,7 @@ instance AutoElem NonEmpty (a ':| as) a where
 instance AutoElem [] as a => AutoElem NonEmpty (b ':| as) a where
     autoElem = NETail autoElem
 
+-- | @since 0.1.2.0
 instance AutoElem ((,) j) '(w, a) a where
     autoElem = ISnd
 
@@ -165,6 +178,8 @@ instance AutoElem f as a => Auto (In f as) a where
 --
 -- Also helps for 'Not' 'Any' predicates and 'Not' 'Found' 'AnyMatch'
 -- predicates.
+--
+-- @since 0.1.2.0
 class AutoAll f (p :: Predicate k) (as :: f k) where
     -- | Generate an 'All' for a given predicate over all items in @as@.
     autoAll :: All f p @@ as
@@ -201,26 +216,34 @@ instance AutoAll f (All g p) ass => AutoAll (f :.: g) p ('Comp ass) where
 instance Auto p a => AutoAll ((,) j) p '(w, a) where
     autoAll = WitAll $ \case ISnd -> auto @_ @p @a
 
+-- | @since 0.1.2.0
 instance AutoAll f p as => Auto (All f p) as where
     auto = autoAll @f @p @as
 
+-- | @since 0.1.2.0
 instance SingI a => Auto (NotNull []) (a ': as) where
     auto = WitAny IZ sing
 
+-- | @since 0.1.2.0
 instance SingI a => Auto IsJust ('Just a) where
     auto = WitAny IJust sing
 
+-- | @since 0.1.2.0
 instance SingI a => Auto IsRight ('Right a) where
     auto = WitAny IRight sing
 
+-- | @since 0.1.2.0
 instance SingI a => Auto (NotNull NonEmpty) (a ':| as) where
     auto = WitAny NEHead sing
 
+-- | @since 0.1.2.0
 instance SingI a => Auto (NotNull ((,) j)) '(w, a) where
     auto = WitAny ISnd sing
 
 -- | An @'AutoNot' p a@ constraint means that @p \@\@ a@ can be proven to not be
 -- true at compiletime.
+--
+-- @since 0.1.2.0
 type AutoNot (p :: Predicate k) = Auto (Not p)
 
 -- | Disprove @p \@\@ a@ at compiletime.
@@ -228,36 +251,60 @@ type AutoNot (p :: Predicate k) = Auto (Not p)
 -- @
 -- autoNot @_ @p @a :: Not p @@ a
 -- @
+--
+-- @since 0.1.2.0
 autoNot :: forall k (p :: Predicate k) (a :: k). AutoNot p a => Not p @@ a
 autoNot = auto @k @(Not p) @a
 
+-- | @since 0.1.2.0
 instance Auto (Found p) (f @@ a) => Auto (Found (PPMap f p)) a where
     auto = case auto @_ @(Found p) @(f @@ a) of
         i :&: p -> i :&: p
 
-instance AutoNot (Found p) (f @@ a) => Auto (Not (Found (PPMap f p))) a where
+-- | @since 0.1.2.0
+instance Auto (NotFound p) (f @@ a) => Auto (NotFound (PPMap f p)) a where
     auto = mapRefuted (\(i :&: p) -> i :&: p)
          $ autoNot @_ @(Found p) @(f @@ a)
 
+-- | @since 0.1.2.0
 instance Auto p (f @@ a) => Auto (PMap f p) a where
     auto = auto @_ @p @(f @@ a)
 
+-- | @since 0.1.2.0
 instance AutoNot p (f @@ a) => Auto (Not (PMap f p)) a where
     auto = autoNot @_ @p @(f @@ a)
 
 -- | Helper function to generate an @'Any' f p@ if you can pick out
 -- a specific @a@ in @as@ where the predicate is provable at compile-time.
-autoAny :: forall f p as a. Auto p a => Elem f as a -> Any f p @@ as
+--
+-- This is used to get around a fundamental limitation of 'Auto' as
+-- a Haskell typeclass.
+--
+-- @since 0.1.2.0
+autoAny
+    :: forall f p as a. Auto p a
+    => Elem f as a
+    -> Any f p @@ as
 autoAny i = WitAny i (auto @_ @p @a)
 
+-- | @since 0.1.2.0
 instance (SingI as, AutoAll f (Not p) as) => Auto (Not (Any f p)) as where
     auto = allNotNone sing $ autoAll @f @(Not p) @as
 
 -- | Helper function to generate a @'Not' ('All' f p)@ if you can pick out
 -- a specific @a@ in @as@ where the predicate is disprovable at compile-time.
-autoNotAll :: forall p f as a. (AutoNot p a, SingI as) => Elem f as a -> Not (All f p) @@ as
+--
+-- This is used to get around a fundamental limitation of 'Auto' as
+-- a Haskell typeclass.
+--
+-- @since 0.1.2.0
+autoNotAll
+    :: forall p f as a. (AutoNot p a, SingI as)
+    => Elem f as a
+    -> Not (All f p) @@ as
 autoNotAll = anyNotNotAll sing . autoAny
 
+-- | @since 0.1.2.0
 instance (SingI as, AutoAll f (Not (Found p)) as) => Auto (Not (Found (AnyMatch f p))) as where
     auto = mapRefuted (\(s :&: WitAny i p) -> WitAny i (s :&: p))
          $ auto @_ @(Not (Any f (Found p))) @as

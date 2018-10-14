@@ -1,25 +1,20 @@
-{-# LANGUAGE AllowAmbiguousTypes   #-}
-{-# LANGUAGE DeriveFunctor         #-}
-{-# LANGUAGE DeriveTraversable     #-}
-{-# LANGUAGE EmptyCase             #-}
-{-# LANGUAGE FlexibleContexts      #-}
-{-# LANGUAGE FlexibleInstances     #-}
-{-# LANGUAGE GADTs                 #-}
-{-# LANGUAGE InstanceSigs          #-}
-{-# LANGUAGE LambdaCase            #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE PolyKinds             #-}
-{-# LANGUAGE QuantifiedConstraints #-}
-{-# LANGUAGE RankNTypes            #-}
-{-# LANGUAGE ScopedTypeVariables   #-}
-{-# LANGUAGE StandaloneDeriving    #-}
-{-# LANGUAGE TemplateHaskell       #-}
-{-# LANGUAGE TypeApplications      #-}
-{-# LANGUAGE TypeFamilies          #-}
-{-# LANGUAGE TypeInType            #-}
-{-# LANGUAGE TypeOperators         #-}
-{-# LANGUAGE TypeSynonymInstances  #-}
-{-# LANGUAGE UndecidableInstances  #-}
+{-# LANGUAGE DeriveDataTypeable   #-}
+{-# LANGUAGE DeriveFunctor        #-}
+{-# LANGUAGE DeriveGeneric        #-}
+{-# LANGUAGE DeriveTraversable    #-}
+{-# LANGUAGE EmptyCase            #-}
+{-# LANGUAGE FlexibleInstances    #-}
+{-# LANGUAGE GADTs                #-}
+{-# LANGUAGE InstanceSigs         #-}
+{-# LANGUAGE LambdaCase           #-}
+{-# LANGUAGE RankNTypes           #-}
+{-# LANGUAGE ScopedTypeVariables  #-}
+{-# LANGUAGE StandaloneDeriving   #-}
+{-# LANGUAGE TemplateHaskell      #-}
+{-# LANGUAGE TypeApplications     #-}
+{-# LANGUAGE TypeFamilies         #-}
+{-# LANGUAGE TypeInType           #-}
+{-# LANGUAGE TypeOperators        #-}
 
 -- |
 -- Module      : Data.Type.Universe
@@ -64,6 +59,8 @@ import           Data.Singletons.Decide
 import           Data.Singletons.Prelude hiding        (Elem, ElemSym0, ElemSym1, ElemSym2, Any, All, Null, Not)
 import           Data.Type.Predicate
 import           Data.Type.Predicate.Logic
+import           Data.Typeable                         (Typeable)
+import           GHC.Generics                          (Generic)
 import           Prelude hiding                        (any, all)
 import qualified Data.Singletons.Prelude.List.NonEmpty as NE
 
@@ -336,9 +333,13 @@ instance (SingI (as :: Maybe k), SDecide k) => Decidable (TyPred (IJust as)) whe
 type instance Elem Maybe = IJust
 
 -- | Test that a 'Maybe' is 'Just'.
+--
+-- @since 0.1.2.0
 type IsJust    = (NotNull Maybe :: Predicate (Maybe k))
 
 -- | Test that a 'Maybe' is 'Nothing'.
+--
+-- @since 0.1.2.0
 type IsNothing = (Null    Maybe :: Predicate (Maybe k))
 
 instance Universe Maybe where
@@ -371,9 +372,13 @@ instance (SingI (as :: Either j k), SDecide k) => Decidable (TyPred (IRight as))
 type instance Elem (Either j) = IRight
 
 -- | Test that an 'Either' is 'Right'
+--
+-- @since 0.1.2.0
 type IsRight = (NotNull (Either j) :: Predicate (Either j k))
 
 -- | Test that an 'Either' is 'Left'
+--
+-- @since 0.1.2.0
 type IsLeft  = (Null    (Either j) :: Predicate (Either j k))
 
 instance Universe (Either j) where
@@ -479,7 +484,7 @@ instance Universe ((,) j) where
 --
 -- @since 0.1.2.0
 data (f :.: g) a = Comp { getComp :: f (g a) }
-    deriving (Show, Eq, Ord, Functor, Foldable)
+    deriving (Show, Eq, Ord, Functor, Foldable, Typeable, Generic)
 deriving instance (Traversable f, Traversable g) => Traversable (f :.: g)
 
 data instance Sing (k :: (f :.: g) a) where

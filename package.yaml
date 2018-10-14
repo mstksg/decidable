@@ -46,7 +46,6 @@ ghc-options:
 dependencies:
 - base >= 4.11 && < 5
 - singletons >= 2.4
-- profunctors
 
 library:
   source-dirs: src

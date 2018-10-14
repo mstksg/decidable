@@ -1,6 +1,4 @@
 {-# LANGUAGE ConstraintKinds      #-}
-{-# LANGUAGE DefaultSignatures    #-}
-{-# LANGUAGE EmptyCase            #-}
 {-# LANGUAGE FlexibleContexts     #-}
 {-# LANGUAGE FlexibleInstances    #-}
 {-# LANGUAGE LambdaCase           #-}
@@ -9,7 +7,6 @@
 {-# LANGUAGE TypeFamilies         #-}
 {-# LANGUAGE TypeInType           #-}
 {-# LANGUAGE TypeOperators        #-}
-{-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 -- |
@@ -29,7 +26,7 @@ module Data.Type.Predicate.Param (
     ParamPred
   , FlipPP, ConstPP, PPMap, InP, AnyMatch
   -- * Deciding and Proving
-  , Found
+  , Found, NotFound
   , Selectable, select
   , Searchable, search
   , inPNotNull, notNullInP
@@ -55,16 +52,37 @@ type ParamPred k v = k -> Predicate v
 --
 -- For some context, an instance of @'Provable' ('Found' P)@, where @P ::
 -- 'ParamPred' k v@, means that for any input @x :: k@, we can always find
--- a @y :: v@ such that we have @P x @@ y@.
+-- a @y :: v@ such that we have @P x \@\@ y@.
 --
 -- In the language of quantifiers, it means that forall @x :: k@, there
--- exists a @y :: v@ such that @P x @@ y@.
+-- exists a @y :: v@ such that @P x \@\@ y@.
 --
 -- For an instance of @'Decidable' ('Found' P)@, it means that for all @x
 -- :: k@, we can prove or disprove the fact that there exists a @y :: v@
--- such that @P x @@ y@.
+-- such that @P x \@\@ y@.
 data Found :: ParamPred k v -> Predicate k
 type instance Apply (Found (p :: ParamPred k v)) a = Σ v (p a)
+
+-- | Convert a parameterized predicate into a predicate on the parameter.
+--
+-- A @'Found' p@ is a predicate on @p :: 'ParamPred' k v@ that tests a @k@
+-- for the fact that there /cannot exist/ a @v@ where @'ParamPred' k v@ is
+-- satisfied.  That is, @'NotFound' P \@\@ x@ is satisfied if no @y :: v@
+-- can exist where @P x \@\@ y@ is satisfied.
+--
+-- For some context, an instance of @'Provable' ('NotFound' P)@, where @P
+-- :: 'ParamPred' k v@, means that for any input @x :: k@, we can always
+-- reject any @y :: v@ that claims to satisfy @P x \@\@ y@.
+--
+-- In the language of quantifiers, it means that forall @x :: k@, there
+-- does not exist a @y :: v@ such that @P x \@\@ y@.
+--
+-- For an instance of @'Decidable' ('Found' P)@, it means that for all @x
+-- :: k@, we can prove or disprove the fact that there does not exist a @y
+-- :: v@ such that @P x \@\@ y@.
+--
+-- @since 0.1.2.0
+type NotFound (p :: ParamPred k v) = (Not (Found p) :: Predicate k)
 
 -- | Flip the arguments of a 'ParamPred'.
 data FlipPP :: ParamPred v k -> ParamPred k v
