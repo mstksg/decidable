@@ -8,7 +8,8 @@
 --   manipulating type-level predicates in Haskell, which are represented
 --   as matchable type-level functions <tt>k ~&gt; Type</tt> from the
 --   <tt>singletons</tt> library. See <a>Data.Type.Predicate</a> for a good
---   starting point.
+--   starting point, and the documentation for <a>Predicate</a> on how to
+--   define predicates.
 @package decidable
 @version 0.1.1.0
 
