@@ -15,28 +15,12 @@ extra-source-files:
 synopsis:            Combinators for manipulating dependently-typed predicates.
 category:            Dependent Types
 
-# To avoid duplicated efforts in documentation and dealing with the
-# complications of embedding Haddock markup inside cabal files, it is
-# common to point users to the README.md file.
-#
-# Which is a bad practice.
-#
-# - Users of Hackage see a link to see readme somewhere,
-#   even Hackage nicely renders the (inter-page) link to README right below.
-# - Hackage and Stackage both display README on the package pages.
-# - Actually, if a README is only four lines, why you need it at all?
-#     - GitHub's readme can point to "look at .cabal or package.yaml" file instead.
-#     - Or the readme could contain more general documentation, examples etc,
-#       and description in the .cabal is then an "abstract" of it.
-#
-# So we don't avoid duplicated efforts, but rather provide as good user
-# experience to all possible users of your package.
-#
 description: |
   This library provides combinators and typeclasses for working and manipulating
   type-level predicates in Haskell, which are represented as matchable type-level
   functions @k ~> Type@ from the @singletons@ library.  See "Data.Type.Predicate"
-  for a good starting point.
+  for a good starting point, and the documentation for 'Predicate' on how to
+  define predicates.
 
 ghc-options:
 - -Wall
