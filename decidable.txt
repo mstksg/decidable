@@ -4,8 +4,11 @@
 
 -- | Combinators for manipulating dependently-typed predicates.
 --   
---   Please see the README on GitHub at
---   <a>https://github.com/mstksg/decidable#readme</a>
+--   This library provides combinators and typeclasses for working and
+--   manipulating type-level predicates in Haskell, which are represented
+--   as matchable type-level functions <tt>k ~&gt; Type</tt> from the
+--   <tt>singletons</tt> library. See <a>Data.Type.Predicate</a> for a good
+--   starting point.
 @package decidable
 @version 0.1.1.0
 
@@ -701,6 +704,7 @@ data ElemSym1 (f :: Type -> Type) :: f k -> k ~> Type
 type ElemSym2 (f :: Type -> Type) (as :: f k) (a :: k) = Elem f as a
 data GetCompSym0 :: (f :.: g) k ~> f (g k)
 type GetCompSym1 a = GetComp a
+instance forall k1 (f :: k1 -> *) k2 (g :: k2 -> k1) (a :: k2). GHC.Generics.Generic ((Data.Type.Universe.:.:) f g a)
 instance (Data.Foldable.Foldable f, Data.Foldable.Foldable g) => Data.Foldable.Foldable (f Data.Type.Universe.:.: g)
 instance (GHC.Base.Functor f, GHC.Base.Functor g) => GHC.Base.Functor (f Data.Type.Universe.:.: g)
 instance forall k1 (f :: k1 -> *) k2 (g :: k2 -> k1) (a :: k2). GHC.Classes.Ord (f (g a)) => GHC.Classes.Ord ((Data.Type.Universe.:.:) f g a)
@@ -955,16 +959,37 @@ data AnyMatch f :: ParamPred k v -> ParamPred (f k) v
 --   For some context, an instance of <tt><a>Provable</a> (<a>Found</a>
 --   P)</tt>, where <tt>P :: <a>ParamPred</a> k v</tt>, means that for any
 --   input <tt>x :: k</tt>, we can always find a <tt>y :: v</tt> such that
---   we have <tt>P x </tt><tt> y</tt>.
+--   we have <tt>P x @@ y</tt>.
 --   
 --   In the language of quantifiers, it means that forall <tt>x :: k</tt>,
---   there exists a <tt>y :: v</tt> such that <tt>P x </tt><tt> y</tt>.
+--   there exists a <tt>y :: v</tt> such that <tt>P x @@ y</tt>.
 --   
 --   For an instance of <tt><a>Decidable</a> (<a>Found</a> P)</tt>, it
 --   means that for all <tt>x :: k</tt>, we can prove or disprove the fact
---   that there exists a <tt>y :: v</tt> such that <tt>P x </tt><tt>
---   y</tt>.
+--   that there exists a <tt>y :: v</tt> such that <tt>P x @@ y</tt>.
 data Found :: ParamPred k v -> Predicate k
+
+-- | Convert a parameterized predicate into a predicate on the parameter.
+--   
+--   A <tt><a>Found</a> p</tt> is a predicate on <tt>p :: <a>ParamPred</a>
+--   k v</tt> that tests a <tt>k</tt> for the fact that there <i>cannot
+--   exist</i> a <tt>v</tt> where <tt><a>ParamPred</a> k v</tt> is
+--   satisfied. That is, <tt><a>NotFound</a> P @@ x</tt> is satisfied if no
+--   <tt>y :: v</tt> can exist where <tt>P x @@ y</tt> is satisfied.
+--   
+--   For some context, an instance of <tt><a>Provable</a> (<a>NotFound</a>
+--   P)</tt>, where <tt>P :: <a>ParamPred</a> k v</tt>, means that for any
+--   input <tt>x :: k</tt>, we can always reject any <tt>y :: v</tt> that
+--   claims to satisfy <tt>P x @@ y</tt>.
+--   
+--   In the language of quantifiers, it means that forall <tt>x :: k</tt>,
+--   there does not exist a <tt>y :: v</tt> such that <tt>P x @@ y</tt>.
+--   
+--   For an instance of <tt><a>Decidable</a> (<a>Found</a> P)</tt>, it
+--   means that for all <tt>x :: k</tt>, we can prove or disprove the fact
+--   that there does not exist a <tt>y :: v</tt> such that <tt>P x @@
+--   y</tt>.
+type NotFound (p :: ParamPred k v) = (Not (Found p) :: Predicate k)
 
 -- | A constraint that a <tt><a>ParamPred</a> k v</tt> s "selectable". It
 --   means that for any input <tt>x :: k</tt>, we can always find a <tt>y
@@ -1028,6 +1053,23 @@ module Data.Type.Predicate.Auto
 --   
 --   Very close in nature to the <tt>Known</tt> typeclass in the
 --   <i>type-combinators</i> library.
+--   
+--   Admittedly this interface is a bit clunky and ad-hoc; at this point
+--   you can just try writing <a>auto</a> in your code and praying that it
+--   works. You always have the option, of course, to just manually write
+--   proofs. If you have any inference rules to suggest, feel free to
+--   submit a PR!
+--   
+--   An important limitation of <a>Auto</a> is the Haskell type system
+--   prevents "either-or" constraints; this could potentially be
+--   implemented using compiler plugins.
+--   
+--   One consequence of this is that it is impossible to automatically
+--   derive <tt><a>Any</a> f p</tt> and <tt><a>Not</a> (<a>All</a> f
+--   p)</tt>.
+--   
+--   For these, the compiler needs help; you can use <a>autoAny</a> and
+--   <a>autoNotAll</a> for these situations.
 class Auto (p :: Predicate k) (a :: k)
 
 -- | Have the compiler generate a witness for <tt>p @@ a</tt>.
@@ -1111,13 +1153,18 @@ autoAll :: AutoAll f p as => All f p @@ as
 -- | Helper function to generate an <tt><a>Any</a> f p</tt> if you can pick
 --   out a specific <tt>a</tt> in <tt>as</tt> where the predicate is
 --   provable at compile-time.
+--   
+--   This is used to get around a fundamental limitation of <a>Auto</a> as
+--   a Haskell typeclass.
 autoAny :: forall f p as a. Auto p a => Elem f as a -> Any f p @@ as
 
 -- | Helper function to generate a <tt><a>Not</a> (<a>All</a> f p)</tt> if
 --   you can pick out a specific <tt>a</tt> in <tt>as</tt> where the
 --   predicate is disprovable at compile-time.
+--   
+--   This is used to get around a fundamental limitation of <a>Auto</a> as
+--   a Haskell typeclass.
 autoNotAll :: forall p f as a. (AutoNot p a, SingI as) => Elem f as a -> Not (All f p) @@ as
-instance forall k j v (p :: Data.Type.Predicate.Param.ParamPred j v) (f :: k Data.Singletons.Internal.~> j) (a :: k). Data.Type.Predicate.Auto.AutoNot (Data.Type.Predicate.Param.Found p) (f Data.Singletons.Internal.@@ a) => Data.Type.Predicate.Auto.Auto (Data.Type.Predicate.Not (Data.Type.Predicate.Param.Found (Data.Type.Predicate.Param.PPMap f p))) a
 instance forall k j (p :: Data.Type.Predicate.Predicate j) (f :: k Data.Singletons.Internal.~> j) (a :: k). Data.Type.Predicate.Auto.AutoNot p (f Data.Singletons.Internal.@@ a) => Data.Type.Predicate.Auto.Auto (Data.Type.Predicate.Not (Data.Type.Predicate.PMap f p)) a
 instance forall k (p :: Data.Type.Predicate.Predicate k). Data.Type.Predicate.Auto.AutoAll [] p '[]
 instance forall a1 (p :: Data.Type.Predicate.Predicate a1) (a2 :: a1) (as :: [a1]). (Data.Type.Predicate.Auto.Auto p a2, Data.Type.Predicate.Auto.AutoAll [] p as) => Data.Type.Predicate.Auto.AutoAll [] p (a2 : as)
@@ -1151,6 +1198,7 @@ instance forall j k (a :: k). Data.Singletons.Internal.SingI a => Data.Type.Pred
 instance forall k (a :: k) (as :: [k]). Data.Singletons.Internal.SingI a => Data.Type.Predicate.Auto.Auto (Data.Type.Universe.NotNull GHC.Base.NonEmpty) (a 'GHC.Base.:| as)
 instance forall k (a :: k) j (w :: j). Data.Singletons.Internal.SingI a => Data.Type.Predicate.Auto.Auto (Data.Type.Universe.NotNull ((,) j)) '(w, a)
 instance forall k j v (p :: Data.Type.Predicate.Param.ParamPred j v) (f :: k Data.Singletons.Internal.~> j) (a :: k). Data.Type.Predicate.Auto.Auto (Data.Type.Predicate.Param.Found p) (f Data.Singletons.Internal.@@ a) => Data.Type.Predicate.Auto.Auto (Data.Type.Predicate.Param.Found (Data.Type.Predicate.Param.PPMap f p)) a
+instance forall k j v (p :: Data.Type.Predicate.Param.ParamPred j v) (f :: k Data.Singletons.Internal.~> j) (a :: k). Data.Type.Predicate.Auto.Auto (Data.Type.Predicate.Param.NotFound p) (f Data.Singletons.Internal.@@ a) => Data.Type.Predicate.Auto.Auto (Data.Type.Predicate.Param.NotFound (Data.Type.Predicate.Param.PPMap f p)) a
 instance forall k j (p :: Data.Type.Predicate.Predicate j) (f :: k Data.Singletons.Internal.~> j) (a :: k). Data.Type.Predicate.Auto.Auto p (f Data.Singletons.Internal.@@ a) => Data.Type.Predicate.Auto.Auto (Data.Type.Predicate.PMap f p) a
 
 
