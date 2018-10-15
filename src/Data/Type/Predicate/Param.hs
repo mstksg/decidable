@@ -35,7 +35,6 @@ module Data.Type.Predicate.Param (
   , OrP, AndP
   ) where
 
-import           Data.Kind
 import           Data.Singletons
 import           Data.Singletons.Prelude.Tuple
 import           Data.Singletons.Sigma
@@ -206,7 +205,7 @@ data OrP :: ParamPred k v -> ParamPred k v -> ParamPred k v
 type instance Apply (OrP p q x) y = (p x ||| q x) @@ y
 
 -- | Conjunction on two 'ParamPred's, with appropriate 'Searchable' and
--- 'Selectable' instances. 
+-- 'Selectable' instances.
 --
 -- @since 0.1.3.0
 data AndP :: ParamPred k v -> ParamPred k u -> ParamPred k (v, u)
@@ -220,7 +219,7 @@ instance (Searchable p, Searchable q) => Decidable (Found (OrP p q)) where
         Disproved vq     -> Disproved $ \case
           s :&: Left  p -> vp (s :&: p)
           s :&: Right q -> vq (s :&: q)
-    
+
 instance (Searchable p, Searchable q) => Decidable (Found (AndP p q)) where
     decide x = case search @p x of
       Proved (s :&: p) -> case search @q x of
@@ -229,7 +228,7 @@ instance (Searchable p, Searchable q) => Decidable (Found (AndP p q)) where
           STuple2 _ t :&: (_, q) -> vq $ t :&: q
       Disproved vp     -> Disproved $ \case
         STuple2 s _ :&: (p, _) -> vp $ s :&: p
-    
+
 instance (Selectable p, Selectable q) => Provable (Found (AndP p q)) where
     prove x = case select @p x of
         s :&: p -> case select @q x of
