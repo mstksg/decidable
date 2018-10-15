@@ -132,9 +132,17 @@ type Evident = (TyPred Sing :: Predicate k)
 --
 -- Could also be defined as @'ConstSym1' Void@, but this defintion gives
 -- us a free 'Decidable' instance.
+--
+-- @
+-- 'Impossible' :: 'Predicate' k
+-- @
 type Impossible = (Not Evident :: Predicate k)
 
 -- | @'EqualTo' a@ is a predicate that the input is equal to @a@.
+--
+-- @
+-- 'EqualTo' :: k -> 'Predicate' k
+-- @
 type EqualTo (a :: k) = (TyPred ((:~:) a) :: Predicate k)
 
 -- | Convert a tradtional @k ~> 'Bool'@ predicate into a 'Predicate'.
@@ -271,6 +279,9 @@ disprove = prove @(Not p)
 -- 'Type'@ instead of matchable type-level functions (that are @k ~>
 -- 'Type'@).
 --
+-- Mostly is in this library for compatiblity with "traditional" predicates
+-- that are GADT type constructors.
+--
 -- @since 0.1.1.0
 type DecidableTC p = Decidable (TyPred p)
 
@@ -290,6 +301,9 @@ decideTC = decide @(TyPred t)
 --
 -- Is essentially 'Provable', except with /type constructors/ @k -> 'Type'@
 -- instead of matchable type-level functions (that are @k ~> 'Type'@).
+--
+-- Mostly is in this library for compatiblity with "traditional" predicates
+-- that are GADT type constructors.
 --
 -- @since 0.1.1.0
 type ProvableTC  p = Provable  (TyPred p)

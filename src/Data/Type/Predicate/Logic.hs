@@ -71,10 +71,13 @@ data (|||) :: Predicate k -> Predicate k -> Predicate k
 type instance Apply (p ||| q) a = Either (p @@ a) (q @@ a)
 infixr 2 |||
 
+-- | Prefers @p@ over @q@.
 instance (Decidable p, Decidable q) => Decidable (p ||| q) where
     decide (x :: Sing a) = decideOr @p @q @a (decide @p x) (decide @q x)
 
 -- | Decide @p '|||' q@ based on decisions of @p@ and @q@.
+--
+-- Prefers @p@ over @q@.
 decideOr
     :: forall p q a. ()
     => Decision (p @@ a)
@@ -86,10 +89,14 @@ decideOr = \case
 
 -- | Left-biased "or".  In proofs, prioritize a proof of the left side over
 -- a proof of the right side.
+--
+-- @since 0.1.2.0
 type p ^|| q = p ||| Not p &&& q
 
 -- | Right-biased "or".  In proofs, prioritize a proof of the right side over
 -- a proof of the left side.
+--
+-- @since 0.1.2.0
 type p ||^ q = p &&& Not q ||| q
 
 -- | @p '^^^' q@ is a predicate that either @p@ and @q@ are true, but not

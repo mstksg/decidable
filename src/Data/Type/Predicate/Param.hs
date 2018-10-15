@@ -1,6 +1,7 @@
 {-# LANGUAGE ConstraintKinds      #-}
 {-# LANGUAGE FlexibleContexts     #-}
 {-# LANGUAGE FlexibleInstances    #-}
+{-# LANGUAGE GADTs                #-}
 {-# LANGUAGE LambdaCase           #-}
 {-# LANGUAGE ScopedTypeVariables  #-}
 {-# LANGUAGE TypeApplications     #-}
@@ -30,8 +31,11 @@ module Data.Type.Predicate.Param (
   , Selectable, select
   , Searchable, search
   , inPNotNull, notNullInP
+  -- * Combining
+  , OrP, OrPWit(..)
   ) where
 
+import           Data.Kind
 import           Data.Singletons
 import           Data.Singletons.Sigma
 import           Data.Type.Predicate
@@ -192,3 +196,27 @@ instance (Universe f, Decidable (Found p)) => Decidable (Found (AnyMatch f p)) w
     decide = mapDecision (\case WitAny i (x :&: p) -> x :&: WitAny i p  )
                          (\case x :&: WitAny i p   -> WitAny i (x :&: p))
            . decide @(Any f (Found p))
+
+-- data AndP :: ParamPred k v -> ParamPred k v -> ParamPred k v
+-- type instance Apply (AndP p q x) y = (p x &&& q x) @@ y
+
+-- data OrP :: ParamPred k v -> ParamPred k v -> ParamPred k v
+-- type instance Apply (OrP p q x) y = (p x ||| q x) @@ y
+
+data OrPWit :: ParamPred k v -> ParamPred k v -> k -> v -> Type where
+    OrPLeft  :: p x @@ y -> OrPWit p q x y
+    OrPRight :: q x @@ y -> OrPWit p q x y
+
+data OrP :: ParamPred k v -> ParamPred k v -> ParamPred k v
+type instance Apply (OrP p q x) y = OrPWit p q x y
+
+-- | Prefers @p@ over @q@.
+instance (Searchable p, Searchable q) => Decidable (Found (OrP p q)) where
+    decide (x :: Sing x) = case search @p x of
+      Proved (s :&: p) -> Proved $ s :&: OrPLeft p
+      Disproved vp     -> case search @q x of
+        Proved (s :&: q) -> Proved $ s :&: OrPRight q
+        Disproved vq     -> Disproved $ \case
+          s :&: OrPLeft  p -> vp (s :&: p)
+          s :&: OrPRight q -> vq (s :&: q)
+

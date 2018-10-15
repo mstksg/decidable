@@ -25,7 +25,7 @@ Version 0.1.2.0
     module documentation for a detailed list of new rules and classes in this
     version.
 *   Convenient combinators for dealing with `Refuted` and `Decision` added to
-    *Data.Type.Predicate*: `elimDisproof` and `mapRefuted.
+    *Data.Type.Predicate*: `elimDisproof` and `mapRefuted`.
 
 
 Version 0.1.1.0
