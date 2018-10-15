@@ -332,10 +332,10 @@ instance Provable Evident where
     prove = id
 
 instance (Decidable p, SingI f) => Decidable (PMap f p) where
-    decide = decide @p . ((sing :: Sing f) @@)
+    decide = decide @p . applySing (sing :: Sing f)
 
 instance (Provable p, SingI f) => Provable (PMap f p) where
-    prove = prove @p . ((sing :: Sing f) @@)
+    prove = prove @p . applySing (sing :: Sing f)
 
 -- | Compose two implications.
 compImpl

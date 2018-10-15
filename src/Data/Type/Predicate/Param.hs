@@ -32,11 +32,12 @@ module Data.Type.Predicate.Param (
   , Searchable, search
   , inPNotNull, notNullInP
   -- * Combining
-  , OrP, OrPWit(..)
+  , OrP, AndP
   ) where
 
 import           Data.Kind
 import           Data.Singletons
+import           Data.Singletons.Prelude.Tuple
 import           Data.Singletons.Sigma
 import           Data.Type.Predicate
 import           Data.Type.Predicate.Logic
@@ -197,26 +198,39 @@ instance (Universe f, Decidable (Found p)) => Decidable (Found (AnyMatch f p)) w
                          (\case x :&: WitAny i p   -> WitAny i (x :&: p))
            . decide @(Any f (Found p))
 
--- data AndP :: ParamPred k v -> ParamPred k v -> ParamPred k v
--- type instance Apply (AndP p q x) y = (p x &&& q x) @@ y
-
--- data OrP :: ParamPred k v -> ParamPred k v -> ParamPred k v
--- type instance Apply (OrP p q x) y = (p x ||| q x) @@ y
-
-data OrPWit :: ParamPred k v -> ParamPred k v -> k -> v -> Type where
-    OrPLeft  :: p x @@ y -> OrPWit p q x y
-    OrPRight :: q x @@ y -> OrPWit p q x y
-
+-- | Disjunction on two 'ParamPred's, with appropriate 'Searchable'
+-- instance.  Priority is given to the left predicate.
+--
+-- @since 0.1.3.0
 data OrP :: ParamPred k v -> ParamPred k v -> ParamPred k v
-type instance Apply (OrP p q x) y = OrPWit p q x y
+type instance Apply (OrP p q x) y = (p x ||| q x) @@ y
 
--- | Prefers @p@ over @q@.
+-- | Conjunction on two 'ParamPred's, with appropriate 'Searchable' and
+-- 'Selectable' instances. 
+--
+-- @since 0.1.3.0
+data AndP :: ParamPred k v -> ParamPred k u -> ParamPred k (v, u)
+type instance Apply (AndP p q x) '(y, z) = (p x @@ y, q x @@ z)
+
 instance (Searchable p, Searchable q) => Decidable (Found (OrP p q)) where
-    decide (x :: Sing x) = case search @p x of
-      Proved (s :&: p) -> Proved $ s :&: OrPLeft p
+    decide x = case search @p x of
+      Proved (s :&: p) -> Proved $ s :&: Left p
       Disproved vp     -> case search @q x of
-        Proved (s :&: q) -> Proved $ s :&: OrPRight q
+        Proved (s :&: q) -> Proved $ s :&: Right q
         Disproved vq     -> Disproved $ \case
-          s :&: OrPLeft  p -> vp (s :&: p)
-          s :&: OrPRight q -> vq (s :&: q)
-
+          s :&: Left  p -> vp (s :&: p)
+          s :&: Right q -> vq (s :&: q)
+    
+instance (Searchable p, Searchable q) => Decidable (Found (AndP p q)) where
+    decide x = case search @p x of
+      Proved (s :&: p) -> case search @q x of
+        Proved (t :&: q) -> Proved $ STuple2 s t :&: (p, q)
+        Disproved vq     -> Disproved $ \case
+          STuple2 _ t :&: (_, q) -> vq $ t :&: q
+      Disproved vp     -> Disproved $ \case
+        STuple2 s _ :&: (p, _) -> vp $ s :&: p
+    
+instance (Selectable p, Selectable q) => Provable (Found (AndP p q)) where
+    prove x = case select @p x of
+        s :&: p -> case select @q x of
+          t :&: q -> STuple2 s t :&: (p, q)

@@ -89,7 +89,7 @@ data WitAny f :: (k ~> Type) -> f k -> Type where
 --
 -- This is mostly useful for its 'Decidable' and 'TFunctor' instances,
 -- which lets you lift predicates on @p@ to predicates on @'Any' f p@.
-data Any f :: (k ~> Type) -> (f k ~> Type)
+data Any f :: Predicate k -> Predicate (f k)
 type instance Apply (Any f p) as = WitAny f p as
 
 -- | A @'WitAll' p as@ is a witness that the predicate @p a@ is true for all
@@ -103,7 +103,7 @@ newtype WitAll f p (as :: f k) = WitAll { runWitAll :: forall a. Elem f as a -> 
 -- This is mostly useful for its 'Decidable', 'Provable', and 'TFunctor'
 -- instances, which lets you lift predicates on @p@ to predicates on @'All'
 -- f p@.
-data All f :: (k ~> Type) -> (f k ~> Type)
+data All f :: Predicate k -> Predicate (f k)
 type instance Apply (All f p) as = WitAll f p as
 
 instance (Universe f, Decidable p) => Decidable (Any f p) where

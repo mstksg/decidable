@@ -209,11 +209,9 @@ atom = const
 excludedMiddle :: (p &&& Not p) --> Impossible
 excludedMiddle _ (p, notP) _ = notP p
 
--- | If only this worked, but darn overlapping instances.  Same for p ==>
--- p ||| q and p &&& q ==> p :(
--- q) ==>
--- instance Provable (p &&& Not p ==> Impossible) where
---     prove = excludedMiddle @p
+-- | @since 0.1.3.0
+instance {-# OVERLAPPING #-} Provable (p &&& Not p ==> Impossible) where
+    prove = excludedMiddle @p
 
 -- | If p implies q, then not q implies not p.
 contrapositive
