@@ -108,6 +108,10 @@ type Evident = (TyPred Sing :: Predicate k)
 
 -- | <tt><a>EqualTo</a> a</tt> is a predicate that the input is equal to
 --   <tt>a</tt>.
+--   
+--   <pre>
+--   <a>EqualTo</a> :: k -&gt; <a>Predicate</a> k
+--   </pre>
 type EqualTo (a :: k) = (TyPred ((:~:) a) :: Predicate k)
 
 -- | Convert a tradtional <tt>k ~&gt; <a>Bool</a></tt> predicate into a
@@ -122,6 +126,10 @@ type BoolPred (p :: k ~> Bool) = (EqualTo  'True .@#@$$$ p :: Predicate k)
 --   
 --   Could also be defined as <tt><a>ConstSym1</a> Void</tt>, but this
 --   defintion gives us a free <a>Decidable</a> instance.
+--   
+--   <pre>
+--   <a>Impossible</a> :: <a>Predicate</a> k
+--   </pre>
 type Impossible = (Not Evident :: Predicate k)
 
 -- | Pre-compose a function to a predicate
@@ -207,6 +215,9 @@ disprove :: forall p. Disprovable p => Prove (Not p)
 --   Is essentially <a>Provable</a>, except with <i>type constructors</i>
 --   <tt>k -&gt; <a>Type</a></tt> instead of matchable type-level functions
 --   (that are <tt>k ~&gt; <a>Type</a></tt>).
+--   
+--   Mostly is in this library for compatiblity with "traditional"
+--   predicates that are GADT type constructors.
 type ProvableTC p = Provable (TyPred p)
 
 -- | The canonical proving function for <tt><a>DecidableTC</a> t</tt>.
@@ -288,6 +299,9 @@ decide :: (Decidable p, Provable p) => Decide p
 --   Is essentially <a>Decidable</a>, except with <i>type constructors</i>
 --   <tt>k -&gt; <a>Type</a></tt> instead of matchable type-level functions
 --   (that are <tt>k ~&gt; <a>Type</a></tt>).
+--   
+--   Mostly is in this library for compatiblity with "traditional"
+--   predicates that are GADT type constructors.
 type DecidableTC p = Decidable (TyPred p)
 
 -- | The canonical deciding function for <tt><a>DecidableTC</a> t</tt>.
@@ -364,6 +378,10 @@ type Evident = (TyPred Sing :: Predicate k)
 --   
 --   Could also be defined as <tt><a>ConstSym1</a> Void</tt>, but this
 --   defintion gives us a free <a>Decidable</a> instance.
+--   
+--   <pre>
+--   <a>Impossible</a> :: <a>Predicate</a> k
+--   </pre>
 type Impossible = (Not Evident :: Predicate k)
 
 -- | <tt><a>Not</a> p</tt> is the predicate that <tt>p</tt> is not true.
@@ -388,6 +406,8 @@ infixr 2 |||
 
 -- | Decide <tt>p <a>|||</a> q</tt> based on decisions of <tt>p</tt> and
 --   <tt>q</tt>.
+--   
+--   Prefers <tt>p</tt> over <tt>q</tt>.
 decideOr :: forall p q a. () => Decision (p @@ a) -> Decision (q @@ a) -> Decision ((p ||| q) @@ a)
 
 -- | Left-biased "or". In proofs, prioritize a proof of the left side over
@@ -1030,6 +1050,11 @@ inPNotNull :: Found (InP f) --> NotNull f
 -- | <tt><a>NotNull</a> f</tt> is basically <tt><a>Found</a> (<a>InP</a>
 --   f)</tt>.
 notNullInP :: NotNull f --> Found (InP f)
+data OrP :: ParamPred k v -> ParamPred k v -> ParamPred k v
+data OrPWit :: ParamPred k v -> ParamPred k v -> k -> v -> Type
+[OrPLeft] :: (p x @@ y) -> OrPWit p q x y
+[OrPRight] :: (q x @@ y) -> OrPWit p q x y
+instance forall k1 v (p :: Data.Type.Predicate.Param.ParamPred k1 v) (q :: Data.Type.Predicate.Param.ParamPred k1 v). (Data.Type.Predicate.Param.Searchable p, Data.Type.Predicate.Param.Searchable q) => Data.Type.Predicate.Decidable (Data.Type.Predicate.Param.Found (Data.Type.Predicate.Param.OrP p q))
 instance forall k v (f :: * -> *) (p :: Data.Type.Predicate.Param.ParamPred k v). (Data.Type.Universe.Universe f, Data.Type.Predicate.Decidable (Data.Type.Predicate.Param.Found p)) => Data.Type.Predicate.Decidable (Data.Type.Predicate.Param.Found (Data.Type.Predicate.Param.AnyMatch f p))
 instance Data.Type.Universe.Universe f => Data.Type.Predicate.Decidable (Data.Type.Predicate.Param.Found (Data.Type.Predicate.Param.InP f))
 instance Data.Type.Predicate.Decidable (Data.Type.Universe.NotNull f Data.Type.Predicate.Logic.==> Data.Type.Predicate.Param.Found (Data.Type.Predicate.Param.InP f))
