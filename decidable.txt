@@ -476,12 +476,7 @@ excludedMiddle :: (p &&& Not p) --> Impossible
 --   <a>Decidable</a>.
 doubleNegation :: forall p. Decidable p => Not (Not p) --> p
 
--- | If only this worked, but darn overlapping instances. Same for p ==&gt;
---   p ||| q and p &amp;&amp;&amp; q ==&gt; p :( q) ==&gt; instance
---   Provable (p &amp;&amp;&amp; Not p ==&gt; Impossible) where prove =
---   excludedMiddle @p
---   
---   If p implies q, then not q implies not p.
+-- | If p implies q, then not q implies not p.
 contrapositive :: (p --> q) -> Not q --> Not p
 
 -- | Reverse direction of <a>contrapositive</a>. Only possible if
@@ -516,6 +511,7 @@ instance forall k1 (q :: Data.Type.Predicate.Predicate k1) (p :: Data.Type.Predi
 instance forall k1 (q :: Data.Type.Predicate.Predicate k1) (p :: Data.Type.Predicate.Predicate k1). Data.Type.Predicate.Provable (q Data.Type.Predicate.Logic.==> (p Data.Type.Predicate.Logic.||| q))
 instance forall k1 (p :: Data.Type.Predicate.Predicate k1). Data.Type.Predicate.Decidable (p Data.Type.Predicate.Logic.==> (p Data.Type.Predicate.Logic.||| p))
 instance forall k1 (p :: Data.Type.Predicate.Predicate k1). Data.Type.Predicate.Provable (p Data.Type.Predicate.Logic.==> (p Data.Type.Predicate.Logic.||| p))
+instance forall k1 (p :: Data.Type.Predicate.Predicate k1). Data.Type.Predicate.Provable ((p Data.Type.Predicate.Logic.&&& Data.Type.Predicate.Not p) Data.Type.Predicate.Logic.==> Data.Type.Predicate.Impossible)
 instance forall k1 (p :: k1 Data.Singletons.Internal.~> *) (q :: k1 Data.Singletons.Internal.~> *). (Data.Type.Predicate.Decidable p, Data.Type.Predicate.Decidable q) => Data.Type.Predicate.Decidable (p Data.Type.Predicate.Logic.||| q)
 instance forall k1 (p :: k1 Data.Singletons.Internal.~> *) (q :: k1 Data.Singletons.Internal.~> *). (Data.Type.Predicate.Decidable p, Data.Type.Predicate.Decidable q) => Data.Type.Predicate.Decidable (p Data.Type.Predicate.Logic.&&& q)
 instance forall k1 (p :: k1 Data.Singletons.Internal.~> *) (q :: k1 Data.Singletons.Internal.~> *). (Data.Type.Predicate.Provable p, Data.Type.Predicate.Provable q) => Data.Type.Predicate.Provable (p Data.Type.Predicate.Logic.&&& q)
@@ -581,7 +577,7 @@ data CompElem :: (f :.: g) k -> k -> Type
 --   This is mostly useful for its <a>Decidable</a>, <a>Provable</a>, and
 --   <a>TFunctor</a> instances, which lets you lift predicates on
 --   <tt>p</tt> to predicates on <tt><a>All</a> f p</tt>.
-data All f :: (k ~> Type) -> (f k ~> Type)
+data All f :: Predicate k -> Predicate (f k)
 
 -- | A <tt><a>WitAll</a> p as</tt> is a witness that the predicate <tt>p
 --   a</tt> is true for all items <tt>a</tt> in the type-level collection
@@ -603,7 +599,7 @@ type NotAll f p = (Not (All f p) :: Predicate (f k))
 --   This is mostly useful for its <a>Decidable</a> and <a>TFunctor</a>
 --   instances, which lets you lift predicates on <tt>p</tt> to predicates
 --   on <tt><a>Any</a> f p</tt>.
-data Any f :: (k ~> Type) -> (f k ~> Type)
+data Any f :: Predicate k -> Predicate (f k)
 
 -- | A <tt><a>WitAny</a> p as</tt> is a witness that, for at least one item
 --   <tt>a</tt> in the type-level collection <tt>as</tt>, the predicate
@@ -771,7 +767,7 @@ module Data.Type.Predicate.Quantification
 --   This is mostly useful for its <a>Decidable</a> and <a>TFunctor</a>
 --   instances, which lets you lift predicates on <tt>p</tt> to predicates
 --   on <tt><a>Any</a> f p</tt>.
-data Any f :: (k ~> Type) -> (f k ~> Type)
+data Any f :: Predicate k -> Predicate (f k)
 
 -- | A <tt><a>WitAny</a> p as</tt> is a witness that, for at least one item
 --   <tt>a</tt> in the type-level collection <tt>as</tt>, the predicate
@@ -860,7 +856,7 @@ compAll :: (All (f :.: g) p @@  'Comp as) -> All f (All g p) @@ as
 --   This is mostly useful for its <a>Decidable</a>, <a>Provable</a>, and
 --   <a>TFunctor</a> instances, which lets you lift predicates on
 --   <tt>p</tt> to predicates on <tt><a>All</a> f p</tt>.
-data All f :: (k ~> Type) -> (f k ~> Type)
+data All f :: Predicate k -> Predicate (f k)
 
 -- | A <tt><a>WitAll</a> p as</tt> is a witness that the predicate <tt>p
 --   a</tt> is true for all items <tt>a</tt> in the type-level collection
@@ -1050,10 +1046,16 @@ inPNotNull :: Found (InP f) --> NotNull f
 -- | <tt><a>NotNull</a> f</tt> is basically <tt><a>Found</a> (<a>InP</a>
 --   f)</tt>.
 notNullInP :: NotNull f --> Found (InP f)
+
+-- | Disjunction on two <a>ParamPred</a>s, with appropriate
+--   <a>Searchable</a> instance. Priority is given to the left predicate.
 data OrP :: ParamPred k v -> ParamPred k v -> ParamPred k v
-data OrPWit :: ParamPred k v -> ParamPred k v -> k -> v -> Type
-[OrPLeft] :: (p x @@ y) -> OrPWit p q x y
-[OrPRight] :: (q x @@ y) -> OrPWit p q x y
+
+-- | Conjunction on two <a>ParamPred</a>s, with appropriate
+--   <a>Searchable</a> and <a>Selectable</a> instances.
+data AndP :: ParamPred k v -> ParamPred k u -> ParamPred k (v, u)
+instance forall u k1 v (p :: Data.Type.Predicate.Param.ParamPred k1 v) (q :: Data.Type.Predicate.Param.ParamPred k1 u). (Data.Type.Predicate.Param.Searchable p, Data.Type.Predicate.Param.Searchable q) => Data.Type.Predicate.Decidable (Data.Type.Predicate.Param.Found (Data.Type.Predicate.Param.AndP p q))
+instance forall u k1 v (p :: Data.Type.Predicate.Param.ParamPred k1 v) (q :: Data.Type.Predicate.Param.ParamPred k1 u). (Data.Type.Predicate.Param.Selectable p, Data.Type.Predicate.Param.Selectable q) => Data.Type.Predicate.Provable (Data.Type.Predicate.Param.Found (Data.Type.Predicate.Param.AndP p q))
 instance forall k1 v (p :: Data.Type.Predicate.Param.ParamPred k1 v) (q :: Data.Type.Predicate.Param.ParamPred k1 v). (Data.Type.Predicate.Param.Searchable p, Data.Type.Predicate.Param.Searchable q) => Data.Type.Predicate.Decidable (Data.Type.Predicate.Param.Found (Data.Type.Predicate.Param.OrP p q))
 instance forall k v (f :: * -> *) (p :: Data.Type.Predicate.Param.ParamPred k v). (Data.Type.Universe.Universe f, Data.Type.Predicate.Decidable (Data.Type.Predicate.Param.Found p)) => Data.Type.Predicate.Decidable (Data.Type.Predicate.Param.Found (Data.Type.Predicate.Param.AnyMatch f p))
 instance Data.Type.Universe.Universe f => Data.Type.Predicate.Decidable (Data.Type.Predicate.Param.Found (Data.Type.Predicate.Param.InP f))
@@ -1199,7 +1201,7 @@ instance forall a1 (p :: Data.Type.Predicate.Predicate a1) (a2 :: a1). Data.Type
 instance forall k j (p :: Data.Type.Predicate.Predicate k) (e :: j). Data.Type.Predicate.Auto.AutoAll (Data.Either.Either j) p ('Data.Either.Left e)
 instance forall b (p :: Data.Type.Predicate.Predicate b) (a :: b) j. Data.Type.Predicate.Auto.Auto p a => Data.Type.Predicate.Auto.AutoAll (Data.Either.Either j) p ('Data.Either.Right a)
 instance forall a1 (p :: Data.Type.Predicate.Predicate a1) (a2 :: a1) (as :: [a1]). (Data.Type.Predicate.Auto.Auto p a2, Data.Type.Predicate.Auto.AutoAll [] p as) => Data.Type.Predicate.Auto.AutoAll GHC.Base.NonEmpty p (a2 'GHC.Base.:| as)
-instance forall a (f :: * -> *) (g :: * -> *) (p :: a Data.Singletons.Internal.~> *) (ass :: f (g a)). Data.Type.Predicate.Auto.AutoAll f (Data.Type.Universe.All g p) ass => Data.Type.Predicate.Auto.AutoAll (f Data.Type.Universe.:.: g) p ('Data.Type.Universe.Comp ass)
+instance forall a (f :: * -> *) (g :: * -> *) (p :: Data.Type.Predicate.Predicate a) (ass :: f (g a)). Data.Type.Predicate.Auto.AutoAll f (Data.Type.Universe.All g p) ass => Data.Type.Predicate.Auto.AutoAll (f Data.Type.Universe.:.: g) p ('Data.Type.Universe.Comp ass)
 instance forall k (p :: Data.Type.Predicate.Predicate k) (a :: k) j (w :: j). Data.Type.Predicate.Auto.Auto p a => Data.Type.Predicate.Auto.AutoAll ((,) j) p '(w, a)
 instance forall k (f :: * -> *) (p :: Data.Type.Predicate.Predicate k) (as :: f k). Data.Type.Predicate.Auto.AutoAll f p as => Data.Type.Predicate.Auto.Auto (Data.Type.Universe.All f p) as
 instance forall k (f :: * -> *) (as :: f k) (p :: Data.Type.Predicate.Predicate k). (Data.Singletons.Internal.SingI as, Data.Type.Predicate.Auto.AutoAll f (Data.Type.Predicate.Not p) as) => Data.Type.Predicate.Auto.Auto (Data.Type.Predicate.Not (Data.Type.Universe.Any f p)) as
