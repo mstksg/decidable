@@ -1,6 +1,19 @@
 Changelog
 =========
 
+Version 0.1.3.0
+---------------
+
+*Unreleased*
+
+<https://github.com/mstksg/decidable/releases/tag/v0.1.3.0>
+
+*   Added a type and `Universe` for universe disjunction or summing, `:+:`,
+    with appropriate `Elem` and `Auto` instances.
+*   Added `Universe` instances (and appropriate `Elem` and `Auto` instances)
+    for `Proxy` (the null universe) and `Identity`.
+*   `Auto` instances for `IsNothing` and `IsLeft`.
+
 Version 0.1.2.0
 ---------------
 

@@ -491,6 +491,7 @@ instance Provable (Not (TyPred (IProxy 'Proxy))) where
 
 type instance Elem Proxy = IProxy
 
+-- | The null universe
 instance Universe Proxy where
     idecideAny _ _ = Disproved $ \case
         WitAny i _ -> case i of {}
