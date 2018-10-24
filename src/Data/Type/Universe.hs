@@ -33,7 +33,7 @@ module Data.Type.Universe (
     Elem, In, Universe(..)
   -- ** Instances
   , Index(..), IJust(..), IRight(..), NEIndex(..), ISnd(..), IProxy, IIdentity(..)
-  , CompElem(..)
+  , CompElem(..), SumElem(..)
   -- ** Predicates
   , All, WitAll(..), NotAll
   , Any, WitAny(..), None
@@ -43,9 +43,13 @@ module Data.Type.Universe (
   -- * Decisions and manipulations
   , decideAny, decideAll, genAllA, genAll, igenAll
   , foldMapUni, ifoldMapUni, index, pickElem
-  -- * Universe Composition
-  , (:.:)(..), Sing(SComp), sGetComp, GetComp
+  -- * Universe Combination
+  , Sing (SComp, SInL, SInR)
+  -- ** Universe Composition
+  , (:.:)(..), sGetComp, GetComp
   , allComp, compAll, anyComp, compAny
+  -- ** Universe Disjunction
+  , (:+:)(..)
   -- * Defunctionalization symbols
   , ElemSym0, ElemSym1, ElemSym2, GetCompSym0, GetCompSym1
   ) where
@@ -480,9 +484,9 @@ instance Universe ((,) j) where
 -- @since 0.1.3.0
 data IProxy :: Proxy k -> k -> Type
 
-deriving instance Show (IProxy as a)
+deriving instance Show (IProxy 'Proxy a)
 
-instance Provable (Not (TyPred (IProxy as))) where
+instance Provable (Not (TyPred (IProxy 'Proxy))) where
     prove _ = \case {}
 
 type instance Elem Proxy = IProxy
@@ -633,3 +637,77 @@ allComp a = WitAll $ \(i :? j) -> runWitAll (runWitAll a i) j
 -- @since 0.1.2.0
 compAll :: All (f :.: g) p @@ 'Comp as -> All f (All g p) @@ as
 compAll a = WitAll $ \i -> WitAll $ \j -> runWitAll a (i :? j)
+
+-- | Disjoint union of two Functors.  Is the same as 'Data.Functor.Sum.Sum'
+-- and 'GHC.Generics.:+:', except with a singleton and meant to be used at
+-- the type level.  Will be redundant if either of the above gets brought
+-- into the singletons library.
+--
+-- Note that because this is a higher-kinded data constructor, there is no
+-- 'SingKind'  instance; if you need 'fromSing' and 'toSing', consider
+-- manually pattern matching.
+--
+-- @since 0.1.3.0
+data (f :+: g) a = InL (f a)
+                 | InR (g a)
+    deriving (Show, Eq, Ord, Functor, Foldable, Typeable, Generic)
+deriving instance (Traversable f, Traversable g) => Traversable (f :+: g)
+
+data instance Sing (k :: (f :+: g) a) where
+    SInL :: Sing x -> Sing ('InL x)
+    SInR :: Sing y -> Sing ('InR y)
+
+type family FromL s where
+    FromL ('InL a) = a
+
+-- | Index into a disjoint union by providing an index into one of the two
+-- possible options.
+--
+-- @since 0.1.3.0
+data SumElem :: (f :+: g) k -> k -> Type where
+    IInL :: Elem f as a -> SumElem ('InL as) a
+    IInR :: Elem f bs b -> SumElem ('InR bs) b
+
+type instance Elem (f :+: g) = SumElem
+
+instance (Universe f, Universe g) => Universe (f :+: g) where
+    idecideAny
+        :: forall k (p :: k ~> Type) (abs :: (f :+: g) k). ()
+        => (forall ab. Elem (f :+: g) abs ab -> Sing ab -> Decision (p @@ ab))
+        -> Sing abs
+        -> Decision (Any (f :+: g) p @@ abs)
+    idecideAny f = \case
+      SInL xs -> mapDecision (\case WitAny i x -> WitAny (IInL i) x)
+                             (\case WitAny i x -> case i of
+                                      IInL i' -> WitAny i' x
+                             )
+               $ idecideAny @f @_ @p (\i -> f (IInL i)) xs
+      SInR ys -> mapDecision (\case WitAny j y -> WitAny (IInR j) y)
+                             (\case WitAny j y -> case j of
+                                      IInR j' -> WitAny j' y
+                             )
+               $ idecideAny @g @_ @p (\j -> f (IInR j)) ys
+
+    idecideAll
+        :: forall k (p :: k ~> Type) (abs :: (f :+: g) k). ()
+        => (forall ab. Elem (f :+: g) abs ab -> Sing ab -> Decision (p @@ ab))
+        -> Sing abs
+        -> Decision (All (f :+: g) p @@ abs)
+    idecideAll f = \case
+      SInL xs -> mapDecision (\a -> WitAll $ \case IInL i -> runWitAll a i)
+                             (\a -> WitAll $ runWitAll a . IInL)
+               $ idecideAll @f @_ @p (\i -> f (IInL i)) xs
+      SInR xs -> mapDecision (\a -> WitAll $ \case IInR i -> runWitAll a i)
+                             (\a -> WitAll $ runWitAll a . IInR)
+               $ idecideAll @g @_ @p (\j -> f (IInR j)) xs
+
+    igenAllA
+        :: forall k (p :: k ~> Type) (abs :: (f :+: g) k) h. Applicative h
+        => (forall ab. Elem (f :+: g) abs ab -> Sing ab -> h (p @@ ab))
+        -> Sing abs
+        -> h (All (f :+: g) p @@ abs)
+    igenAllA f = \case
+      SInL xs -> (\a -> WitAll $ \case IInL i -> runWitAll a i)
+             <$> igenAllA @f @_ @p (\i -> f (IInL i)) xs
+      SInR xs -> (\a -> WitAll $ \case IInR j -> runWitAll a j)
+             <$> igenAllA @g @_ @p (\j -> f (IInR j)) xs

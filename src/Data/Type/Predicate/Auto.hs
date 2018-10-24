@@ -170,9 +170,14 @@ instance AutoElem ((,) j) '(w, a) a where
 -- TODO: ???
 -- instance AutoElem (f :.: g) p ('Comp ass) where
 
--- | @since 0.1.2.0
 instance AutoElem Identity ('Identity a) a where
     autoElem = IId
+
+instance AutoElem f as a => AutoElem (f :+: g) ('InL as) a where
+    autoElem = IInL autoElem
+
+instance AutoElem g bs b => AutoElem (f :+: g) ('InR bs) b where
+    autoElem = IInR autoElem
 
 instance AutoElem f as a => Auto (In f as) a where
     auto = autoElem @f @as @a
@@ -221,6 +226,18 @@ instance AutoAll f (All g p) ass => AutoAll (f :.: g) p ('Comp ass) where
 instance Auto p a => AutoAll ((,) j) p '(w, a) where
     autoAll = WitAll $ \case ISnd -> auto @_ @p @a
 
+instance AutoAll Proxy p 'Proxy where
+    autoAll = WitAll $ \case {}
+
+instance Auto p a => AutoAll Identity p ('Identity a) where
+    autoAll = WitAll $ \case IId -> auto @_ @p @a
+
+instance AutoAll f p as => AutoAll (f :+: g) p ('InL as) where
+    autoAll = WitAll $ \case IInL i -> runWitAll (autoAll @f @p @as) i
+
+instance AutoAll g p bs => AutoAll (f :+: g) p ('InR bs) where
+    autoAll = WitAll $ \case IInR j -> runWitAll (autoAll @g @p @bs) j
+
 -- | @since 0.1.2.0
 instance AutoAll f p as => Auto (All f p) as where
     auto = autoAll @f @p @as
@@ -233,9 +250,17 @@ instance SingI a => Auto (NotNull []) (a ': as) where
 instance SingI a => Auto IsJust ('Just a) where
     auto = WitAny IJust sing
 
+-- | @since 0.1.3.0
+instance Auto IsNothing 'Nothing where
+    auto = \case WitAny i _ -> case i of {}
+
 -- | @since 0.1.2.0
 instance SingI a => Auto IsRight ('Right a) where
     auto = WitAny IRight sing
+
+-- | @since 0.1.3.0
+instance Auto IsLeft ('Left a) where
+    auto = \case WitAny i _ -> case i of {}
 
 -- | @since 0.1.2.0
 instance SingI a => Auto (NotNull NonEmpty) (a ':| as) where
@@ -244,6 +269,20 @@ instance SingI a => Auto (NotNull NonEmpty) (a ':| as) where
 -- | @since 0.1.2.0
 instance SingI a => Auto (NotNull ((,) j)) '(w, a) where
     auto = WitAny ISnd sing
+
+instance Auto (Null Proxy) 'Proxy where
+    auto = \case WitAny i _ -> case i of {}
+
+instance SingI a => Auto (NotNull Identity) ('Identity a) where
+    auto = WitAny IId sing
+
+instance Auto (NotNull f) as => Auto (NotNull (f :+: g)) ('InL as) where
+    auto = case auto @_ @(NotNull f) @as of
+      WitAny i xs -> WitAny (IInL i) xs
+
+instance Auto (NotNull g) bs => Auto (NotNull (f :+: g)) ('InR bs) where
+    auto = case auto @_ @(NotNull g) @bs of
+      WitAny i ys -> WitAny (IInR i) ys
 
 -- | An @'AutoNot' p a@ constraint means that @p \@\@ a@ can be proven to not be
 -- true at compiletime.
