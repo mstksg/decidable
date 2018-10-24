@@ -1,5 +1,5 @@
 name:                decidable
-version:             0.1.2.0
+version:             0.1.3.0
 github:              "mstksg/decidable"
 license:             BSD3
 author:              "Justin Le"
@@ -26,6 +26,7 @@ ghc-options:
 - -Wall
 - -Wredundant-constraints
 - -Wcompat
+- -Werror=incomplete-patterns
 
 dependencies:
 - base >= 4.11 && < 5

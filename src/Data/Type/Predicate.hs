@@ -150,7 +150,7 @@ type EqualTo (a :: k) = (TyPred ((:~:) a) :: Predicate k)
 -- @
 -- 'BoolPred' :: (k ~> Bool) -> Predicate k
 -- @
-type BoolPred (p :: k ~> Bool) = (EqualTo 'True .@#@$$$ p :: Predicate k)
+type BoolPred (p :: k ~> Bool) = (PMap p (EqualTo 'True) :: Predicate k)
 
 -- | Pre-compose a function to a predicate
 --

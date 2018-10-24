@@ -25,8 +25,8 @@
 -- Stability   : experimental
 -- Portability : non-portable
 --
--- Combinators for working with type-level predicates, along with
--- typeclasses for canonical proofs and deciding functions.
+-- A type family for "containers", intended for allowing lifting of
+-- predicates on @k@ to be predicates on containers @f k@.
 --
 module Data.Type.Universe (
   -- * Universe
@@ -54,10 +54,12 @@ import           Control.Applicative
 import           Data.Functor.Identity
 import           Data.Kind
 import           Data.List.NonEmpty                    (NonEmpty(..))
+import           Data.Proxy
 import           Data.Singletons
 import           Data.Singletons.Decide
 import           Data.Singletons.Prelude hiding        (Elem, ElemSym0, ElemSym1, ElemSym2, Any, All, Null, Not)
 import           Data.Type.Predicate
+import           Data.Singletons.Prelude.Identity
 import           Data.Type.Predicate.Logic
 import           Data.Typeable                         (Typeable)
 import           GHC.Generics                          (Generic)
@@ -472,6 +474,46 @@ instance Universe ((,) j) where
       Disproved v -> Disproved $ \a -> v $ runWitAll a ISnd
 
     igenAllA f (STuple2 _ x) = (\p -> WitAll $ \case ISnd -> p) <$> f ISnd x
+
+-- | There are no items of type @a@ in a @'Proxy' a@.
+--
+-- @since 0.1.3.0
+data IProxy :: Proxy k -> k -> Type
+
+deriving instance Show (IProxy as a)
+
+instance Provable (Not (TyPred (IProxy as))) where
+    prove _ = \case {}
+
+type instance Elem Proxy = IProxy
+
+instance Universe Proxy where
+    idecideAny _ _ = Disproved $ \case
+        WitAny i _ -> case i of {}
+    idecideAll _ _ = Proved $ WitAll $ \case {}
+    igenAllA   _ _ = pure $ WitAll $ \case {}
+
+-- | Trivially witness the item held in an 'Identity'.
+--
+-- @since 0.1.3.0
+data IIdentity :: Identity k -> k -> Type where
+    IId :: IIdentity ('Identity x) x
+
+deriving instance Show (IIdentity as a)
+
+instance (SingI (as :: Identity k), SDecide k) => Decidable (TyPred (IIdentity as)) where
+    decide x = withSingI x $ pickElem
+
+type instance Elem Identity = IIdentity
+
+instance Universe Identity where
+    idecideAny f (SIdentity x) = mapDecision (WitAny IId)
+                                             (\case WitAny IId p -> p)
+                               $ f IId x
+    idecideAll f (SIdentity x) = mapDecision (\p -> WitAll $ \case IId -> p)
+                                             (\a -> runWitAll a IId)
+                               $ f IId x
+    igenAllA f (SIdentity x) = (\p -> WitAll $ \case IId -> p) <$> f IId x
 
 -- | Compose two Functors.  Is the same as 'Data.Functor.Compose.Compose'
 -- and 'GHC.Generics.:.:', except with a singleton and meant to be used at
