@@ -32,7 +32,7 @@ module Data.Type.Universe (
   -- * Universe
     Elem, In, Universe(..)
   -- ** Instances
-  , Index(..), IJust(..), IRight(..), NEIndex(..), ISnd(..)
+  , Index(..), IJust(..), IRight(..), NEIndex(..), ISnd(..), IProxy, IIdentity(..)
   , CompElem(..)
   -- ** Predicates
   , All, WitAll(..), NotAll

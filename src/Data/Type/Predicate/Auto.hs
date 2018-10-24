@@ -38,6 +38,7 @@ module Data.Type.Predicate.Auto (
   , autoAny, autoNotAll
   ) where
 
+import           Data.Functor.Identity
 import           Data.List.NonEmpty                 (NonEmpty(..))
 import           Data.Singletons
 import           Data.Singletons.Sigma
@@ -168,6 +169,10 @@ instance AutoElem ((,) j) '(w, a) a where
 
 -- TODO: ???
 -- instance AutoElem (f :.: g) p ('Comp ass) where
+
+-- | @since 0.1.2.0
+instance AutoElem Identity ('Identity a) a where
+    autoElem = IId
 
 instance AutoElem f as a => Auto (In f as) a where
     auto = autoElem @f @as @a
