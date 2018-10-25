@@ -1,20 +1,21 @@
-{-# LANGUAGE DeriveDataTypeable   #-}
-{-# LANGUAGE DeriveFunctor        #-}
-{-# LANGUAGE DeriveGeneric        #-}
-{-# LANGUAGE DeriveTraversable    #-}
-{-# LANGUAGE EmptyCase            #-}
-{-# LANGUAGE FlexibleInstances    #-}
-{-# LANGUAGE GADTs                #-}
-{-# LANGUAGE InstanceSigs         #-}
-{-# LANGUAGE LambdaCase           #-}
-{-# LANGUAGE RankNTypes           #-}
-{-# LANGUAGE ScopedTypeVariables  #-}
-{-# LANGUAGE StandaloneDeriving   #-}
-{-# LANGUAGE TemplateHaskell      #-}
-{-# LANGUAGE TypeApplications     #-}
-{-# LANGUAGE TypeFamilies         #-}
-{-# LANGUAGE TypeInType           #-}
-{-# LANGUAGE TypeOperators        #-}
+{-# LANGUAGE CPP                 #-}
+{-# LANGUAGE DeriveDataTypeable  #-}
+{-# LANGUAGE DeriveFunctor       #-}
+{-# LANGUAGE DeriveGeneric       #-}
+{-# LANGUAGE DeriveTraversable   #-}
+{-# LANGUAGE EmptyCase           #-}
+{-# LANGUAGE FlexibleInstances   #-}
+{-# LANGUAGE GADTs               #-}
+{-# LANGUAGE InstanceSigs        #-}
+{-# LANGUAGE LambdaCase          #-}
+{-# LANGUAGE RankNTypes          #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving  #-}
+{-# LANGUAGE TemplateHaskell     #-}
+{-# LANGUAGE TypeApplications    #-}
+{-# LANGUAGE TypeFamilies        #-}
+{-# LANGUAGE TypeInType          #-}
+{-# LANGUAGE TypeOperators       #-}
 
 -- |
 -- Module      : Data.Type.Universe
@@ -63,12 +64,18 @@ import           Data.Singletons
 import           Data.Singletons.Decide
 import           Data.Singletons.Prelude hiding        (Elem, ElemSym0, ElemSym1, ElemSym2, Any, All, Null, Not)
 import           Data.Type.Predicate
-import           Data.Singletons.Prelude.Identity
 import           Data.Type.Predicate.Logic
 import           Data.Typeable                         (Typeable)
 import           GHC.Generics                          (Generic)
 import           Prelude hiding                        (any, all)
 import qualified Data.Singletons.Prelude.List.NonEmpty as NE
+
+#if MIN_VERSION_singletons(2,5,0)
+import           Data.Singletons.Prelude.Identity
+#else
+import           Data.Singletons.TH
+genSingletons [''Identity]
+#endif
 
 -- | A witness for membership of a given item in a type-level collection
 type family Elem (f :: Type -> Type) :: f k -> k -> Type
@@ -511,6 +518,8 @@ instance (SingI (as :: Identity k), SDecide k) => Decidable (TyPred (IIdentity a
 
 type instance Elem Identity = IIdentity
 
+-- | The single-pointed universe.  Note that this instance is really only
+-- usable in /singletons-2.5/ and higher (so GHC 8.6).
 instance Universe Identity where
     idecideAny f (SIdentity x) = mapDecision (WitAny IId)
                                              (\case WitAny IId p -> p)
@@ -528,6 +537,8 @@ instance Universe Identity where
 -- Note that because this is a higher-kinded data constructor, there is no
 -- 'SingKind'  instance; if you need 'fromSing' and 'toSing', try going
 -- through 'Comp' and 'getComp' and 'SComp' and 'sGetComp'.
+--
+-- Note that 'Identity' acts as an identity.
 --
 -- @since 0.1.2.0
 data (f :.: g) a = Comp { getComp :: f (g a) }
@@ -647,6 +658,8 @@ compAll a = WitAll $ \i -> WitAll $ \j -> runWitAll a (i :? j)
 -- Note that because this is a higher-kinded data constructor, there is no
 -- 'SingKind'  instance; if you need 'fromSing' and 'toSing', consider
 -- manually pattern matching.
+--
+-- Note that 'Proxy' acts as an identity.
 --
 -- @since 0.1.3.0
 data (f :+: g) a = InL (f a)
