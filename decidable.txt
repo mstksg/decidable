@@ -745,6 +745,14 @@ compAny :: (Any (f :.: g) p @@  'Comp as) -> Any f (Any g p) @@ as
 data ( f :+: g ) a
 InL :: f a -> (:+:) f g a
 InR :: g a -> (:+:) f g a
+anySumL :: (Any f p @@ as) -> Any (f :+: g) p @@  'InL as
+anySumR :: (Any g p @@ bs) -> Any (f :+: g) p @@  'InR bs
+sumLAny :: (Any (f :+: g) p @@  'InL as) -> Any f p @@ as
+sumRAny :: (Any (f :+: g) p @@  'InR bs) -> Any g p @@ bs
+allSumL :: (All f p @@ as) -> All (f :+: g) p @@  'InL as
+allSumR :: (All g p @@ bs) -> All (f :+: g) p @@  'InR bs
+sumLAll :: (All (f :+: g) p @@  'InL as) -> All f p @@ as
+sumRAll :: (All (f :+: g) p @@  'InR bs) -> All g p @@ bs
 data ElemSym0 (f :: Type -> Type) :: f k ~> k ~> Type
 data ElemSym1 (f :: Type -> Type) :: f k -> k ~> Type
 type ElemSym2 (f :: Type -> Type) (as :: f k) (a :: k) = Elem f as a
@@ -1305,7 +1313,7 @@ makeSubset :: forall f k p (as :: f k). Universe f => (forall a. Elem f as a -> 
 -- | Subset intersection
 intersection :: forall f p q. () => (Subset f p &&& Subset f q) --> Subset f (p &&& q)
 
--- | Subset union
+-- | Subset union (left-biased)
 union :: forall f p q. () => (Subset f p &&& Subset f q) --> Subset f (p ||| q)
 
 -- | Symmetric subset difference
