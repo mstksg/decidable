@@ -745,13 +745,37 @@ compAny :: (Any (f :.: g) p @@  'Comp as) -> Any f (Any g p) @@ as
 data ( f :+: g ) a
 InL :: f a -> (:+:) f g a
 InR :: g a -> (:+:) f g a
+
+-- | Turn an <a>Any</a> of <tt>f</tt> into an <a>Any</a> of <tt>f
+--   <a>:+:</a> g</tt>.
 anySumL :: (Any f p @@ as) -> Any (f :+: g) p @@  'InL as
+
+-- | Turn an <a>Any</a> of <tt>g</tt> into an <a>Any</a> of <tt>f
+--   <a>:+:</a> g</tt>.
 anySumR :: (Any g p @@ bs) -> Any (f :+: g) p @@  'InR bs
+
+-- | Turn an <a>Any</a> of <tt>f <a>:+:</a> g</tt> into an <a>Any</a> of
+--   <tt>f</tt>.
 sumLAny :: (Any (f :+: g) p @@  'InL as) -> Any f p @@ as
+
+-- | Turn an <a>Any</a> of <tt>f <a>:+:</a> g</tt> into an <a>Any</a> of
+--   <tt>g</tt>.
 sumRAny :: (Any (f :+: g) p @@  'InR bs) -> Any g p @@ bs
+
+-- | Turn an <a>All</a> of <tt>f</tt> into an <a>All</a> of <tt>f
+--   <a>:+:</a> g</tt>.
 allSumL :: (All f p @@ as) -> All (f :+: g) p @@  'InL as
+
+-- | Turn an <a>All</a> of <tt>g</tt> into an <a>All</a> of <tt>f
+--   <a>:+:</a> g</tt>.
 allSumR :: (All g p @@ bs) -> All (f :+: g) p @@  'InR bs
+
+-- | Turn an <a>All</a> of <tt>f <a>:+:</a> g</tt> into an <a>All</a> of
+--   <tt>f</tt>.
 sumLAll :: (All (f :+: g) p @@  'InL as) -> All f p @@ as
+
+-- | Turn an <a>All</a> of <tt>f <a>:+:</a> g</tt> into an <a>All</a> of
+--   <tt>g</tt>.
 sumRAll :: (All (f :+: g) p @@  'InR bs) -> All g p @@ bs
 data ElemSym0 (f :: Type -> Type) :: f k ~> k ~> Type
 data ElemSym1 (f :: Type -> Type) :: f k -> k ~> Type
