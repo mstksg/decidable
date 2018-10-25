@@ -4,7 +4,7 @@ Changelog
 Version 0.1.3.0
 ---------------
 
-*Unreleased*
+*October 24, 2018*
 
 <https://github.com/mstksg/decidable/releases/tag/v0.1.3.0>
 
