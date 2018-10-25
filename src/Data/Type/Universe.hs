@@ -718,26 +718,34 @@ instance (Universe f, Universe g) => Universe (f :+: g) where
       SInL xs -> allSumL <$> igenAllA @f @_ @p (f . IInL) xs
       SInR xs -> allSumR <$> igenAllA @g @_ @p (f . IInR) xs
 
+-- | Turn an 'Any' of @f@ into an 'Any' of @f ':+:' g@.
 anySumL :: Any f p @@ as -> Any (f :+: g) p @@ 'InL as
 anySumL (WitAny i x) = WitAny (IInL i) x
 
+-- | Turn an 'Any' of @g@ into an 'Any' of @f ':+:' g@.
 anySumR :: Any g p @@ bs -> Any (f :+: g) p @@ 'InR bs
 anySumR (WitAny j y) = WitAny (IInR j) y
 
+-- | Turn an 'Any' of @f ':+:' g@ into an 'Any' of @f@.
 sumLAny :: Any (f :+: g) p @@ 'InL as -> Any f p @@ as
 sumLAny (WitAny (IInL i) x) = WitAny i x
 
+-- | Turn an 'Any' of @f ':+:' g@ into an 'Any' of @g@.
 sumRAny :: Any (f :+: g) p @@ 'InR bs -> Any g p @@ bs
 sumRAny (WitAny (IInR j) y) = WitAny j y
 
+-- | Turn an 'All' of @f@ into an 'All' of @f ':+:' g@.
 allSumL :: All f p @@ as -> All (f :+: g) p @@ 'InL as
 allSumL a = WitAll $ \case IInL i -> runWitAll a i
 
+-- | Turn an 'All' of @g@ into an 'All' of @f ':+:' g@.
 allSumR :: All g p @@ bs -> All (f :+: g) p @@ 'InR bs
 allSumR a = WitAll $ \case IInR j -> runWitAll a j
 
+-- | Turn an 'All' of @f ':+:' g@ into an 'All' of @f@.
 sumLAll :: All (f :+: g) p @@ 'InL as -> All f p @@ as
 sumLAll a = WitAll $ runWitAll a . IInL
 
+-- | Turn an 'All' of @f ':+:' g@ into an 'All' of @g@.
 sumRAll :: All (f :+: g) p @@ 'InR bs -> All g p @@ bs
 sumRAll a = WitAll $ runWitAll a . IInR
