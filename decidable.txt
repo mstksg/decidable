@@ -708,6 +708,8 @@ data family Sing (a :: k) :: Type
 --   no <a>SingKind</a> instance; if you need <a>fromSing</a> and
 --   <a>toSing</a>, try going through <a>Comp</a> and <a>getComp</a> and
 --   <a>SComp</a> and <a>sGetComp</a>.
+--   
+--   Note that <a>Identity</a> acts as an identity.
 data ( f :.: g ) a
 Comp :: f (g a) -> (:.:) f g a
 [getComp] :: (:.:) f g a -> f (g a)
@@ -738,6 +740,8 @@ compAny :: (Any (f :.: g) p @@  'Comp as) -> Any f (Any g p) @@ as
 --   Note that because this is a higher-kinded data constructor, there is
 --   no <a>SingKind</a> instance; if you need <a>fromSing</a> and
 --   <a>toSing</a>, consider manually pattern matching.
+--   
+--   Note that <a>Proxy</a> acts as an identity.
 data ( f :+: g ) a
 InL :: f a -> (:+:) f g a
 InR :: g a -> (:+:) f g a
