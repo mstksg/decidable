@@ -233,10 +233,10 @@ instance Auto p a => AutoAll Identity p ('Identity a) where
     autoAll = WitAll $ \case IId -> auto @_ @p @a
 
 instance AutoAll f p as => AutoAll (f :+: g) p ('InL as) where
-    autoAll = WitAll $ \case IInL i -> runWitAll (autoAll @f @p @as) i
+    autoAll = allSumL $ autoAll @f @p @as
 
 instance AutoAll g p bs => AutoAll (f :+: g) p ('InR bs) where
-    autoAll = WitAll $ \case IInR j -> runWitAll (autoAll @g @p @bs) j
+    autoAll = allSumR $ autoAll @g @p @bs
 
 -- | @since 0.1.2.0
 instance AutoAll f p as => Auto (All f p) as where
@@ -277,12 +277,10 @@ instance SingI a => Auto (NotNull Identity) ('Identity a) where
     auto = WitAny IId sing
 
 instance Auto (NotNull f) as => Auto (NotNull (f :+: g)) ('InL as) where
-    auto = case auto @_ @(NotNull f) @as of
-      WitAny i xs -> WitAny (IInL i) xs
+    auto = anySumL $ auto @_ @(NotNull f) @as
 
 instance Auto (NotNull g) bs => Auto (NotNull (f :+: g)) ('InR bs) where
-    auto = case auto @_ @(NotNull g) @bs of
-      WitAny i ys -> WitAny (IInR i) ys
+    auto = anySumR $ auto @_ @(NotNull g) @bs
 
 -- | An @'AutoNot' p a@ constraint means that @p \@\@ a@ can be proven to not be
 -- true at compiletime.

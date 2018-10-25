@@ -120,7 +120,7 @@ intersection
     => ((Subset f p &&& Subset f q) --> Subset f (p &&& q))
 intersection _ = uncurry $ imergeSubset $ \(_ :: Elem f as a) -> decideAnd @p @q @a
 
--- | Subset union
+-- | Subset union (left-biased)
 union
     :: forall f p q. ()
     => ((Subset f p &&& Subset f q) --> Subset f (p ||| q))

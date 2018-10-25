@@ -51,6 +51,8 @@ module Data.Type.Universe (
   , allComp, compAll, anyComp, compAny
   -- ** Universe Disjunction
   , (:+:)(..)
+  , anySumL, anySumR, sumLAny, sumRAny
+  , allSumL, allSumR, sumLAll, sumRAll
   -- * Defunctionalization symbols
   , ElemSym0, ElemSym1, ElemSym2, GetCompSym0, GetCompSym1
   ) where
@@ -525,7 +527,7 @@ instance Universe Identity where
                                              (\case WitAny IId p -> p)
                                $ f IId x
     idecideAll f (SIdentity x) = mapDecision (\p -> WitAll $ \case IId -> p)
-                                             (\a -> runWitAll a IId)
+                                             (`runWitAll` IId)
                                $ f IId x
     igenAllA f (SIdentity x) = (\p -> WitAll $ \case IId -> p) <$> f IId x
 
@@ -559,7 +561,7 @@ type family GetComp c where
 -- @since 0.1.2.0
 sGetComp :: Sing a -> Sing (GetComp a)
 sGetComp (SComp x) = x
- 
+
 instance SingI ass => SingI ('Comp ass) where
     sing = SComp sing
 
@@ -691,16 +693,10 @@ instance (Universe f, Universe g) => Universe (f :+: g) where
         -> Sing abs
         -> Decision (Any (f :+: g) p @@ abs)
     idecideAny f = \case
-      SInL xs -> mapDecision (\case WitAny i x -> WitAny (IInL i) x)
-                             (\case WitAny i x -> case i of
-                                      IInL i' -> WitAny i' x
-                             )
-               $ idecideAny @f @_ @p (\i -> f (IInL i)) xs
-      SInR ys -> mapDecision (\case WitAny j y -> WitAny (IInR j) y)
-                             (\case WitAny j y -> case j of
-                                      IInR j' -> WitAny j' y
-                             )
-               $ idecideAny @g @_ @p (\j -> f (IInR j)) ys
+      SInL xs -> mapDecision anySumL sumLAny
+               $ idecideAny @f @_ @p (f . IInL) xs
+      SInR ys -> mapDecision anySumR sumRAny
+               $ idecideAny @g @_ @p (f . IInR) ys
 
     idecideAll
         :: forall k (p :: k ~> Type) (abs :: (f :+: g) k). ()
@@ -708,12 +704,10 @@ instance (Universe f, Universe g) => Universe (f :+: g) where
         -> Sing abs
         -> Decision (All (f :+: g) p @@ abs)
     idecideAll f = \case
-      SInL xs -> mapDecision (\a -> WitAll $ \case IInL i -> runWitAll a i)
-                             (\a -> WitAll $ runWitAll a . IInL)
-               $ idecideAll @f @_ @p (\i -> f (IInL i)) xs
-      SInR xs -> mapDecision (\a -> WitAll $ \case IInR i -> runWitAll a i)
-                             (\a -> WitAll $ runWitAll a . IInR)
-               $ idecideAll @g @_ @p (\j -> f (IInR j)) xs
+      SInL xs -> mapDecision allSumL sumLAll
+               $ idecideAll @f @_ @p (f . IInL) xs
+      SInR xs -> mapDecision allSumR sumRAll
+               $ idecideAll @g @_ @p (f . IInR) xs
 
     igenAllA
         :: forall k (p :: k ~> Type) (abs :: (f :+: g) k) h. Applicative h
@@ -721,7 +715,29 @@ instance (Universe f, Universe g) => Universe (f :+: g) where
         -> Sing abs
         -> h (All (f :+: g) p @@ abs)
     igenAllA f = \case
-      SInL xs -> (\a -> WitAll $ \case IInL i -> runWitAll a i)
-             <$> igenAllA @f @_ @p (\i -> f (IInL i)) xs
-      SInR xs -> (\a -> WitAll $ \case IInR j -> runWitAll a j)
-             <$> igenAllA @g @_ @p (\j -> f (IInR j)) xs
+      SInL xs -> allSumL <$> igenAllA @f @_ @p (f . IInL) xs
+      SInR xs -> allSumR <$> igenAllA @g @_ @p (f . IInR) xs
+
+anySumL :: Any f p @@ as -> Any (f :+: g) p @@ 'InL as
+anySumL (WitAny i x) = WitAny (IInL i) x
+
+anySumR :: Any g p @@ bs -> Any (f :+: g) p @@ 'InR bs
+anySumR (WitAny j y) = WitAny (IInR j) y
+
+sumLAny :: Any (f :+: g) p @@ 'InL as -> Any f p @@ as
+sumLAny (WitAny (IInL i) x) = WitAny i x
+
+sumRAny :: Any (f :+: g) p @@ 'InR bs -> Any g p @@ bs
+sumRAny (WitAny (IInR j) y) = WitAny j y
+
+allSumL :: All f p @@ as -> All (f :+: g) p @@ 'InL as
+allSumL a = WitAll $ \case IInL i -> runWitAll a i
+
+allSumR :: All g p @@ bs -> All (f :+: g) p @@ 'InR bs
+allSumR a = WitAll $ \case IInR j -> runWitAll a j
+
+sumLAll :: All (f :+: g) p @@ 'InL as -> All f p @@ as
+sumLAll a = WitAll $ runWitAll a . IInL
+
+sumRAll :: All (f :+: g) p @@ 'InR bs -> All g p @@ bs
+sumRAll a = WitAll $ runWitAll a . IInR
