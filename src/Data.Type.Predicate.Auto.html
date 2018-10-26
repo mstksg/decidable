@@ -107,7 +107,7 @@
 </span><a name="line-107"></a><span class="hs-comment">-- compile-time.  You can use:</span><span>
 </span><a name="line-108"></a><span class="hs-comment">--</span><span>
 </span><a name="line-109"></a><span class="hs-comment">-- @</span><span>
-</span><a name="line-110"></a><span class="hs-comment">-- 'auto' @_ @(AutoProvable P) @x</span><span>
+</span><a name="line-110"></a><span class="hs-comment">-- 'auto' \@_ \@('AutoProvable' P) \@x</span><span>
 </span><a name="line-111"></a><span class="hs-comment">-- @</span><span>
 </span><a name="line-112"></a><span class="hs-comment">--</span><span>
 </span><a name="line-113"></a><span class="hs-comment">-- to obtain a @P \@\@ x@.</span><span>
@@ -130,14 +130,14 @@
 </span><a name="line-130"></a><span class="hs-comment">-- Example usage:</span><span>
 </span><a name="line-131"></a><span class="hs-comment">--</span><span>
 </span><a name="line-132"></a><span class="hs-comment">-- @</span><span>
-</span><a name="line-133"></a><span class="hs-comment">-- autoElem :: Index '[1,6,2,3] 2</span><span>
+</span><a name="line-133"></a><span class="hs-comment">-- 'autoElem' :: 'Index' '[1,6,2,3] 2</span><span>
 </span><a name="line-134"></a><span class="hs-comment">-- -- IS (IS IZ)        -- third spot</span><span>
 </span><a name="line-135"></a><span class="hs-comment">-- @</span><span>
 </span><a name="line-136"></a><span class="hs-comment">--</span><span>
 </span><a name="line-137"></a><span class="hs-comment">-- And when used with 'Auto':</span><span>
 </span><a name="line-138"></a><span class="hs-comment">--</span><span>
 </span><a name="line-139"></a><span class="hs-comment">-- @</span><span>
-</span><a name="line-140"></a><span class="hs-comment">-- auto @_ @(In [] '[1,6,2,3]) @2</span><span>
+</span><a name="line-140"></a><span class="hs-comment">-- 'auto' \@_ \@('In' [] '[1,6,2,3]) \@2</span><span>
 </span><a name="line-141"></a><span class="hs-comment">-- -- IS (IS IZ)</span><span>
 </span><a name="line-142"></a><span class="hs-comment">-- @</span><span>
 </span><a name="line-143"></a><span class="hs-keyword">class</span><span> </span><a name="AutoElem"><a href="Data.Type.Predicate.Auto.html#AutoElem"><span class="hs-identifier">AutoElem</span></a></a><span> </span><a name="local-6989586621679247286"><a href="#local-6989586621679247286"><span class="hs-identifier">f</span></a></a><span> </span><span class="hs-special">(</span><span class="hs-keyword">as</span><span> </span><span class="hs-glyph">::</span><span> </span><a href="#local-6989586621679247286"><span class="hs-identifier hs-type">f</span></a><span> </span><a href="#local-6989586621679247285"><span class="hs-identifier hs-type">k</span></a><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><a name="local-6989586621679247288"><a href="#local-6989586621679247288"><span class="hs-identifier">a</span></a></a><span> </span><span class="hs-glyph">::</span><span> </span><a href="#local-6989586621679247285"><span class="hs-identifier hs-type">k</span></a><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
@@ -282,8 +282,8 @@
 </span><a name="line-282"></a><span class="hs-keyword">instance</span><span> </span><a href="Data.Type.Predicate.Auto.html#Auto"><span class="hs-identifier hs-type">Auto</span></a><span> </span><span class="hs-special">(</span><a href="Data.Type.Universe.html#NotNull"><span class="hs-identifier hs-type">NotNull</span></a><span> </span><a href="#local-6989586621679247323"><span class="hs-identifier hs-type">g</span></a><span class="hs-special">)</span><span> </span><a href="#local-6989586621679247324"><span class="hs-identifier hs-type">bs</span></a><span> </span><span class="hs-glyph">=&gt;</span><span> </span><a href="Data.Type.Predicate.Auto.html#Auto"><span class="hs-identifier hs-type">Auto</span></a><span> </span><span class="hs-special">(</span><a href="Data.Type.Universe.html#NotNull"><span class="hs-identifier hs-type">NotNull</span></a><span> </span><span class="hs-special">(</span><a href="Data.Type.Universe.html#%3A%2B%3A"><span class="hs-identifier hs-type">f</span></a><span> </span><a href="Data.Type.Universe.html#%3A%2B%3A"><span class="hs-operator hs-type">:+:</span></a><span> </span><a href="#local-6989586621679247323"><span class="hs-identifier hs-type">g</span></a><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="hs-special">'</span><a href="Data.Type.Universe.html#InR"><span class="hs-identifier hs-type">InR</span></a><span> </span><a href="#local-6989586621679247324"><span class="hs-identifier hs-type">bs</span></a><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
 </span><a name="line-283"></a><span>    </span><a name="local-8214565720324022186"><a href="Data.Type.Predicate.Auto.html#auto"><span class="hs-identifier">auto</span></a></a><span> </span><span class="hs-glyph">=</span><span> </span><a href="Data.Type.Universe.html#anySumR"><span class="hs-identifier hs-var">anySumR</span></a><span> </span><span class="hs-operator hs-var">$</span><span> </span><a href="Data.Type.Predicate.Auto.html#auto"><span class="hs-identifier hs-var">auto</span></a><span> </span><span class="hs-glyph">@</span><span class="hs-identifier">_</span><span> </span><span class="hs-glyph">@</span><span class="hs-special">(</span><a href="Data.Type.Universe.html#NotNull"><span class="hs-identifier hs-type">NotNull</span></a><span> </span><a href="#local-6989586621679247323"><span class="hs-identifier hs-type">g</span></a><span class="hs-special">)</span><span> </span><span class="hs-glyph">@</span><a href="#local-6989586621679247324"><span class="hs-identifier hs-type">bs</span></a><span>
 </span><a name="line-284"></a><span>
-</span><a name="line-285"></a><span class="hs-comment">-- | An @'AutoNot' p a@ constraint means that @p \@\@ a@ can be proven to not be</span><span>
-</span><a name="line-286"></a><span class="hs-comment">-- true at compiletime.</span><span>
+</span><a name="line-285"></a><span class="hs-comment">-- | An @'AutoNot' p a@ constraint means that @p \@\@ a@ can be proven to</span><span>
+</span><a name="line-286"></a><span class="hs-comment">-- not be true at compiletime.</span><span>
 </span><a name="line-287"></a><span class="hs-comment">--</span><span>
 </span><a name="line-288"></a><span class="hs-comment">-- @since 0.1.2.0</span><span>
 </span><a name="line-289"></a><span class="hs-keyword">type</span><span> </span><a name="AutoNot"><a href="Data.Type.Predicate.Auto.html#AutoNot"><span class="hs-identifier">AutoNot</span></a></a><span> </span><span class="hs-special">(</span><a name="local-6989586621679247280"><a href="#local-6989586621679247280"><span class="hs-identifier">p</span></a></a><span> </span><span class="hs-glyph">::</span><span> </span><a href="Data.Type.Predicate.html#Predicate"><span class="hs-identifier hs-type">Predicate</span></a><span> </span><a href="#local-6989586621679247279"><span class="hs-identifier hs-type">k</span></a><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><a href="Data.Type.Predicate.Auto.html#Auto"><span class="hs-identifier hs-type">Auto</span></a><span> </span><span class="hs-special">(</span><a href="Data.Type.Predicate.html#Not"><span class="hs-identifier hs-type">Not</span></a><span> </span><a href="#local-6989586621679247280"><span class="hs-identifier hs-type">p</span></a><span class="hs-special">)</span><span>
@@ -291,7 +291,7 @@
 </span><a name="line-291"></a><span class="hs-comment">-- | Disprove @p \@\@ a@ at compiletime.</span><span>
 </span><a name="line-292"></a><span class="hs-comment">--</span><span>
 </span><a name="line-293"></a><span class="hs-comment">-- @</span><span>
-</span><a name="line-294"></a><span class="hs-comment">-- autoNot @_ @p @a :: Not p @@ a</span><span>
+</span><a name="line-294"></a><span class="hs-comment">-- 'autoNot' \@_ \@p \@a :: 'Not' p '@@' a</span><span>
 </span><a name="line-295"></a><span class="hs-comment">-- @</span><span>
 </span><a name="line-296"></a><span class="hs-comment">--</span><span>
 </span><a name="line-297"></a><span class="hs-comment">-- @since 0.1.2.0</span><span>

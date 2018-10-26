@@ -55,7 +55,7 @@ module Data.Type.Predicate
 --   
 --   -- Then, write the <a>Apply</a> instance, to specify the type of the
 --   -- witnesses of that predicate
---   instance <a>Apply</a> (Not p) a = (p <a>@@</a> a) -&gt; Void
+--   instance <a>Apply</a> (Not p) a = (p <a>@@</a> a) -&gt; <a>Void</a>
 --   </pre>
 --   
 --   See the source of <a>Data.Type.Predicate</a> and
@@ -64,8 +64,8 @@ module Data.Type.Predicate
 --   <a>Evident</a>:
 --   
 --   <pre>
---   data Evident :: Predicate k
---   instance Apply Evident a = Sing a
+--   data Evident :: <a>Predicate</a> k
+--   instance Apply Evident a = <a>Sing</a> a
 --   </pre>
 --   
 --   And the "and" predicate combinator:
@@ -142,7 +142,7 @@ type PMap (f :: k ~> j) (p :: Predicate j) = (p .@#@$$$ f :: Predicate k)
 -- | <tt><a>Not</a> p</tt> is the predicate that <tt>p</tt> is not true.
 data Not :: Predicate k -> Predicate k
 
--- | Decide <tt>Not p</tt> based on decisions of <tt>p</tt>.
+-- | Decide <tt><a>Not</a> p</tt> based on decisions of <tt>p</tt>.
 decideNot :: forall p a. () => Decision (p @@ a) -> Decision (Not p @@ a)
 
 -- | A proving function for predicate <tt>p</tt>. See <a>Provable</a> for
@@ -209,7 +209,7 @@ disprove :: forall p. Disprovable p => Prove (Not p)
 --   "decidable", in that you have a canonical function:
 --   
 --   <pre>
---   proveTC :: Sing a -&gt; T a
+--   <a>proveTC</a> :: <a>Sing</a> a -&gt; T a
 --   </pre>
 --   
 --   Is essentially <a>Provable</a>, except with <i>type constructors</i>
@@ -221,6 +221,10 @@ disprove :: forall p. Disprovable p => Prove (Not p)
 type ProvableTC p = Provable (TyPred p)
 
 -- | The canonical proving function for <tt><a>DecidableTC</a> t</tt>.
+--   
+--   Note that because <tt>t</tt> must be an injective type constructor,
+--   you can use this without explicit type applications; the instance of
+--   <a>ProvableTC</a> can be inferred from the result type.
 proveTC :: forall t a. ProvableTC t => Sing a -> t a
 
 -- | Implicatons <tt>p <a>--&gt;</a> q</tt> can be lifted "through" a
@@ -293,7 +297,7 @@ decide :: (Decidable p, Provable p) => Decide p
 --   "decidable", in that you have a canonical function:
 --   
 --   <pre>
---   decideTC :: Sing a -&gt; <a>Decision</a> (T a)
+--   <a>decideTC</a> :: <a>Sing</a> a -&gt; <a>Decision</a> (T a)
 --   </pre>
 --   
 --   Is essentially <a>Decidable</a>, except with <i>type constructors</i>
@@ -305,6 +309,10 @@ decide :: (Decidable p, Provable p) => Decide p
 type DecidableTC p = Decidable (TyPred p)
 
 -- | The canonical deciding function for <tt><a>DecidableTC</a> t</tt>.
+--   
+--   Note that because <tt>t</tt> must be an injective type constructor,
+--   you can use this without explicit type applications; the instance of
+--   <a>DecidableTC</a> can be inferred from the result type.
 decideTC :: forall t a. DecidableTC t => Sing a -> Decision (t a)
 
 -- | Implicatons <tt>p <a>-?&gt;</a> q</tt> can be lifted "through" a
@@ -387,7 +395,7 @@ type Impossible = (Not Evident :: Predicate k)
 -- | <tt><a>Not</a> p</tt> is the predicate that <tt>p</tt> is not true.
 data Not :: Predicate k -> Predicate k
 
--- | Decide <tt>Not p</tt> based on decisions of <tt>p</tt>.
+-- | Decide <tt><a>Not</a> p</tt> based on decisions of <tt>p</tt>.
 decideNot :: forall p a. () => Decision (p @@ a) -> Decision (Not p @@ a)
 
 -- | <tt>p <a>&amp;&amp;&amp;</a> q</tt> is a predicate that both
@@ -1191,7 +1199,7 @@ type AutoNot (p :: Predicate k) = Auto (Not p)
 -- | Disprove <tt>p @@ a</tt> at compiletime.
 --   
 --   <pre>
---   autoNot <tt>_ </tt>p <tt>a :: Not p </tt>@ a
+--   <a>autoNot</a> @_ @p @a :: <a>Not</a> p <a>@@</a> a
 --   </pre>
 autoNot :: forall k (p :: Predicate k) (a :: k). AutoNot p a => Not p @@ a
 
@@ -1203,7 +1211,7 @@ autoNot :: forall k (p :: Predicate k) (a :: k). AutoNot p a => Not p @@ a
 --   specific <tt>x</tt> you know at compile-time. You can use:
 --   
 --   <pre>
---   <a>auto</a> <tt>_ </tt>(AutoProvable P) @x
+--   <a>auto</a> @_ @(<a>AutoProvable</a> P) @x
 --   </pre>
 --   
 --   to obtain a <tt>P @@ x</tt>.
@@ -1224,14 +1232,14 @@ data AutoProvable :: Predicate k -> Predicate k
 --   Example usage:
 --   
 --   <pre>
---   autoElem :: Index '[1,6,2,3] 2
+--   <a>autoElem</a> :: <a>Index</a> '[1,6,2,3] 2
 --   -- IS (IS IZ)        -- third spot
 --   </pre>
 --   
 --   And when used with <a>Auto</a>:
 --   
 --   <pre>
---   auto <tt>_ </tt>(In [] '[1,6,2,3]) @2
+--   <a>auto</a> @_ @(<a>In</a> [] '[1,6,2,3]) @2
 --   -- IS (IS IZ)
 --   </pre>
 class AutoElem f (as :: f k) (a :: k)
