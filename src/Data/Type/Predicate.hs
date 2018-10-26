@@ -90,7 +90,7 @@ import           Data.Void
 --
 -- -- Then, write the 'Apply' instance, to specify the type of the
 -- -- witnesses of that predicate
--- instance 'Apply' (Not p) a = (p '@@' a) -> Void
+-- instance 'Apply' (Not p) a = (p '@@' a) -> 'Void'
 -- @
 --
 -- See the source of "Data.Type.Predicate" and "Data.Type.Predicate.Logic"
@@ -98,8 +98,8 @@ import           Data.Void
 -- always-true predicate 'Evident':
 --
 -- @
--- data Evident :: Predicate k
--- instance Apply Evident a = Sing a
+-- data Evident :: 'Predicate' k
+-- instance Apply Evident a = 'Sing' a
 -- @
 --
 -- And the "and" predicate combinator:
@@ -272,7 +272,7 @@ disprove = prove @(Not p)
 -- function:
 --
 -- @
--- decideTC :: Sing a -> 'Decision' (T a)
+-- 'decideTC' :: 'Sing' a -> 'Decision' (T a)
 -- @
 --
 -- Is essentially 'Decidable', except with /type constructors/ @k ->
@@ -287,6 +287,10 @@ type DecidableTC p = Decidable (TyPred p)
 
 -- | The canonical deciding function for @'DecidableTC' t@.
 --
+-- Note that because @t@ must be an injective type constructor, you can use
+-- this without explicit type applications; the instance of 'DecidableTC'
+-- can be inferred from the result type.
+--
 -- @since 0.1.1.0
 decideTC :: forall t a. DecidableTC t => Sing a -> Decision (t a)
 decideTC = decide @(TyPred t)
@@ -296,7 +300,7 @@ decideTC = decide @(TyPred t)
 -- function:
 --
 -- @
--- proveTC :: Sing a -> T a
+-- 'proveTC' :: 'Sing' a -> T a
 -- @
 --
 -- Is essentially 'Provable', except with /type constructors/ @k -> 'Type'@
@@ -309,6 +313,10 @@ decideTC = decide @(TyPred t)
 type ProvableTC  p = Provable  (TyPred p)
 
 -- | The canonical proving function for @'DecidableTC' t@.
+--
+-- Note that because @t@ must be an injective type constructor, you can use
+-- this without explicit type applications; the instance of 'ProvableTC'
+-- can be inferred from the result type.
 --
 -- @since 0.1.1.0
 proveTC :: forall t a. ProvableTC t => Sing a -> t a
@@ -355,7 +363,7 @@ instance Decidable p => Decidable (Not p) where
 instance Provable (Not Impossible) where
     prove x v = absurd $ v x
 
--- | Decide @Not p@ based on decisions of @p@.
+-- | Decide @'Not' p@ based on decisions of @p@.
 decideNot
     :: forall p a. ()
     => Decision (p @@ a)

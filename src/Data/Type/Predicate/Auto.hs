@@ -107,7 +107,7 @@ instance Auto q a => Auto (p ==> q) a where
 -- compile-time.  You can use:
 --
 -- @
--- 'auto' @_ @(AutoProvable P) @x
+-- 'auto' \@_ \@('AutoProvable' P) \@x
 -- @
 --
 -- to obtain a @P \@\@ x@.
@@ -130,14 +130,14 @@ instance (Provable p, SingI a) => Auto (AutoProvable p) a where
 -- Example usage:
 --
 -- @
--- autoElem :: Index '[1,6,2,3] 2
+-- 'autoElem' :: 'Index' '[1,6,2,3] 2
 -- -- IS (IS IZ)        -- third spot
 -- @
 --
 -- And when used with 'Auto':
 --
 -- @
--- auto @_ @(In [] '[1,6,2,3]) @2
+-- 'auto' \@_ \@('In' [] '[1,6,2,3]) \@2
 -- -- IS (IS IZ)
 -- @
 class AutoElem f (as :: f k) (a :: k) where
@@ -282,8 +282,8 @@ instance Auto (NotNull f) as => Auto (NotNull (f :+: g)) ('InL as) where
 instance Auto (NotNull g) bs => Auto (NotNull (f :+: g)) ('InR bs) where
     auto = anySumR $ auto @_ @(NotNull g) @bs
 
--- | An @'AutoNot' p a@ constraint means that @p \@\@ a@ can be proven to not be
--- true at compiletime.
+-- | An @'AutoNot' p a@ constraint means that @p \@\@ a@ can be proven to
+-- not be true at compiletime.
 --
 -- @since 0.1.2.0
 type AutoNot (p :: Predicate k) = Auto (Not p)
@@ -291,7 +291,7 @@ type AutoNot (p :: Predicate k) = Auto (Not p)
 -- | Disprove @p \@\@ a@ at compiletime.
 --
 -- @
--- autoNot @_ @p @a :: Not p @@ a
+-- 'autoNot' \@_ \@p \@a :: 'Not' p '@@' a
 -- @
 --
 -- @since 0.1.2.0
