@@ -11,7 +11,7 @@
 --   starting point, and the documentation for <a>Predicate</a> on how to
 --   define predicates.
 @package decidable
-@version 0.1.3.1
+@version 0.1.4.0
 
 
 -- | Combinators for working with type-level predicates, along with
@@ -333,8 +333,8 @@ Disproved :: Refuted a -> Decision a
 -- | Flip the contents of a decision. Turn a proof of <tt>a</tt> into a
 --   disproof of not-<tt>a</tt>.
 --   
---   Note that this is not reversible in general in Haskell. See
---   <a>doubleNegation</a> for a situation where it is.
+--   Note that this is not reversible in general in constructivist logic
+--   See <a>doubleNegation</a> for a situation where it is.
 flipDecision :: Decision a -> Decision (Refuted a)
 
 -- | Map over the value inside a <a>Decision</a>.
@@ -482,7 +482,17 @@ excludedMiddle :: (p &&& Not p) --> Impossible
 
 -- | Logical double negation. Only possible if <tt>p</tt> is
 --   <a>Decidable</a>.
+--   
+--   This is because in constructivist logic, not (not p) does not imply p.
+--   However, p implies not (not p) (see <a>negateTwice</a>), and not (not
+--   (not p)) implies not p (see <a>tripleNegation</a>)
 doubleNegation :: forall p. Decidable p => Not (Not p) --> p
+
+-- | In constructivist logic, not (not (not p)) implies not p.
+tripleNegation :: forall p. Not (Not (Not p)) --> Not p
+
+-- | In constructivist logic, p implies not (not p).
+negateTwice :: p --> Not (Not p)
 
 -- | If p implies q, then not q implies not p.
 contrapositive :: (p --> q) -> Not q --> Not p
