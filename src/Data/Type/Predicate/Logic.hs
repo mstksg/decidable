@@ -33,7 +33,8 @@ module Data.Type.Predicate.Logic (
   , type (==>), proveImplies, Implies
   , type (<==>), Equiv
   -- * Logical deductions
-  , compImpl, explosion, atom, excludedMiddle, doubleNegation
+  , compImpl, explosion, atom
+  , excludedMiddle, doubleNegation, tripleNegation, negateTwice
   , contrapositive, contrapositive'
   -- ** Lattice
   , projAndFst, projAndSnd, injOrLeft, injOrRight
@@ -217,7 +218,7 @@ instance {-# OVERLAPPING #-} Provable (p &&& Not p ==> Impossible) where
 contrapositive
     :: (p --> q)
     -> (Not q --> Not p)
-contrapositive f x v p = v (f x p)
+contrapositive f x vQ p = vQ (f x p)
 
 -- | Reverse direction of 'contrapositive'.  Only possible if @q@ is
 -- 'Decidable' on its own, without the help of @p@, which makes this much
@@ -230,9 +231,25 @@ contrapositive' f x p = elimDisproof (decide @q x) $ \vQ ->
     f x vQ p
 
 -- | Logical double negation.  Only possible if @p@ is 'Decidable'.
+--
+-- This is because in constructivist logic, not (not p) does not imply p.
+-- However, p implies not (not p) (see 'negateTwice'), and not (not (not
+-- p)) implies not p (see 'tripleNegation')
 doubleNegation :: forall p. Decidable p => Not (Not p) --> p
 doubleNegation x vvP = elimDisproof (decide @p x) $ \vP ->
     vvP vP
+
+-- | In constructivist logic, not (not (not p)) implies not p.
+--
+-- @since 0.1.4.0
+tripleNegation :: forall p. Not (Not (Not p)) --> Not p
+tripleNegation _ vvvP p = vvvP $ \vP -> vP p
+
+-- | In constructivist logic, p implies not (not p).
+--
+-- @since 0.1.4.0
+negateTwice :: p --> Not (Not p)
+negateTwice _ p vP = vP p
 
 -- | If @p '&&&' q@ is true, then so is @p@.
 projAndFst :: (p &&& q) --> p

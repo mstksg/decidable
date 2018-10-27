@@ -1,6 +1,25 @@
 Changelog
 =========
 
+Version 0.1.4.0
+---------------
+
+*Unreleased*
+
+<https://github.com/mstksg/decidable/releases/tag/v0.1.4.0>
+
+*   Added `tripleNegative` and `negateTwice` to *Data.Type.Predicate.Logic*,
+    for more constructivist principles.
+
+Version 0.1.3.1
+---------------
+
+*October 26, 2018*
+
+<https://github.com/mstksg/decidable/releases/tag/v0.1.3.1>
+
+*   *BUGFIX* Remove overlapping `Auto` instances for `IsNothing` and `IsLeft`.
+
 Version 0.1.3.0
 ---------------
 
@@ -13,6 +32,7 @@ Version 0.1.3.0
 *   Added `Universe` instances (and appropriate `Elem` and `Auto` instances)
     for `Proxy` (the null universe) and `Identity`.
 *   `Auto` instances for `IsNothing` and `IsLeft`.
+
 
 Version 0.1.2.0
 ---------------

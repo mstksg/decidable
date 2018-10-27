@@ -373,7 +373,7 @@ decideNot = flipDecision
 -- | Flip the contents of a decision.  Turn a proof of @a@ into a disproof
 -- of not-@a@.
 --
--- Note that this is not reversible in general in Haskell.  See
+-- Note that this is not reversible in general in constructivist logic  See
 -- 'Data.Type.Predicate.Logic.doubleNegation' for a situation where it is.
 --
 -- @since 0.1.1.0
