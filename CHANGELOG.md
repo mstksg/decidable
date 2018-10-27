@@ -10,6 +10,7 @@ Version 0.1.4.0
 
 *   Added `tripleNegative` and `negateTwice` to *Data.Type.Predicate.Logic*,
     for more constructivist principles.
+*   Renamed `excludedMiddle` to `complementation`.
 
 Version 0.1.3.1
 ---------------

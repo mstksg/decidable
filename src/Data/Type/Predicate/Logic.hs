@@ -34,7 +34,7 @@ module Data.Type.Predicate.Logic (
   , type (<==>), Equiv
   -- * Logical deductions
   , compImpl, explosion, atom
-  , excludedMiddle, doubleNegation, tripleNegation, negateTwice
+  , complementation, doubleNegation, tripleNegation, negateTwice
   , contrapositive, contrapositive'
   -- ** Lattice
   , projAndFst, projAndSnd, injOrLeft, injOrRight
@@ -207,12 +207,16 @@ atom :: p --> Evident
 atom = const
 
 -- | We cannot have both @p@ and @'Not' p@.
-excludedMiddle :: (p &&& Not p) --> Impossible
-excludedMiddle _ (p, notP) _ = notP p
+--
+-- (Renamed in v0.1.4.0; used to be 'excludedMiddle')
+--
+-- @since 0.1.4.0
+complementation :: forall p. (p &&& Not p) --> Impossible
+complementation _ (p, notP) _ = notP p
 
 -- | @since 0.1.3.0
 instance {-# OVERLAPPING #-} Provable (p &&& Not p ==> Impossible) where
-    prove = excludedMiddle @p
+    prove = complementation @p
 
 -- | If p implies q, then not q implies not p.
 contrapositive
