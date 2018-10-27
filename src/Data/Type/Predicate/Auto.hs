@@ -250,17 +250,9 @@ instance SingI a => Auto (NotNull []) (a ': as) where
 instance SingI a => Auto IsJust ('Just a) where
     auto = WitAny IJust sing
 
--- | @since 0.1.3.0
-instance Auto IsNothing 'Nothing where
-    auto = \case WitAny i _ -> case i of {}
-
 -- | @since 0.1.2.0
 instance SingI a => Auto IsRight ('Right a) where
     auto = WitAny IRight sing
-
--- | @since 0.1.3.0
-instance Auto IsLeft ('Left a) where
-    auto = \case WitAny i _ -> case i of {}
 
 -- | @since 0.1.2.0
 instance SingI a => Auto (NotNull NonEmpty) (a ':| as) where
@@ -269,9 +261,6 @@ instance SingI a => Auto (NotNull NonEmpty) (a ':| as) where
 -- | @since 0.1.2.0
 instance SingI a => Auto (NotNull ((,) j)) '(w, a) where
     auto = WitAny ISnd sing
-
-instance Auto (Null Proxy) 'Proxy where
-    auto = \case WitAny i _ -> case i of {}
 
 instance SingI a => Auto (NotNull Identity) ('Identity a) where
     auto = WitAny IId sing
