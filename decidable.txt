@@ -478,7 +478,9 @@ explosion :: Impossible --> p
 atom :: p --> Evident
 
 -- | We cannot have both <tt>p</tt> and <tt><a>Not</a> p</tt>.
-excludedMiddle :: (p &&& Not p) --> Impossible
+--   
+--   (Renamed in v0.1.4.0; used to be <tt>excludedMiddle</tt>)
+complementation :: forall p. (p &&& Not p) --> Impossible
 
 -- | Logical double negation. Only possible if <tt>p</tt> is
 --   <a>Decidable</a>.
