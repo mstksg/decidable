@@ -214,10 +214,11 @@ disprove :: forall p. Disprovable p => Prove (Not p)
 --   
 --   Is essentially <a>Provable</a>, except with <i>type constructors</i>
 --   <tt>k -&gt; <a>Type</a></tt> instead of matchable type-level functions
---   (that are <tt>k ~&gt; <a>Type</a></tt>).
+--   (that are <tt>k ~&gt; <a>Type</a></tt>). Useful because <a>proveTC</a>
+--   doesn't require anything fancy like TypeApplications to use.
 --   
---   Mostly is in this library for compatiblity with "traditional"
---   predicates that are GADT type constructors.
+--   Also is in this library for compatiblity with "traditional" predicates
+--   that are GADT type constructors.
 type ProvableTC p = Provable (TyPred p)
 
 -- | The canonical proving function for <tt><a>DecidableTC</a> t</tt>.
@@ -302,10 +303,12 @@ decide :: (Decidable p, Provable p) => Decide p
 --   
 --   Is essentially <a>Decidable</a>, except with <i>type constructors</i>
 --   <tt>k -&gt; <a>Type</a></tt> instead of matchable type-level functions
---   (that are <tt>k ~&gt; <a>Type</a></tt>).
+--   (that are <tt>k ~&gt; <a>Type</a></tt>). Useful because
+--   <a>decideTC</a> doesn't require anything fancy like TypeApplications
+--   to use.
 --   
---   Mostly is in this library for compatiblity with "traditional"
---   predicates that are GADT type constructors.
+--   Also is in this library for compatiblity with "traditional" predicates
+--   that are GADT type constructors.
 type DecidableTC p = Decidable (TyPred p)
 
 -- | The canonical deciding function for <tt><a>DecidableTC</a> t</tt>.
@@ -1058,6 +1061,14 @@ type InP f = (ElemSym1 f :: ParamPred (f k) k)
 --   any <tt>k</tt> in <tt>f k</tt> can create some <tt>v</tt>.
 data AnyMatch f :: ParamPred k v -> ParamPred (f k) v
 
+-- | Convert a normal '-&gt;' type constructor taking two arguments into a
+--   <a>ParamPred</a>.
+--   
+--   <pre>
+--   <a>TyPP</a> :: (k -&gt; v -&gt; <a>Type</a>) -&gt; <a>ParamPred</a> k v
+--   </pre>
+data TyPP :: (k -> v -> Type) -> ParamPred k v
+
 -- | Convert a parameterized predicate into a predicate on the parameter.
 --   
 --   A <tt><a>Found</a> p</tt> is a predicate on <tt>p :: <a>ParamPred</a>
@@ -1141,6 +1152,56 @@ inPNotNull :: Found (InP f) --> NotNull f
 -- | <tt><a>NotNull</a> f</tt> is basically <tt><a>Found</a> (<a>InP</a>
 --   f)</tt>.
 notNullInP :: NotNull f --> Found (InP f)
+
+-- | If <tt>T :: k -&gt; v -&gt; <a>Type</a></tt> is a type constructor,
+--   then <tt><a>Selectable</a> T</tt> is a constraint that <tt>T</tt> is
+--   "selectable", in that you have a canonical function:
+--   
+--   <pre>
+--   <a>selectTC</a> :: <a>Sing</a> a -&gt; Σ v (<a>TyPP</a> T x)
+--   </pre>
+--   
+--   That is, given an <tt>x :: k</tt>, we can <i>always</i> find a <tt>y
+--   :: k</tt> that satisfies <tt>T x y</tt>.
+--   
+--   Is essentially <a>Selectable</a>, except with <i>type constructors</i>
+--   <tt>k -&gt; <a>Type</a></tt> instead of matchable type-level functions
+--   (that are <tt>k ~&gt; <a>Type</a></tt>). Useful because
+--   <a>selectTC</a> doesn't require anything fancy like TypeApplications
+--   to use.
+type SelectableTC t = Provable (Found (TyPP t))
+
+-- | The canonical selecting function for <tt><a>SelectableTC</a> t</tt>.
+--   
+--   Note that because <tt>t</tt> must be an injective type constructor,
+--   you can use this without explicit type applications; the instance of
+--   <a>SelectableTC</a> can be inferred from the result type.
+selectTC :: forall t. SelectableTC t => Prove (Found (TyPP t))
+
+-- | If <tt>T :: k -&gt; v -&gt; <a>Type</a></tt> is a type constructor,
+--   then <tt><a>SearchableTC</a> T</tt> is a constraint that <tt>T</tt> is
+--   "searchable", in that you have a canonical function:
+--   
+--   <pre>
+--   <a>searchTC</a> :: <a>Sing</a> x -&gt; <a>Decision</a> (Σ v (<a>TyPP</a> T x))
+--   </pre>
+--   
+--   That, given an <tt>x :: k</tt>, we can decide whether or not a <tt>y
+--   :: v</tt> exists that satisfies <tt>T x y</tt>.
+--   
+--   Is essentially <a>Searchable</a>, except with <i>type constructors</i>
+--   <tt>k -&gt; <a>Type</a></tt> instead of matchable type-level functions
+--   (that are <tt>k ~&gt; <a>Type</a></tt>). Useful because
+--   <a>searchTC</a> doesn't require anything fancy like TypeApplications
+--   to use.
+type SearchableTC t = Decidable (Found (TyPP t))
+
+-- | The canonical selecting function for <tt><a>Searchable</a> t</tt>.
+--   
+--   Note that because <tt>t</tt> must be an injective type constructor,
+--   you can use this without explicit type applications; the instance of
+--   <a>SearchableTC</a> can be inferred from the result type.
+searchTC :: forall t. SearchableTC t => Decide (Found (TyPP t))
 
 -- | Disjunction on two <a>ParamPred</a>s, with appropriate
 --   <a>Searchable</a> instance. Priority is given to the left predicate.
