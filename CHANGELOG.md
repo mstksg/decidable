@@ -4,13 +4,16 @@ Changelog
 Version 0.1.4.0
 ---------------
 
-*Unreleased*
+*October 29, 2018*
 
 <https://github.com/mstksg/decidable/releases/tag/v0.1.4.0>
 
 *   Added `tripleNegative` and `negateTwice` to *Data.Type.Predicate.Logic*,
     for more constructivist principles.
 *   Renamed `excludedMiddle` to `complementation`.
+*   Add `TyPP`, `SearchableTC`, `searchTC`, `SelectableTC`, `selectTC` to
+    *Data.Type.Predicate.Param*, to mirror `TyPred` and the
+    `DecidableTC`/`ProvableTC` interface from *Data.Type.Predicate*
 
 Version 0.1.3.1
 ---------------

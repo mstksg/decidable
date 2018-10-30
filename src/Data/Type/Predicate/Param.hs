@@ -25,16 +25,20 @@
 module Data.Type.Predicate.Param (
   -- * Parameterized Predicates
     ParamPred
-  , FlipPP, ConstPP, PPMap, InP, AnyMatch
+  , FlipPP, ConstPP, PPMap, InP, AnyMatch, TyPP
   -- * Deciding and Proving
   , Found, NotFound
   , Selectable, select
   , Searchable, search
   , inPNotNull, notNullInP
+  -- ** Type Constructors
+  , SelectableTC, selectTC
+  , SearchableTC, searchTC
   -- * Combining
   , OrP, AndP
   ) where
 
+import           Data.Kind
 import           Data.Singletons
 import           Data.Singletons.Prelude.Tuple
 import           Data.Singletons.Sigma
@@ -97,6 +101,17 @@ type instance Apply (FlipPP p x) y = p y @@ x
 data ConstPP :: Predicate v -> ParamPred k v
 type instance Apply (ConstPP p k) v = p @@ v
 
+-- | Convert a normal '->' type constructor taking two arguments into
+-- a 'ParamPred'.
+--
+-- @
+-- 'TyPP' :: (k -> v -> 'Type') -> 'ParamPred' k v
+-- @
+--
+-- @since 0.1.4.0
+data TyPP :: (k -> v -> Type) -> ParamPred k v
+type instance Apply (TyPP t k) v = t k v
+
 -- | Pre-compose a function to a 'ParamPred'.  Is essentially @'flip'
 -- ('.')@, but unfortunately defunctionalization doesn't work too well with
 -- that definition.
@@ -147,6 +162,68 @@ select
     :: forall p. Selectable p
     => Prove (Found p)
 select = prove @(Found p)
+
+-- | If @T :: k -> v -> 'Type'@ is a type constructor, then @'SearchableTC'
+-- T@ is a constraint that @T@ is "searchable", in that you have
+-- a canonical function:
+--
+-- @
+-- 'searchTC' :: 'Sing' x -> 'Decision' (Σ v ('TyPP' T x))
+-- @
+--
+-- That, given an @x :: k@, we can decide whether or not a @y :: v@ exists
+-- that satisfies @T x y@.
+--
+-- Is essentially 'Searchable', except with /type constructors/ @k ->
+-- 'Type'@ instead of matchable type-level functions (that are @k ~>
+-- 'Type'@).  Useful because 'searchTC' doesn't require anything fancy like
+-- TypeApplications to use.
+--
+-- @since 0.1.4.0
+type SearchableTC t = Decidable (Found (TyPP t))
+
+-- | If @T :: k -> v -> 'Type'@ is a type constructor, then @'Selectable'
+-- T@ is a constraint that @T@ is "selectable", in that you have
+-- a canonical function:
+--
+-- @
+-- 'selectTC' :: 'Sing' a -> Σ v ('TyPP' T x)
+-- @
+--
+-- That is, given an @x :: k@, we can /always/ find a @y :: k@ that
+-- satisfies @T x y@.
+--
+-- Is essentially 'Selectable', except with /type constructors/ @k ->
+-- 'Type'@ instead of matchable type-level functions (that are @k ~>
+-- 'Type'@). Useful because 'selectTC' doesn't require anything fancy like
+-- TypeApplications to use.
+--
+-- @since 0.1.4.0
+type SelectableTC t = Provable  (Found (TyPP t))
+
+-- | The canonical selecting function for @'Searchable' t@.
+--
+-- Note that because @t@ must be an injective type constructor, you can use
+-- this without explicit type applications; the instance of 'SearchableTC'
+-- can be inferred from the result type.
+--
+-- @since 0.1.4.0
+searchTC
+    :: forall t. SearchableTC t
+    => Decide (Found (TyPP t))
+searchTC = search @(TyPP t)
+
+-- | The canonical selecting function for @'SelectableTC' t@.
+--
+-- Note that because @t@ must be an injective type constructor, you can use
+-- this without explicit type applications; the instance of 'SelectableTC'
+-- can be inferred from the result type.
+--
+-- @since 0.1.4.0
+selectTC
+    :: forall t. SelectableTC t
+    => Prove (Found (TyPP t))
+selectTC = select @(TyPP t)
 
 -- | A @'ParamPred' (f k) k@.  Parameterized on an @as :: f k@, returns
 -- a predicate that is true if there exists any @a :: k@ in @as@.

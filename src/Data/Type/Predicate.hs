@@ -277,9 +277,10 @@ disprove = prove @(Not p)
 --
 -- Is essentially 'Decidable', except with /type constructors/ @k ->
 -- 'Type'@ instead of matchable type-level functions (that are @k ~>
--- 'Type'@).
+-- 'Type'@).  Useful because 'decideTC' doesn't require anything fancy like
+-- TypeApplications to use.
 --
--- Mostly is in this library for compatiblity with "traditional" predicates
+-- Also is in this library for compatiblity with "traditional" predicates
 -- that are GADT type constructors.
 --
 -- @since 0.1.1.0
@@ -305,8 +306,10 @@ decideTC = decide @(TyPred t)
 --
 -- Is essentially 'Provable', except with /type constructors/ @k -> 'Type'@
 -- instead of matchable type-level functions (that are @k ~> 'Type'@).
+-- Useful because 'proveTC' doesn't require anything fancy like
+-- TypeApplications to use.
 --
--- Mostly is in this library for compatiblity with "traditional" predicates
+-- Also is in this library for compatiblity with "traditional" predicates
 -- that are GADT type constructors.
 --
 -- @since 0.1.1.0
