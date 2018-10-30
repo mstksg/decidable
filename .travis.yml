@@ -25,9 +25,9 @@ matrix:
   include:
   # We grab the appropriate GHC and cabal-install versions from hvr's PPA. See:
   # https://github.com/hvr/multi-ghc-travis
-  - env: BUILD=cabal GHCVER=8.4.3 CABALVER=2.2 HAPPYVER=1.19.5 ALEXVER=3.1.7
-    compiler: ": #GHC 8.4.3"
-    addons: {apt: {packages: [cabal-install-2.2,ghc-8.4.3,happy-1.19.5,alex-3.1.7], sources: [hvr-ghc]}}
+  - env: BUILD=cabal GHCVER=8.4.4 CABALVER=2.2 HAPPYVER=1.19.5 ALEXVER=3.1.7
+    compiler: ": #GHC 8.4.4"
+    addons: {apt: {packages: [cabal-install-2.2,ghc-8.4.4,happy-1.19.5,alex-3.1.7], sources: [hvr-ghc]}}
 
   - env: BUILD=cabal GHCVER=8.6.1 CABALVER=2.4 HAPPYVER=1.19.5 ALEXVER=3.1.7
     compiler: ": #GHC 8.6.1"
@@ -46,8 +46,8 @@ matrix:
     addons: {apt: {packages: [ghc-8.6.1], sources: [hvr-ghc]}}
 
   - env: BUILD=stack ARGS="--resolver lts-12"
-    compiler: ": #stack 8.4.3"
-    addons: {apt: {packages: [ghc-8.4.3], sources: [hvr-ghc]}}
+    compiler: ": #stack 8.4.4"
+    addons: {apt: {packages: [ghc-8.4.4], sources: [hvr-ghc]}}
 
   # Nightly builds are allowed to fail
   - env: BUILD=stack ARGS="--resolver nightly"
@@ -60,7 +60,7 @@ matrix:
     os: osx
 
   - env: BUILD=stack ARGS="--resolver lts-12"
-    compiler: ": #stack 8.4.3 osx"
+    compiler: ": #stack 8.4.4 osx"
     os: osx
 
   - env: BUILD=stack ARGS="--resolver nightly"
