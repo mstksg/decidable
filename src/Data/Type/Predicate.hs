@@ -61,7 +61,8 @@ import           Data.Void
 -- 'Predicate' k@ is true/satisfied by input @x :: k@ if there exists
 -- a value of type @P \@\@ x@, and that it false/disproved if such a value
 -- cannot exist. (Where '@@' is 'Apply', the singleton library's type-level
--- function application for mathcable functions)
+-- function application for mathcable functions).  In some contexts, this
+-- is also known as a dependently typed "view".
 --
 -- See 'Provable' and 'Decidable' for more information on how to use, prove
 -- and decide these predicates.
@@ -177,8 +178,8 @@ type p -?> q = forall a. Sing a -> p @@ a -> Decision (q @@ a)
 -- | Like '-?>', but only in a specific context @h@.
 type (p -?># q) h = forall a. Sing a -> p @@ a -> h (Decision (q @@ a))
 
--- | A proving function for predicate @p@.  See 'Provable' for more
--- information.
+-- | A proving function for predicate @p@; in some contexts, also called
+-- a "view function".  See 'Provable' for more information.
 type Prove p = forall a. Sing a -> p @@ a
 
 -- | We say that @p@ implies @q@ (@p '-->' q@) if, given @p @@ a@, we can
@@ -220,30 +221,38 @@ class Decidable p where
     -- @
     -- 'decide' \@MyPredicate
     -- @
+    --
+    -- See 'decideTC' and 'DecidableTC' for a version that isn't ambiguously
+    -- typed, but only works when @p@ is a type constructor.
     decide :: Decide p
 
     default decide :: Provable p => Decide p
     decide = Proved . prove @p
 
--- | A typeclass for provable predicates (constructivist tautologies).
+-- | A typeclass for provable predicates (constructivist tautologies).  In
+-- some context, these are also known as "views".
 --
 -- A predicate is provable if, given any input @a@, you can generate
 -- a proof of @p \@\@ a@.  Essentially, it means that a predicate is "always
 -- true".
 --
+-- We can call a type a view if, for any input @a@, there is /some/
+-- constructor of @p \@\@ a@ that can we can use to "categorize" @a@.
+--
 -- This typeclass associates a canonical proof function for every provable
--- predicate.
+-- predicate, or a canonical view function for any view.
 --
 -- It confers two main advatnages:
 --
---     1. The proof function for every predicate is available via the same
---     name
+--     1. The proof function/view for every predicate/view is available via
+--     the same name
 --
 --     2. We can write 'Provable' instances for polymorphic predicate
 --     transformers (predicates parameterized on other predicates) easily,
 --     by refering to 'Provable' instances of the transformed predicates.
 class Provable p where
-    -- | The canonical proving function for predicate @p@.
+    -- | The canonical proving function for predicate @p@ (or a canonical
+    -- view function for view @p@).
     --
     -- Note that 'prove' is ambiguously typed, so you /always/ need to call
     -- by specifying the predicate you want to prove using TypeApplications
@@ -252,6 +261,9 @@ class Provable p where
     -- @
     -- 'prove' \@MyPredicate
     -- @
+    --
+    -- See 'proveTC' and 'ProvableTC' for a version that isn't ambiguously
+    -- typed, but only works when @p@ is a type constructor.
     prove :: Prove p
 
 -- | @'Disprovable' p@ is a constraint that @p@ can be disproven.

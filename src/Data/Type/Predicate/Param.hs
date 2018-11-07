@@ -141,11 +141,15 @@ type Selectable p = Provable  (Found p)
 
 -- | The deciding/searching function for @'Searchable' p@.
 --
--- Must be called by applying the 'ParamPred':
+-- Because this is ambiguously typed, it must be called by applying the
+-- 'ParamPred':
 --
 -- @
 -- 'search' \@p
 -- @
+--
+-- See 'searchTC' and 'SearchableTC' for a version that isn't ambiguously
+-- typed, but only works when @p@ is a type constructor.
 search
     :: forall p. Searchable p
     => Decide (Found p)
@@ -153,11 +157,15 @@ search = decide @(Found p)
 
 -- | The proving/selecting function for @'Selectable' p@.
 --
--- Must be called by applying the 'ParamPred':
+-- Because this is ambiguously typed, it must be called by applying the
+-- 'ParamPred':
 --
 -- @
 -- 'select' \@p
 -- @
+--
+-- See 'selectTC' and 'SelectableTC' for a version that isn't ambiguously
+-- typed, but only works when @p@ is a type constructor.
 select
     :: forall p. Selectable p
     => Prove (Found p)
