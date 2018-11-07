@@ -23,7 +23,8 @@ module Data.Type.Predicate
 --   there exists a value of type <tt>P @@ x</tt>, and that it
 --   false/disproved if such a value cannot exist. (Where <a>@@</a> is
 --   <a>Apply</a>, the singleton library's type-level function application
---   for mathcable functions)
+--   for mathcable functions). In some contexts, this is also known as a
+--   dependently typed "view".
 --   
 --   See <a>Provable</a> and <a>Decidable</a> for more information on how
 --   to use, prove and decide these predicates.
@@ -145,8 +146,8 @@ data Not :: Predicate k -> Predicate k
 -- | Decide <tt><a>Not</a> p</tt> based on decisions of <tt>p</tt>.
 decideNot :: forall p a. () => Decision (p @@ a) -> Decision (Not p @@ a)
 
--- | A proving function for predicate <tt>p</tt>. See <a>Provable</a> for
---   more information.
+-- | A proving function for predicate <tt>p</tt>; in some contexts, also
+--   called a "view function". See <a>Provable</a> for more information.
 type Prove p = forall a. Sing a -> p @@ a
 
 -- | We say that <tt>p</tt> implies <tt>q</tt> (<tt>p <a>--&gt;</a> q</tt>)
@@ -159,20 +160,25 @@ infixr 1 -->
 type ( p --># q ) h = forall a. Sing a -> p @@ a -> h (q @@ a)
 infixr 1 -->#
 
--- | A typeclass for provable predicates (constructivist tautologies).
+-- | A typeclass for provable predicates (constructivist tautologies). In
+--   some context, these are also known as "views".
 --   
 --   A predicate is provable if, given any input <tt>a</tt>, you can
 --   generate a proof of <tt>p @@ a</tt>. Essentially, it means that a
 --   predicate is "always true".
 --   
+--   We can call a type a view if, for any input <tt>a</tt>, there is
+--   <i>some</i> constructor of <tt>p @@ a</tt> that can we can use to
+--   "categorize" <tt>a</tt>.
+--   
 --   This typeclass associates a canonical proof function for every
---   provable predicate.
+--   provable predicate, or a canonical view function for any view.
 --   
 --   It confers two main advatnages:
 --   
 --   <ol>
---   <li>The proof function for every predicate is available via the same
---   name</li>
+--   <li>The proof function<i>view for every predicate</i>view is available
+--   via the same name</li>
 --   <li>We can write <a>Provable</a> instances for polymorphic predicate
 --   transformers (predicates parameterized on other predicates) easily, by
 --   refering to <a>Provable</a> instances of the transformed
@@ -180,7 +186,8 @@ infixr 1 -->#
 --   </ol>
 class Provable p
 
--- | The canonical proving function for predicate <tt>p</tt>.
+-- | The canonical proving function for predicate <tt>p</tt> (or a
+--   canonical view function for view <tt>p</tt>).
 --   
 --   Note that <a>prove</a> is ambiguously typed, so you <i>always</i> need
 --   to call by specifying the predicate you want to prove using
@@ -189,6 +196,10 @@ class Provable p
 --   <pre>
 --   <a>prove</a> @MyPredicate
 --   </pre>
+--   
+--   See <a>proveTC</a> and <a>ProvableTC</a> for a version that isn't
+--   ambiguously typed, but only works when <tt>p</tt> is a type
+--   constructor.
 prove :: Provable p => Prove p
 
 -- | <tt><a>Disprovable</a> p</tt> is a constraint that <tt>p</tt> can be
@@ -280,6 +291,10 @@ class Decidable p
 --   <pre>
 --   <a>decide</a> @MyPredicate
 --   </pre>
+--   
+--   See <a>decideTC</a> and <a>DecidableTC</a> for a version that isn't
+--   ambiguously typed, but only works when <tt>p</tt> is a type
+--   constructor.
 decide :: Decidable p => Decide p
 
 -- | The canonical decision function for predicate <tt>p</tt>.
@@ -291,6 +306,10 @@ decide :: Decidable p => Decide p
 --   <pre>
 --   <a>decide</a> @MyPredicate
 --   </pre>
+--   
+--   See <a>decideTC</a> and <a>DecidableTC</a> for a version that isn't
+--   ambiguously typed, but only works when <tt>p</tt> is a type
+--   constructor.
 decide :: (Decidable p, Provable p) => Decide p
 
 -- | If <tt>T :: k -&gt; <a>Type</a></tt> is a type constructor, then
@@ -1122,11 +1141,16 @@ type Selectable p = Provable (Found p)
 
 -- | The proving/selecting function for <tt><a>Selectable</a> p</tt>.
 --   
---   Must be called by applying the <a>ParamPred</a>:
+--   Because this is ambiguously typed, it must be called by applying the
+--   <a>ParamPred</a>:
 --   
 --   <pre>
 --   <a>select</a> @p
 --   </pre>
+--   
+--   See <a>selectTC</a> and <a>SelectableTC</a> for a version that isn't
+--   ambiguously typed, but only works when <tt>p</tt> is a type
+--   constructor.
 select :: forall p. Selectable p => Prove (Found p)
 
 -- | A constraint that a <tt><a>ParamPred</a> k v</tt> is "searchable". It
@@ -1138,11 +1162,16 @@ type Searchable p = Decidable (Found p)
 
 -- | The deciding/searching function for <tt><a>Searchable</a> p</tt>.
 --   
---   Must be called by applying the <a>ParamPred</a>:
+--   Because this is ambiguously typed, it must be called by applying the
+--   <a>ParamPred</a>:
 --   
 --   <pre>
 --   <a>search</a> @p
 --   </pre>
+--   
+--   See <a>searchTC</a> and <a>SearchableTC</a> for a version that isn't
+--   ambiguously typed, but only works when <tt>p</tt> is a type
+--   constructor.
 search :: forall p. Searchable p => Decide (Found p)
 
 -- | <tt><a>NotNull</a> f</tt> is basically <tt><a>Found</a> (<a>InP</a>
