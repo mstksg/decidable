@@ -20,33 +20,33 @@
 --
 module Data.Type.Predicate.Quantification (
   -- * Any
-    Any, WitAny(..), anyImpossible
+    Any, WitAny(..), None, anyImpossible
   -- ** Decision
   , decideAny, idecideAny, decideNone, idecideNone
-  -- ** Negation
-  , None, allNotNone, noneAllNot
   -- ** Entailment
   , entailAny, ientailAny, entailAnyF, ientailAnyF
   -- ** Composition
   , allComp, compAll
   -- * All
-  , All, WitAll(..)
+  , All, WitAll(..), NotAll
   -- ** Decision
   , decideAll, idecideAll
-  -- ** Negation
-  , NotAll
-  , anyNotNotAll, notAllAnyNot
   -- ** Entailment
   , entailAll, ientailAll, entailAllF, ientailAllF
   , decideEntailAll, idecideEntailAll
   -- ** Composition
   , anyComp, compAny
+  -- * Logical interplay
+  , allToAny
+  , allNotNone, noneAllNot
+  , anyNotNotAll, notAllAnyNot
   ) where
 
 import           Data.Kind
 import           Data.Singletons
 import           Data.Singletons.Decide
 import           Data.Type.Predicate
+import           Data.Type.Predicate.Logic
 import           Data.Type.Universe
 
 -- | 'decideNone', but providing an 'Elem'.
@@ -201,3 +201,10 @@ noneAllNot
     => None f p --> All f (Not p)
 noneAllNot xs vAny = elimDisproof (decide @(All f (Not p)) xs) $ \vAll ->
     vAll $ WitAll $ \i p -> vAny $ WitAny i p
+
+-- | If something is true for all xs, then it must be true for at least one
+-- x in xs, provided that xs is not empty.
+--
+-- @since 0.1.5.0
+allToAny :: (All f p &&& NotNull f) --> Any f p
+allToAny _ (a, WitAny i _) = WitAny i $ runWitAll a i
