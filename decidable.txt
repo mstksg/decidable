@@ -11,7 +11,7 @@
 --   starting point, and the documentation for <a>Predicate</a> on how to
 --   define predicates.
 @package decidable
-@version 0.1.4.0
+@version 0.1.5.0
 
 
 -- | Combinators for working with type-level predicates, along with
@@ -892,6 +892,10 @@ data Any f :: Predicate k -> Predicate (f k)
 data WitAny f :: (k ~> Type) -> f k -> Type
 [WitAny] :: Elem f as a -> (p @@ a) -> WitAny f p as
 
+-- | A <tt><a>None</a> f p</tt> is a predicate on a collection <tt>as</tt>
+--   that no <tt>a</tt> in <tt>as</tt> satisfies predicate <tt>p</tt>.
+type None f p = (Not (Any f p) :: Predicate (f k))
+
 -- | It is impossible for any value in a collection to be
 --   <a>Impossible</a>.
 anyImpossible :: Universe f => Any f Impossible --> Impossible
@@ -919,19 +923,6 @@ decideNone :: forall f k (p :: k ~> Type). Universe f => Decide p -> Decide (Non
 
 -- | <a>decideNone</a>, but providing an <a>Elem</a>.
 idecideNone :: forall f k (p :: k ~> Type) (as :: f k). Universe f => (forall a. Elem f as a -> Sing a -> Decision (p @@ a)) -> Sing as -> Decision (None f p @@ as)
-
--- | A <tt><a>None</a> f p</tt> is a predicate on a collection <tt>as</tt>
---   that no <tt>a</tt> in <tt>as</tt> satisfies predicate <tt>p</tt>.
-type None f p = (Not (Any f p) :: Predicate (f k))
-
--- | If <tt>p</tt> is false for all <tt>a</tt> in <tt>as</tt>, then no
---   <tt>a</tt> in <tt>as</tt> satisfies <tt>p</tt>.
-allNotNone :: All f (Not p) --> None f p
-
--- | If no <tt>a</tt> in <tt>as</tt> satisfies <tt>p</tt>, then <tt>p</tt>
---   is false for all <tt>a</tt> in <tt>as</tt>. Requires
---   <tt><a>Decidable</a> p</tt> to interrogate the input disproof.
-noneAllNot :: forall f p. (Universe f, Decidable p) => None f p --> All f (Not p)
 
 -- | If there exists an <tt>a</tt> s.t. <tt>p a</tt>, and if <tt>p</tt>
 --   implies <tt>q</tt>, then there must exist an <tt>a</tt> s.t. <tt>q
@@ -982,6 +973,11 @@ newtype WitAll f p (as :: f k)
 WitAll :: (forall a. Elem f as a -> p @@ a) -> WitAll f p
 [runWitAll] :: WitAll f p -> forall a. Elem f as a -> p @@ a
 
+-- | A <tt><a>NotAll</a> f p</tt> is a predicate on a collection
+--   <tt>as</tt> that at least one <tt>a</tt> in <tt>as</tt> does not
+--   satisfy predicate <tt>p</tt>.
+type NotAll f p = (Not (All f p) :: Predicate (f k))
+
 -- | Lifts a predicate <tt>p</tt> on an individual <tt>a</tt> into a
 --   predicate that on a collection <tt>as</tt> that is true if and only if
 --   <i>all</i> items in <tt>as</tt> satisfies the original predicate.
@@ -994,21 +990,6 @@ decideAll :: forall f k (p :: k ~> Type). Universe f => Decide p -> Decide (All 
 
 -- | <a>decideAll</a>, but providing an <a>Elem</a>.
 idecideAll :: forall k (p :: k ~> Type) (as :: f k). Universe f => (forall a. Elem f as a -> Sing a -> Decision (p @@ a)) -> Sing as -> Decision (All f p @@ as)
-
--- | A <tt><a>NotAll</a> f p</tt> is a predicate on a collection
---   <tt>as</tt> that at least one <tt>a</tt> in <tt>as</tt> does not
---   satisfy predicate <tt>p</tt>.
-type NotAll f p = (Not (All f p) :: Predicate (f k))
-
--- | If any <tt>a</tt> in <tt>as</tt> does not satisfy <tt>p</tt>, then not
---   all <tt>a</tt> in <tt>as</tt> satisfy <tt>p</tt>.
-anyNotNotAll :: Any f (Not p) --> NotAll f p
-
--- | If not all <tt>a</tt> in <tt>as</tt> satisfy <tt>p</tt>, then there
---   must be at least one <tt>a</tt> in <tt>as</tt> that does not satisfy
---   <tt>p</tt>. Requires <tt><a>Decidable</a> p</tt> in order to locate
---   that specific <tt>a</tt>.
-notAllAnyNot :: forall f p. (Universe f, Decidable p) => NotAll f p --> Any f (Not p)
 
 -- | If for all <tt>a</tt> we have <tt>p a</tt>, and if <tt>p</tt> implies
 --   <tt>q</tt>, then for all <tt>a</tt> we must also have <tt>p a</tt>.
@@ -1038,6 +1019,29 @@ anyComp :: (Any f (Any g p) @@ as) -> Any (f :.: g) p @@  'Comp as
 
 -- | Turn an <a>Any</a> of a composition into a composition of <a>Any</a>.
 compAny :: (Any (f :.: g) p @@  'Comp as) -> Any f (Any g p) @@ as
+
+-- | If something is true for all xs, then it must be true for at least one
+--   x in xs, provided that xs is not empty.
+allToAny :: (All f p &&& NotNull f) --> Any f p
+
+-- | If <tt>p</tt> is false for all <tt>a</tt> in <tt>as</tt>, then no
+--   <tt>a</tt> in <tt>as</tt> satisfies <tt>p</tt>.
+allNotNone :: All f (Not p) --> None f p
+
+-- | If no <tt>a</tt> in <tt>as</tt> satisfies <tt>p</tt>, then <tt>p</tt>
+--   is false for all <tt>a</tt> in <tt>as</tt>. Requires
+--   <tt><a>Decidable</a> p</tt> to interrogate the input disproof.
+noneAllNot :: forall f p. (Universe f, Decidable p) => None f p --> All f (Not p)
+
+-- | If any <tt>a</tt> in <tt>as</tt> does not satisfy <tt>p</tt>, then not
+--   all <tt>a</tt> in <tt>as</tt> satisfy <tt>p</tt>.
+anyNotNotAll :: Any f (Not p) --> NotAll f p
+
+-- | If not all <tt>a</tt> in <tt>as</tt> satisfy <tt>p</tt>, then there
+--   must be at least one <tt>a</tt> in <tt>as</tt> that does not satisfy
+--   <tt>p</tt>. Requires <tt><a>Decidable</a> p</tt> in order to locate
+--   that specific <tt>a</tt>.
+notAllAnyNot :: forall f p. (Universe f, Decidable p) => NotAll f p --> Any f (Not p)
 
 
 -- | Manipulate "parameterized predicates". See <a>ParamPred</a> and
