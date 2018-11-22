@@ -1051,6 +1051,27 @@ module Data.Type.Predicate.Param
 -- | A parameterized predicate. See <a>Found</a> for more information.
 type ParamPred k v = k -> Predicate v
 
+-- | <tt>Found (<a>IsTC</a> t) @@ x</tt> is true if <tt>x</tt> was made
+--   using the unary type constructor <tt>t</tt>.
+--   
+--   For example:
+--   
+--   <pre>
+--   type IsJust = (Found (IsTC 'Just) :: Predicate (Maybe v))
+--   </pre>
+--   
+--   makes a predicate where <tt>IsJust @@ x</tt> is true if <tt>x</tt> is
+--   <a>Just</a>, and false if <tt>x</tt> is <a>Nothing</a>.
+--   
+--   For a more general version, see <a>EqBy</a>
+type IsTC t = EqBy (TyCon1 t)
+
+-- | <tt>Found (<a>EqBy</a> f) @@ x</tt> is true if there exists some value
+--   when, with <tt>f</tt> applied to it, is equal to <tt>x</tt>.
+--   
+--   See <a>IsTC</a> for a useful specific application.
+type EqBy f = PPMapV f (TyPP (:~:))
+
 -- | Flip the arguments of a <a>ParamPred</a>.
 data FlipPP :: ParamPred v k -> ParamPred k v
 
@@ -1062,6 +1083,9 @@ data ConstPP :: Predicate v -> ParamPred k v
 --   <tt><a>flip</a> (<a>.</a>)</tt>, but unfortunately defunctionalization
 --   doesn't work too well with that definition.
 data PPMap :: (k ~> j) -> ParamPred j v -> ParamPred k v
+
+-- | Pre-compose a function to a <a>ParamPred</a>, but on the "value" side.
+data PPMapV :: (u ~> v) -> ParamPred k u -> ParamPred k v
 
 -- | A <tt><a>ParamPred</a> (f k) k</tt>. Parameterized on an <tt>as :: f
 --   k</tt>, returns a predicate that is true if there exists any <tt>a ::
