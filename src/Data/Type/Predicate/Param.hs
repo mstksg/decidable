@@ -25,7 +25,8 @@
 module Data.Type.Predicate.Param (
   -- * Parameterized Predicates
     ParamPred
-  , FlipPP, ConstPP, PPMap, InP, AnyMatch, TyPP
+  , IsTC, EqBy
+  , FlipPP, ConstPP, PPMap, PPMapV, InP, AnyMatch, TyPP
   -- * Deciding and Proving
   , Found, NotFound
   , Selectable, select
@@ -40,6 +41,7 @@ module Data.Type.Predicate.Param (
 
 import           Data.Kind
 import           Data.Singletons
+import           Data.Singletons.Decide
 import           Data.Singletons.Prelude.Tuple
 import           Data.Singletons.Sigma
 import           Data.Type.Predicate
@@ -101,6 +103,31 @@ type instance Apply (FlipPP p x) y = p y @@ x
 data ConstPP :: Predicate v -> ParamPred k v
 type instance Apply (ConstPP p k) v = p @@ v
 
+-- | @Found ('EqBy' f) \@\@ x@ is true if there exists some value when,
+-- with @f@ applied to it, is equal to @x@.
+--
+-- See 'IsTC' for a useful specific application.
+--
+-- @since 0.1.5.0
+type EqBy f = PPMapV f (TyPP (:~:))
+
+-- | @Found ('IsTC' t) \@\@ x@ is true if @x@ was made using the unary type
+-- constructor @t@.
+--
+-- For example:
+--
+-- @
+-- type IsJust = (Found (IsTC 'Just) :: Predicate (Maybe v))
+-- @
+--
+-- makes a predicate where @IsJust \@\@ x@ is true if @x@ is 'Just', and
+-- false if @x@ is 'Nothing'.
+--
+-- For a more general version, see 'EqBy'
+--
+-- @since 0.1.5.0
+type IsTC t = EqBy (TyCon1 t)
+
 -- | Convert a normal '->' type constructor taking two arguments into
 -- a 'ParamPred'.
 --
@@ -117,6 +144,12 @@ type instance Apply (TyPP t k) v = t k v
 -- that definition.
 data PPMap :: (k ~> j) -> ParamPred j v -> ParamPred k v
 type instance Apply (PPMap f p x) y = p (f @@ x) @@ y
+
+-- | Pre-compose a function to a 'ParamPred', but on the "value" side.
+--
+-- @since 0.1.5.0
+data PPMapV :: (u ~> v) -> ParamPred k u -> ParamPred k v
+type instance Apply (PPMapV f p x) y = p x @@ (f @@ y)
 
 instance (Decidable (Found (p :: ParamPred j v)), SingI (f :: k ~> j)) => Decidable (Found (PPMap f p)) where
     decide = mapDecision (\case i :&: p -> i :&: p)

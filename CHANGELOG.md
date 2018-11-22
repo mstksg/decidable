@@ -9,6 +9,7 @@ Version 0.1.5.0
 <https://github.com/mstksg/decidable/releases/tag/v0.1.5.0>
 
 *   Add `allToAny` to *Data.Type.Predicate.Quantification*.
+*   Add `PPMapV`, `EqBy`, and `IsTC` to *Data.Type.Predicate.Param*.
 
 Version 0.1.4.0
 ---------------
