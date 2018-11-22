@@ -1064,13 +1064,32 @@ type ParamPred k v = k -> Predicate v
 --   <a>Just</a>, and false if <tt>x</tt> is <a>Nothing</a>.
 --   
 --   For a more general version, see <a>EqBy</a>
+--   
+--   The kind of <a>IsTC</a> is:
+--   
+--   <pre>
+--   <a>IsTC</a> :: (v -&gt; k) -&gt; <a>ParamPred</a> k v
+--   <a>Found</a> (<a>IsTC</a> t) :: <a>Predicate</a> k
+--   </pre>
+--   
+--   Applied to specific things:
+--   
+--   <pre>
+--   <a>IsTC</a> '<a>Just</a> :: <a>ParamPred</a> (Maybe v) v
+--   <a>Found</a> (<a>IsTC</a> '<tt>Just'</tt>) :: <a>Predicate</a> (Maybe v)
+--   </pre>
 type IsTC t = EqBy (TyCon1 t)
 
 -- | <tt>Found (<a>EqBy</a> f) @@ x</tt> is true if there exists some value
 --   when, with <tt>f</tt> applied to it, is equal to <tt>x</tt>.
 --   
 --   See <a>IsTC</a> for a useful specific application.
-type EqBy f = PPMapV f (TyPP (:~:))
+--   
+--   <pre>
+--   <a>EqBy</a> :: (v ~&gt; k) -&gt; <a>ParamPred</a> k v
+--   <a>Found</a> (<a>EqBy</a> f) :: <a>Predicate</a> k
+--   </pre>
+data EqBy :: (v ~> k) -> ParamPred k v
 
 -- | Flip the arguments of a <a>ParamPred</a>.
 data FlipPP :: ParamPred v k -> ParamPred k v
