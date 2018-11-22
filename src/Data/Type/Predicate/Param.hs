@@ -108,8 +108,14 @@ type instance Apply (ConstPP p k) v = p @@ v
 --
 -- See 'IsTC' for a useful specific application.
 --
+-- @
+-- 'EqBy' :: (v ~> k) -> 'ParamPred' k v
+-- 'Found' ('EqBy' f) :: 'Predicate' k
+-- @
+--
 -- @since 0.1.5.0
-type EqBy f = PPMapV f (TyPP (:~:))
+data EqBy :: (v ~> k) -> ParamPred k v
+type instance Apply (EqBy f x) y = x :~: (f @@ y)
 
 -- | @Found ('IsTC' t) \@\@ x@ is true if @x@ was made using the unary type
 -- constructor @t@.
@@ -124,6 +130,20 @@ type EqBy f = PPMapV f (TyPP (:~:))
 -- false if @x@ is 'Nothing'.
 --
 -- For a more general version, see 'EqBy'
+--
+-- The kind of 'IsTC' is:
+--
+-- @
+-- 'IsTC' :: (v -> k) -> 'ParamPred' k v
+-- 'Found' ('IsTC' t) :: 'Predicate' k
+-- @
+--
+-- Applied to specific things:
+-- 
+-- @
+-- 'IsTC' ''Just' :: 'ParamPred' (Maybe v) v
+-- 'Found' ('IsTC' ''Just'') :: 'Predicate' (Maybe v)
+-- @
 --
 -- @since 0.1.5.0
 type IsTC t = EqBy (TyCon1 t)
