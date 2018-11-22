@@ -55,6 +55,7 @@ module Data.Type.Universe (
   , allSumL, allSumR, sumLAll, sumRAll
   -- * Defunctionalization symbols
   , ElemSym0, ElemSym1, ElemSym2, GetCompSym0, GetCompSym1
+  , Dims(..), IDims(..), SDims, Sing(..)
   ) where
 
 import           Control.Applicative
@@ -71,11 +72,12 @@ import           Data.Typeable                         (Typeable)
 import           GHC.Generics                          (Generic)
 import           Prelude hiding                        (any, all)
 import qualified Data.Singletons.Prelude.List.NonEmpty as NE
+import           Data.Singletons.TH hiding (Elem, Null)
 
 #if MIN_VERSION_singletons(2,5,0)
 import           Data.Singletons.Prelude.Identity
 #else
-import           Data.Singletons.TH
+import           Data.Singletons.TH hiding (Elem, Null)
 genSingletons [''Identity]
 #endif
 
@@ -749,3 +751,49 @@ sumLAll a = WitAll $ runWitAll a . IInL
 -- | Turn an 'All' of @f ':+:' g@ into an 'All' of @g@.
 sumRAll :: All (f :+: g) p @@ 'InR bs -> All g p @@ bs
 sumRAll a = WitAll $ runWitAll a . IInR
+
+-- TODO: an Any type with 2 wits, 3 ?
+data Dims a = D0 | D1 a | D2 a a
+
+genSingletons [''Dims]
+
+data IDims :: Dims k -> k -> Type where
+    ID1  :: IDims ('D1 x    ) x
+    ID2a :: IDims ('D2 x y  ) x
+    ID2b :: IDims ('D2 x y  ) y
+
+type instance Elem Dims = IDims
+
+instance Universe Dims where
+    idecideAny f = \case
+      SD0     -> Disproved $ \case WitAny i _ -> case i of {}
+      SD1 x   -> case f ID1 x of
+        Proved p    -> Proved $ WitAny ID1 p
+        Disproved v -> Disproved $ \case WitAny i p -> case i of
+                                           ID1 -> v p
+      SD2 x y -> case f ID2a x of
+        Proved p     -> Proved $ WitAny ID2a p
+        Disproved va -> case f ID2b y of
+          Proved p     -> Proved $ WitAny ID2b p
+          Disproved vb -> Disproved $ \case
+            WitAny i p -> case i of ID2a -> va p
+                                    ID2b -> vb p
+
+    idecideAll f = \case
+      SD0     -> Proved $ WitAll $ \case {}
+      SD1 x   -> case f ID1 x of
+        Proved p    -> Proved $ WitAll $ \case ID1 -> p
+        Disproved v -> Disproved $ \wa -> v (runWitAll wa ID1)
+      SD2 x y -> case f ID2a x of
+        Proved pa   -> case f ID2b y of
+          Proved pb   -> Proved $ WitAll $ \case ID2a -> pa
+                                                 ID2b -> pb
+          Disproved v -> Disproved $ \wa -> v (runWitAll wa ID2b)
+        Disproved v -> Disproved $ \wa -> v (runWitAll wa ID2a)
+
+    igenAllA f = \case
+      SD0     -> pure $ WitAll $ \case {}
+      SD1 x   -> (\p -> WitAll $ \case ID1 -> p) <$> f ID1 x
+      SD2 x y -> (\pa pb -> WitAll $ \case ID2a -> pa; ID2b -> pb)
+                    <$> f ID2a x
+                    <*> f ID2b y
