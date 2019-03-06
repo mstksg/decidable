@@ -843,6 +843,11 @@ data SIJust as a :: IJust as a -> Type
 --   <a>SIRight'</a>, which has an actual proper <a>Sing</a> instance.
 data SIRight as a :: IRight as a -> Type
 [SIRight] :: SIRight ( 'Right a) a  'IRight
+
+-- | Kind-indexed singleton for <a>NEIndex</a>. Provided as a separate data
+--   declaration to allow you to use these at the type level. However, the
+--   main interface is still provided through the newtype wrapper
+--   <a>SNEIndex'</a>, which has an actual proper <a>Sing</a> instance.
 data SNEIndex as a :: NEIndex as a -> Type
 [SNEHead] :: SNEIndex (a :| as) a  'NEHead
 [SNETail] :: SIndex as a i -> SNEIndex (b :| as) a ( 'NETail i)
