@@ -45,7 +45,6 @@ module Data.Type.Universe (
   , decideAny, decideAll, genAllA, genAll, igenAll
   , foldMapUni, ifoldMapUni, index, pickElem
   -- * Universe Combination
-  , Sing (SComp, SInL, SInR)
   -- ** Universe Composition
   , (:.:)(..), sGetComp, GetComp
   , allComp, compAll, anyComp, compAny
@@ -55,6 +54,9 @@ module Data.Type.Universe (
   , allSumL, allSumR, sumLAll, sumRAll
   -- * Defunctionalization symbols
   , ElemSym0, ElemSym1, ElemSym2, GetCompSym0, GetCompSym1
+  -- * Singletons
+  , SIndex(..), SIJust(..), SIRight(..), SNEIndex(..), SISnd(..), SIProxy, SIIdentity(..)
+  , Sing (SComp, SInL, SIndex', SIJust', SIRight', SNEIndex', SISnd', SIProxy', SIIdentity')
   ) where
 
 import           Control.Applicative
@@ -290,6 +292,55 @@ instance (SingI (as :: [k]), SDecide k) => Decidable (TyPred (Index as)) where
 
 type instance Elem [] = Index
 
+-- | Kind-indexed singleton for 'Index'.  Provided as a separate data
+-- declaration to allow you to use these at the type level.  However, the
+-- main interface is still provided through the newtype wrapper 'SIndex'',
+-- which has an actual proper 'Sing' instance.
+data SIndex as a :: Index as a -> Type where
+    SIZ :: SIndex (a ': as) a 'IZ
+    SIS :: SIndex bs a i -> SIndex (b ': bs) a ('IS i)
+
+deriving instance Show (SIndex as a i)
+
+newtype instance Sing (i :: Index as a) where
+    SIndex' :: SIndex as a i -> Sing i
+
+instance SingI 'IZ where
+    sing = SIndex' SIZ
+
+instance SingI i => SingI ('IS i) where
+    sing = case sing of
+      SIndex' i -> SIndex' (SIS i)
+
+instance SingKind (Index as a) where
+    type Demote (Index as a) = Index as a
+    fromSing (SIndex' i) = go i
+      where
+        go :: SIndex bs b i -> Index bs b
+        go = \case
+          SIZ   -> IZ
+          SIS j -> IS (go j)
+    toSing i = go i (SomeSing . SIndex')
+      where
+        go :: Index bs b -> (forall i. SIndex bs b i -> r) -> r
+        go = \case
+          IZ   -> ($ SIZ)
+          IS j -> \f -> go j (f . SIS)
+
+instance SDecide (Index as a) where
+    SIndex' i %~ SIndex' j = go i j
+      where
+        go :: SIndex bs b i -> SIndex bs b j -> Decision (i :~: j)
+        go = \case
+          SIZ -> \case
+            SIZ   -> Proved Refl
+            SIS _ -> Disproved $ \case {}
+          SIS i' -> \case
+            SIZ   -> Disproved $ \case {}
+            SIS j' -> case go i' j' of
+              Proved Refl -> Proved Refl
+              Disproved v -> Disproved $ \case Refl -> v Refl
+
 instance Universe [] where
     idecideAny
         :: forall k (p :: k ~> Type) (as :: [k]). ()
@@ -345,6 +396,29 @@ deriving instance Show (IJust as a)
 instance (SingI (as :: Maybe k), SDecide k) => Decidable (TyPred (IJust as)) where
     decide x = withSingI x $ pickElem
 
+-- | Kind-indexed singleton for 'IJust'.  Provided as a separate data
+-- declaration to allow you to use these at the type level.  However, the
+-- main interface is still provided through the newtype wrapper 'SIJust'',
+-- which has an actual proper 'Sing' instance.
+data SIJust as a :: IJust as a -> Type where
+    SIJust :: SIJust ('Just a) a 'IJust
+
+deriving instance Show (SIJust as a i)
+
+newtype instance Sing (i :: IJust as a) where
+    SIJust' :: SIJust as a i -> Sing i
+
+instance SingI 'IJust where
+    sing = SIJust' SIJust
+
+instance SingKind (IJust as a) where
+    type Demote (IJust as a) = IJust as a
+    fromSing (SIJust' SIJust) = IJust
+    toSing IJust = SomeSing (SIJust' SIJust)
+
+instance SDecide (IJust as a) where
+    SIJust' SIJust %~ SIJust' SIJust = Proved Refl
+
 type instance Elem Maybe = IJust
 
 -- | Test that a 'Maybe' is 'Just'.
@@ -383,6 +457,29 @@ data IRight :: Either j k -> k -> Type where
 deriving instance Show (IRight as a)
 instance (SingI (as :: Either j k), SDecide k) => Decidable (TyPred (IRight as)) where
     decide x = withSingI x $ pickElem
+
+-- | Kind-indexed singleton for 'IRight'.  Provided as a separate data
+-- declaration to allow you to use these at the type level.  However, the
+-- main interface is still provided through the newtype wrapper 'SIRight'',
+-- which has an actual proper 'Sing' instance.
+data SIRight as a :: IRight as a -> Type where
+    SIRight :: SIRight ('Right a) a 'IRight
+
+deriving instance Show (SIRight as a i)
+
+newtype instance Sing (i :: IRight as a) where
+    SIRight' :: SIRight as a i -> Sing i
+
+instance SingI 'IRight where
+    sing = SIRight' SIRight
+
+instance SingKind (IRight as a) where
+    type Demote (IRight as a) = IRight as a
+    fromSing (SIRight' SIRight) = IRight
+    toSing IRight = SomeSing (SIRight' SIRight)
+
+instance SDecide (IRight as a) where
+    SIRight' SIRight %~ SIRight' SIRight = Proved Refl
 
 type instance Elem (Either j) = IRight
 
@@ -423,6 +520,43 @@ data NEIndex :: NonEmpty k -> k -> Type where
 deriving instance Show (NEIndex as a)
 instance (SingI (as :: NonEmpty k), SDecide k) => Decidable (TyPred (NEIndex as)) where
     decide x = withSingI x $ pickElem
+
+data SNEIndex as a :: NEIndex as a -> Type where
+    SNEHead :: SNEIndex (a ':| as) a 'NEHead
+    SNETail :: SIndex as a i -> SNEIndex (b ':| as) a ('NETail i)
+
+deriving instance Show (SNEIndex as a i)
+
+newtype instance Sing (i :: NEIndex as a) where
+    SNEIndex' :: SNEIndex as a i -> Sing i
+
+instance SingI 'NEHead where
+    sing = SNEIndex' SNEHead
+
+instance SingI i => SingI ('NETail i) where
+    sing = case sing of
+      SIndex' i -> SNEIndex' (SNETail i)
+
+instance SingKind (NEIndex as a) where
+    type Demote (NEIndex as a) = NEIndex as a
+    fromSing = \case
+      SNEIndex' SNEHead     -> NEHead
+      SNEIndex' (SNETail i) -> NETail $ fromSing (SIndex' i)
+    toSing = \case
+      NEHead   -> SomeSing (SNEIndex' SNEHead)
+      NETail i -> withSomeSing i $ \case
+        SIndex' j -> SomeSing (SNEIndex' (SNETail j))
+
+instance SDecide (NEIndex as a) where
+    (%~) = \case
+      SNEIndex' SNEHead -> \case
+        SNEIndex' SNEHead     -> Proved Refl
+        SNEIndex' (SNETail _) -> Disproved $ \case {}
+      SNEIndex' (SNETail i) -> \case
+        SNEIndex' SNEHead -> Disproved $ \case {}
+        SNEIndex' (SNETail j) -> case SIndex' i %~ SIndex' j of
+          Proved Refl -> Proved Refl
+          Disproved v -> Disproved $ \case Refl -> v Refl
 
 type instance Elem NonEmpty = NEIndex
 
@@ -475,6 +609,29 @@ deriving instance Show (ISnd as a)
 instance (SingI (as :: (j, k)), SDecide k) => Decidable (TyPred (ISnd as)) where
     decide x = withSingI x $ pickElem
 
+-- | Kind-indexed singleton for 'ISnd'.  Provided as a separate data
+-- declaration to allow you to use these at the type level.  However, the
+-- main interface is still provided through the newtype wrapper 'SISnd'',
+-- which has an actual proper 'Sing' instance.
+data SISnd as a :: ISnd as a -> Type where
+    SISnd :: SISnd '(a, b) b 'ISnd
+
+deriving instance Show (SISnd as a i)
+
+newtype instance Sing (i :: ISnd as a) where
+    SISnd' :: SISnd as a i -> Sing i
+
+instance SingI 'ISnd where
+    sing = SISnd' SISnd
+
+instance SingKind (ISnd as a) where
+    type Demote (ISnd as a) = ISnd as a
+    fromSing (SISnd' SISnd) = ISnd
+    toSing ISnd = SomeSing (SISnd' SISnd)
+
+instance SDecide (ISnd as a) where
+    SISnd' SISnd %~ SISnd' SISnd = Proved Refl
+
 type instance Elem ((,) j) = ISnd
 
 instance Universe ((,) j) where
@@ -498,6 +655,25 @@ deriving instance Show (IProxy 'Proxy a)
 instance Provable (Not (TyPred (IProxy 'Proxy))) where
     prove _ = \case {}
 
+-- | Kind-indexed singleton for 'IProxy'.  Provided as a separate data
+-- declaration to allow you to use these at the type level.  However, the
+-- main interface is still provided through the newtype wrapper 'SIProxy'',
+-- which has an actual proper 'Sing' instance.
+data SIProxy as a :: IProxy as a -> Type
+
+deriving instance Show (SIProxy as a i)
+
+newtype instance Sing (i :: IProxy as a) where
+    SIProxy' :: SIProxy as a i -> Sing i
+
+instance SingKind (IProxy as a) where
+    type Demote (IProxy as a) = IProxy as a
+    fromSing (SIProxy' i) = case i of {}
+    toSing = \case {}
+
+instance SDecide (IProxy as a) where
+    SIProxy' i %~ SIProxy' _ = Proved $ case i of {}
+
 type instance Elem Proxy = IProxy
 
 -- | The null universe
@@ -517,6 +693,29 @@ deriving instance Show (IIdentity as a)
 
 instance (SingI (as :: Identity k), SDecide k) => Decidable (TyPred (IIdentity as)) where
     decide x = withSingI x $ pickElem
+
+-- | Kind-indexed singleton for 'IIdentity'.  Provided as a separate data
+-- declaration to allow you to use these at the type level.  However, the
+-- main interface is still provided through the newtype wrapper 'SIIdentity'',
+-- which has an actual proper 'Sing' instance.
+data SIIdentity as a :: IIdentity as a -> Type where
+    SIId :: SIIdentity ('Identity a) a 'IId
+
+deriving instance Show (SIIdentity as a i)
+
+newtype instance Sing (i :: IIdentity as a) where
+    SIIdentity' :: SIIdentity as a i -> Sing i
+
+instance SingI 'IId where
+    sing = SIIdentity' SIId
+
+instance SingKind (IIdentity as a) where
+    type Demote (IIdentity as a) = IIdentity as a
+    fromSing (SIIdentity' SIId) = IId
+    toSing IId = SomeSing (SIIdentity' SIId)
+
+instance SDecide (IIdentity as a) where
+    SIIdentity' SIId %~ SIIdentity' SIId = Proved Refl
 
 type instance Elem Identity = IIdentity
 
