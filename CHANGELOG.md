@@ -10,6 +10,7 @@ Version 0.1.5.0
 
 *   Add `allToAny` to *Data.Type.Predicate.Quantification*.
 *   Add `PPMapV`, `EqBy`, and `IsTC` to *Data.Type.Predicate.Param*.
+*   Kind-indexed singletons for indices in *Data.Type.Universe*.
 
 Version 0.1.4.0
 ---------------
@@ -18,7 +19,7 @@ Version 0.1.4.0
 
 <https://github.com/mstksg/decidable/releases/tag/v0.1.4.0>
 
-*   Added `tripleNegative` and `negateTwice` to *Data.Type.Predicate.Logic*,
+*   Added `tripleNegation` and `negateTwice` to *Data.Type.Predicate.Logic*,
     for more constructivist principles.
 *   Renamed `excludedMiddle` to `complementation`.
 *   Add `TyPP`, `SearchableTC`, `searchTC`, `SelectableTC`, `selectTC` to

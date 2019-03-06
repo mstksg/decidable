@@ -296,6 +296,8 @@ type instance Elem [] = Index
 -- declaration to allow you to use these at the type level.  However, the
 -- main interface is still provided through the newtype wrapper 'SIndex'',
 -- which has an actual proper 'Sing' instance.
+--
+-- @since 0.1.5.0
 data SIndex as a :: Index as a -> Type where
     SIZ :: SIndex (a ': as) a 'IZ
     SIS :: SIndex bs a i -> SIndex (b ': bs) a ('IS i)
@@ -400,6 +402,8 @@ instance (SingI (as :: Maybe k), SDecide k) => Decidable (TyPred (IJust as)) whe
 -- declaration to allow you to use these at the type level.  However, the
 -- main interface is still provided through the newtype wrapper 'SIJust'',
 -- which has an actual proper 'Sing' instance.
+--
+-- @since 0.1.5.0
 data SIJust as a :: IJust as a -> Type where
     SIJust :: SIJust ('Just a) a 'IJust
 
@@ -462,6 +466,8 @@ instance (SingI (as :: Either j k), SDecide k) => Decidable (TyPred (IRight as))
 -- declaration to allow you to use these at the type level.  However, the
 -- main interface is still provided through the newtype wrapper 'SIRight'',
 -- which has an actual proper 'Sing' instance.
+--
+-- @since 0.1.5.0
 data SIRight as a :: IRight as a -> Type where
     SIRight :: SIRight ('Right a) a 'IRight
 
@@ -521,6 +527,12 @@ deriving instance Show (NEIndex as a)
 instance (SingI (as :: NonEmpty k), SDecide k) => Decidable (TyPred (NEIndex as)) where
     decide x = withSingI x $ pickElem
 
+-- | Kind-indexed singleton for 'NEIndex'.  Provided as a separate data
+-- declaration to allow you to use these at the type level.  However, the
+-- main interface is still provided through the newtype wrapper
+-- 'SNEIndex'', which has an actual proper 'Sing' instance.
+--
+-- @since 0.1.5.0
 data SNEIndex as a :: NEIndex as a -> Type where
     SNEHead :: SNEIndex (a ':| as) a 'NEHead
     SNETail :: SIndex as a i -> SNEIndex (b ':| as) a ('NETail i)
@@ -613,6 +625,8 @@ instance (SingI (as :: (j, k)), SDecide k) => Decidable (TyPred (ISnd as)) where
 -- declaration to allow you to use these at the type level.  However, the
 -- main interface is still provided through the newtype wrapper 'SISnd'',
 -- which has an actual proper 'Sing' instance.
+--
+-- @since 0.1.5.0
 data SISnd as a :: ISnd as a -> Type where
     SISnd :: SISnd '(a, b) b 'ISnd
 
@@ -659,6 +673,8 @@ instance Provable (Not (TyPred (IProxy 'Proxy))) where
 -- declaration to allow you to use these at the type level.  However, the
 -- main interface is still provided through the newtype wrapper 'SIProxy'',
 -- which has an actual proper 'Sing' instance.
+--
+-- @since 0.1.5.0
 data SIProxy as a :: IProxy as a -> Type
 
 deriving instance Show (SIProxy as a i)
@@ -698,6 +714,8 @@ instance (SingI (as :: Identity k), SDecide k) => Decidable (TyPred (IIdentity a
 -- declaration to allow you to use these at the type level.  However, the
 -- main interface is still provided through the newtype wrapper 'SIIdentity'',
 -- which has an actual proper 'Sing' instance.
+--
+-- @since 0.1.5.0
 data SIIdentity as a :: IIdentity as a -> Type where
     SIId :: SIIdentity ('Identity a) a 'IId
 
