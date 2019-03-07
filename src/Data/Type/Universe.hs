@@ -35,6 +35,7 @@ module Data.Type.Universe (
   -- ** Instances
   , Index(..), IJust(..), IRight(..), NEIndex(..), ISnd(..), IProxy, IIdentity(..)
   , CompElem(..), SumElem(..)
+  , sameIndexVal, sameNEIndexVal
   -- ** Predicates
   , All, WitAll(..), NotAll
   , Any, WitAny(..), None
@@ -60,6 +61,7 @@ module Data.Type.Universe (
   ) where
 
 import           Control.Applicative
+import           Data.Functor
 import           Data.Functor.Identity
 import           Data.Kind
 import           Data.List.NonEmpty                    (NonEmpty(..))
@@ -389,6 +391,26 @@ instance Universe [] where
           IZ   -> p
           IS i -> runWitAll a i
 
+-- | Test if two indices point to the same item in a list.
+--
+-- We have to return a 'Maybe' here instead of a 'Decision', because it
+-- might be the case that the same item might be duplicated in a list.
+-- Therefore, even if two indices are different, we cannot prove that the
+-- values they point to are different.
+--
+-- @since 0.1.5.1
+sameIndexVal
+    :: Index as a
+    -> Index as b
+    -> Maybe (a :~: b)
+sameIndexVal = \case
+    IZ -> \case
+      IZ   -> Just Refl
+      IS _ -> Nothing
+    IS i -> \case
+      IZ   -> Nothing
+      IS j -> sameIndexVal i j <&> \case Refl -> Refl
+
 -- | Witness an item in a type-level 'Maybe' by proving the 'Maybe' is
 -- 'Just'.
 data IJust :: Maybe k -> k -> Type where
@@ -611,6 +633,26 @@ instance Universe NonEmpty where
         go p ps = WitAll $ \case
           NEHead   -> p
           NETail i -> runWitAll ps i
+
+-- | Test if two indices point to the same item in a non-empty list.
+--
+-- We have to return a 'Maybe' here instead of a 'Decision', because it
+-- might be the case that the same item might be duplicated in a list.
+-- Therefore, even if two indices are different, we cannot prove that the
+-- values they point to are different.
+--
+-- @since 0.1.5.1
+sameNEIndexVal
+    :: NEIndex as a
+    -> NEIndex as b
+    -> Maybe (a :~: b)
+sameNEIndexVal = \case
+    NEHead -> \case
+      NEHead   -> Just Refl
+      NETail _ -> Nothing
+    NETail i -> \case
+      NEHead   -> Nothing
+      NETail j -> sameIndexVal i j <&> \case Refl -> Refl
 
 -- | Trivially witness an item in the second field of a type-level tuple.
 data ISnd :: (j, k) -> k -> Type where

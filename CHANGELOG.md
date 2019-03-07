@@ -1,6 +1,15 @@
 Changelog
 =========
 
+Version 0.1.5.1
+---------------
+
+*Unreleased*
+
+<https://github.com/mstksg/decidable/releases/tag/v0.1.5.1>
+
+*   Add `sameIndexVal`, `sameNEIndexVal`.
+
 Version 0.1.5.0
 ---------------
 
