@@ -625,6 +625,22 @@ data SumElem :: (f :+: g) k -> k -> Type
 [IInL] :: Elem f as a -> SumElem ( 'InL as) a
 [IInR] :: Elem f bs b -> SumElem ( 'InR bs) b
 
+-- | Test if two indices point to the same item in a list.
+--   
+--   We have to return a <a>Maybe</a> here instead of a <a>Decision</a>,
+--   because it might be the case that the same item might be duplicated in
+--   a list. Therefore, even if two indices are different, we cannot prove
+--   that the values they point to are different.
+sameIndexVal :: Index as a -> Index as b -> Maybe (a :~: b)
+
+-- | Test if two indices point to the same item in a non-empty list.
+--   
+--   We have to return a <a>Maybe</a> here instead of a <a>Decision</a>,
+--   because it might be the case that the same item might be duplicated in
+--   a list. Therefore, even if two indices are different, we cannot prove
+--   that the values they point to are different.
+sameNEIndexVal :: NEIndex as a -> NEIndex as b -> Maybe (a :~: b)
+
 -- | An <tt><a>All</a> f p</tt> is a predicate testing a collection <tt>as
 --   :: f a</tt> for the fact that <i>all</i> items in <tt>as</tt> satisfy
 --   <tt>p</tt>. Represents the "forall" quantifier over a given universe.
