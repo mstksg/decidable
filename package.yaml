@@ -30,7 +30,8 @@ ghc-options:
 
 dependencies:
 - base >= 4.11 && < 5
-- singletons >= 2.4
+- singletons >= 2.5
+- vinyl
 
 library:
   source-dirs: src

@@ -17,51 +17,43 @@
 {-# LANGUAGE TypeInType             #-}
 {-# LANGUAGE TypeOperators          #-}
 
--- |
--- Module      : Data.Type.Universe
--- Copyright   : (c) Justin Le 2018
--- License     : BSD3
---
--- Maintainer  : justin@jle.im
--- Stability   : experimental
--- Portability : non-portable
---
--- A type family for "containers", intended for allowing lifting of
--- predicates on @k@ to be predicates on containers @f k@.
---
-module Data.Type.Universe (
+module Data.Type.Universe.Internal (
   -- * Universe
-    Elem, In, Prod, Universe(..)
-  , mapProd, imapProd, foldMapProd, ifoldMapProd, singAll
-  -- ** Instances
-  , Index(..), IJust(..), IRight(..), NEIndex(..), ISnd(..), IProxy, IIdentity(..)
-  , CompElem(..), SumElem(..)
-  , sameIndexVal, sameNEIndexVal
+    Elem, In, Prod, HasProd(..), Universe(..)
+  -- , mapProd
+  , imapProd
+  -- , foldMapProd, ifoldMapProd
+  -- , splitSing
+  -- -- ** Instances
+  -- , Index(..), IJust(..), IRight(..), NEIndex(..), ISnd(..), IProxy, IIdentity(..)
+  -- , CompElem(..), SumElem(..)
+  -- , sameIndexVal, sameNEIndexVal
   -- ** Predicates
   , All, WitAll(..), NotAll
   , Any, WitAny(..), None
   , Null, NotNull
-  -- *** Specialized
-  , IsJust, IsNothing, IsRight, IsLeft
+  -- -- *** Specialized
+  -- , IsJust, IsNothing, IsRight, IsLeft
   -- * Decisions and manipulations
   , decideAny, decideAll
-  , genAll, igenAll
-  , foldMapUni, ifoldMapUni, index, pickElem
-  -- * Universe Combination
-  -- ** Universe Composition
-  , (:.:)(..), sGetComp, GetComp
-  , allComp, compAll, anyComp, compAny
-  -- ** Universe Disjunction
-  , (:+:)(..)
-  , anySumL, anySumR, sumLAny, sumRAny
-  , allSumL, allSumR, sumLAll, sumRAll
+  -- , genAll, igenAll
+  -- , foldMapUni, ifoldMapUni
+  , index, pickElem
+  -- -- * Universe Combination
+  -- -- ** Universe Composition
+  -- , (:.:)(..), sGetComp, GetComp
+  -- , allComp, compAll, anyComp, compAny
+  -- -- ** Universe Disjunction
+  -- , (:+:)(..)
+  -- , anySumL, anySumR, sumLAny, sumRAny
+  -- , allSumL, allSumR, sumLAll, sumRAll
   -- * Defunctionalization symbols
   , ElemSym0, ElemSym1, ElemSym2
   , ProdSym0, ProdSym1, ProdSym2
-  , GetCompSym0, GetCompSym1
-  -- * Singletons
-  , SIndex(..), SIJust(..), SIRight(..), SNEIndex(..), SISnd(..), SIProxy, SIIdentity(..)
-  , Sing (SComp, SInL, SIndex', SIJust', SIRight', SNEIndex', SISnd', SIProxy', SIIdentity')
+  -- , GetCompSym0, GetCompSym1
+  -- -- * Singletons
+  -- , SIndex(..), SIJust(..), SIRight(..), SNEIndex(..), SISnd(..), SIProxy, SIIdentity(..)
+  -- , Sing (SComp, SInL, SIndex', SIJust', SIRight', SNEIndex', SISnd', SIProxy', SIIdentity')
   ) where
 
 import           Control.Applicative
@@ -76,132 +68,221 @@ import           Data.Singletons.Prelude hiding        (Elem, ElemSym0, ElemSym1
 import           Data.Singletons.Prelude.Identity
 import           Data.Type.Predicate
 import           Data.Type.Predicate.Logic
-import           Data.Type.Universe.Internal
-import           Data.Type.Universe.Prod
 import           Data.Typeable                         (Typeable)
 import           Data.Vinyl                            (Rec(..))
 import           GHC.Generics                          (Generic, (:*:)(..))
 import           Prelude hiding                        (any, all)
 import qualified Data.Singletons.Prelude.List.NonEmpty as NE
 
----- | A @'WitAny' p as@ is a witness that, for at least one item @a@ in the
----- type-level collection @as@, the predicate @p a@ is true.
---data WitAny f :: (k ~> Type) -> f k -> Type where
---    WitAny :: Elem f as a -> p @@ a -> WitAny f p as
+-- | A witness for membership of a given item in a type-level collection
+type family Elem (f :: Type -> Type) = (i :: f k -> k -> Type) | i -> f
 
----- | An @'Any' f p@ is a predicate testing a collection @as :: f a@ for the
----- fact that at least one item in @as@ satisfies @p@.  Represents the
----- "exists" quantifier over a given universe.
-----
----- This is mostly useful for its 'Decidable' and 'TFunctor' instances,
----- which lets you lift predicates on @p@ to predicates on @'Any' f p@.
---data Any f :: Predicate k -> Predicate (f k)
---type instance Apply (Any f p) as = WitAny f p as
+data ElemSym0 (f :: Type -> Type) :: f k ~> k ~> Type
+data ElemSym1 (f :: Type -> Type) :: f k -> k ~> Type
+type ElemSym2 (f :: Type -> Type) (as :: f k) (a :: k) = Elem f as a
 
----- | A @'WitAll' p as@ is a witness that the predicate @p a@ is true for all
----- items @a@ in the type-level collection @as@.
---newtype WitAll f p (as :: f k) = WitAll { runWitAll :: forall a. Elem f as a -> p @@ a }
+type instance Apply (ElemSym0 f) as = ElemSym1 f as
+type instance Apply (ElemSym1 f as) a = Elem f as a
 
----- | An @'All' f p@ is a predicate testing a collection @as :: f a@ for the
----- fact that /all/ items in @as@ satisfy @p@.  Represents the "forall"
----- quantifier over a given universe.
-----
----- This is mostly useful for its 'Decidable', 'Provable', and 'TFunctor'
----- instances, which lets you lift predicates on @p@ to predicates on @'All'
----- f p@.
---data All f :: Predicate k -> Predicate (f k)
---type instance Apply (All f p) as = WitAll f p as
+type family Prod (f :: Type -> Type) = (p :: (k -> Type) -> f k -> Type) | p -> f
 
---instance (Universe f, Decidable p) => Decidable (Any f p) where
---    decide = decideAny @f @_ @p $ decide @p
+data ProdSym0 (f :: Type -> Type) :: (k -> Type) ~> f k ~> Type
+data ProdSym1 (f :: Type -> Type) :: (k -> Type) -> f k ~> Type
+type ProdSym2 (f :: Type -> Type) (g :: k -> Type) (as :: f k) = Prod f g as
 
---instance (Universe f, Decidable p) => Decidable (All f p) where
---    decide = decideAll @f @_ @p $ decide @p
+type instance Apply (ProdSym0 f) g = ProdSym1 f g
+type instance Apply (ProdSym1 f g) as = Prod f g as
 
---instance (Universe f, Provable p) => Decidable (NotNull f ==> Any f p) where
+-- | @'In' f as@ is a predicate that a given input @a@ is a member of
+-- collection @as@.
+type In (f :: Type -> Type) (as :: f k) = ElemSym1 f as
 
---instance Provable p => Provable (NotNull f ==> Any f p) where
---    prove _ (WitAny i s) = WitAny i (prove @p s)
+-- instance (Universe f, Decidable p) => Decidable (Any f p) where
+--     decide = decideAny @f @_ @p $ decide @p
 
---instance (Universe f, Provable p) => Provable (All f p) where
---    prove xs = WitAll $ \i -> prove @p (index i xs)
+-- instance (Universe f, Decidable p) => Decidable (All f p) where
+--     decide = decideAll @f @_ @p $ decide @p
 
---instance Universe f => TFunctor (Any f) where
---    tmap f xs (WitAny i x) = WitAny i (f (index i xs) x)
+-- instance (Universe f, Provable p) => Decidable (NotNull f ==> Any f p) where
 
---instance Universe f => TFunctor (All f) where
---    tmap f xs a = WitAll $ \i -> f (index i xs) (runWitAll a i)
+-- instance Provable p => Provable (NotNull f ==> Any f p) where
+--     prove _ (WitAny i s) = WitAny i (prove @p s)
 
---instance Universe f => DFunctor (All f) where
---    dmap f xs a = idecideAll (\i x -> f x (runWitAll a i)) xs
+-- instance (Universe f, Provable p) => Provable (All f p) where
+--     prove xs = WitAll $ \i -> prove @p (index i xs)
 
----- | Typeclass for a type-level container that you can quantify or lift
----- type-level predicates over.
---class HasProd f => Universe (f :: Type -> Type) where
---    -- | 'decideAny', but providing an 'Elem'.
---    idecideAny
---        :: forall k (p :: k ~> Type) (as :: f k). ()
---        => (forall a. Elem f as a -> Sing a -> Decision (p @@ a))   -- ^ predicate on value
---        -> (Sing as -> Decision (Any f p @@ as))                         -- ^ predicate on collection
+-- instance Universe f => TFunctor (Any f) where
+--     tmap f xs (WitAny i x) = WitAny i (f (index i xs) x)
 
---    -- | 'decideAll', but providing an 'Elem'.
---    idecideAll
---        :: forall k (p :: k ~> Type) (as :: f k). ()
---        => (forall a. Elem f as a -> Sing a -> Decision (p @@ a))   -- ^ predicate on value
---        -> (Sing as -> Decision (All f p @@ as))                         -- ^ predicate on collection
+-- instance Universe f => TFunctor (All f) where
+--     tmap f xs a = WitAll $ \i -> f (index i xs) (runWitAll a i)
 
---    allProd
---        :: forall p g. ()
---        => (forall a. Sing a -> p @@ a -> g a)
---        -> All f p --> TyPred (Prod f g)
---    prodAll
---        :: forall p g as. ()
---        => (forall a. g a -> p @@ a)
---        -> Prod f g as
---        -> All f p @@ as
+-- instance Universe f => DFunctor (All f) where
+--     dmap f xs a = idecideAll (\i x -> f x (runWitAll a i)) xs
 
----- | Predicate that a given @as :: f k@ is empty and has no items in it.
---type Null    f = (None f Evident :: Predicate (f k))
+class HasProd (f :: Type -> Type) where
+    singProd :: Sing as -> Prod f Sing as
+    prodSing :: Prod f Sing as -> Sing as
 
----- | Predicate that a given @as :: f k@ is not empty, and has at least one
----- item in it.
---type NotNull f = (Any f Evident :: Predicate (f k))
+    itraverseProd
+        :: Applicative m
+        => (forall a. Elem f as a -> g a -> m (h a))
+        -> Prod f g as
+        -> m (Prod f h as)
 
----- | A @'None' f p@ is a predicate on a collection @as@ that no @a@ in @as@
----- satisfies predicate @p@.
---type None f p = (Not (Any f p) :: Predicate (f k))
+    traverseProd
+        :: Applicative m
+        => (forall a. g a -> m (h a))
+        -> Prod f g as
+        -> m (Prod f h as)
+    traverseProd f = itraverseProd (const f)
 
----- | A @'NotAll' f p@ is a predicate on a collection @as@ that at least one
----- @a@ in @as@ does not satisfy predicate @p@.
---type NotAll f p = (Not (All f p) :: Predicate (f k))
+    zipWithProd
+        :: (forall a. g a -> h a -> j a)
+        -> Prod f g as
+        -> Prod f h as
+        -> Prod f j as
+    zipWithProd f xs ys = imapProd (\i x -> f x (indexProd i ys)) xs
 
----- | Lifts a predicate @p@ on an individual @a@ into a predicate that on
----- a collection @as@ that is true if and only if /any/ item in @as@
----- satisfies the original predicate.
-----
----- That is, it turns a predicate of kind @k ~> Type@ into a predicate
----- of kind @f k ~> Type@.
-----
----- Essentially tests existential quantification.
---decideAny
---    :: forall f k (p :: k ~> Type). Universe f
---    => Decide p                                 -- ^ predicate on value
---    -> Decide (Any f p)                -- ^ predicate on collection
---decideAny f = idecideAny (const f)
+    indexProd
+        :: Elem f as a
+        -> Prod f g as
+        -> g a
 
----- | Lifts a predicate @p@ on an individual @a@ into a predicate that on
----- a collection @as@ that is true if and only if /all/ items in @as@
----- satisfies the original predicate.
-----
----- That is, it turns a predicate of kind @k ~> Type@ into a predicate
----- of kind @f k ~> Type@.
-----
----- Essentially tests universal quantification.
---decideAll
---    :: forall f k (p :: k ~> Type). Universe f
---    => Decide p                                 -- ^ predicate on value
---    -> Decide (All f p)                -- ^ predicate on collection
---decideAll f = idecideAll (const f)
+
+-- | A @'WitAny' p as@ is a witness that, for at least one item @a@ in the
+-- type-level collection @as@, the predicate @p a@ is true.
+data WitAny f :: (k ~> Type) -> f k -> Type where
+    WitAny :: Elem f as a -> p @@ a -> WitAny f p as
+
+-- | An @'Any' f p@ is a predicate testing a collection @as :: f a@ for the
+-- fact that at least one item in @as@ satisfies @p@.  Represents the
+-- "exists" quantifier over a given universe.
+--
+-- This is mostly useful for its 'Decidable' and 'TFunctor' instances,
+-- which lets you lift predicates on @p@ to predicates on @'Any' f p@.
+data Any f :: Predicate k -> Predicate (f k)
+type instance Apply (Any f p) as = WitAny f p as
+
+-- | A @'WitAll' p as@ is a witness that the predicate @p a@ is true for all
+-- items @a@ in the type-level collection @as@.
+newtype WitAll f p (as :: f k) = WitAll { runWitAll :: forall a. Elem f as a -> p @@ a }
+
+-- | An @'All' f p@ is a predicate testing a collection @as :: f a@ for the
+-- fact that /all/ items in @as@ satisfy @p@.  Represents the "forall"
+-- quantifier over a given universe.
+--
+-- This is mostly useful for its 'Decidable', 'Provable', and 'TFunctor'
+-- instances, which lets you lift predicates on @p@ to predicates on @'All'
+-- f p@.
+data All f :: Predicate k -> Predicate (f k)
+type instance Apply (All f p) as = WitAll f p as
+
+instance (Universe f, Decidable p) => Decidable (Any f p) where
+    decide = decideAny @f @_ @p $ decide @p
+
+instance (Universe f, Decidable p) => Decidable (All f p) where
+    decide = decideAll @f @_ @p $ decide @p
+
+instance (Universe f, Provable p) => Decidable (NotNull f ==> Any f p) where
+
+instance Provable p => Provable (NotNull f ==> Any f p) where
+    prove _ (WitAny i s) = WitAny i (prove @p s)
+
+instance (Universe f, Provable p) => Provable (All f p) where
+    prove xs = WitAll $ \i -> prove @p (index i xs)
+
+instance Universe f => TFunctor (Any f) where
+    tmap f xs (WitAny i x) = WitAny i (f (index i xs) x)
+
+instance Universe f => TFunctor (All f) where
+    tmap f xs a = WitAll $ \i -> f (index i xs) (runWitAll a i)
+
+instance Universe f => DFunctor (All f) where
+    dmap f xs a = idecideAll (\i x -> f x (runWitAll a i)) xs
+
+-- | Typeclass for a type-level container that you can quantify or lift
+-- type-level predicates over.
+class HasProd f => Universe (f :: Type -> Type) where
+    -- | 'decideAny', but providing an 'Elem'.
+    idecideAny
+        :: forall k (p :: k ~> Type) (as :: f k). ()
+        => (forall a. Elem f as a -> Sing a -> Decision (p @@ a))   -- ^ predicate on value
+        -> (Sing as -> Decision (Any f p @@ as))                         -- ^ predicate on collection
+
+    -- | 'decideAll', but providing an 'Elem'.
+    idecideAll
+        :: forall k (p :: k ~> Type) (as :: f k). ()
+        => (forall a. Elem f as a -> Sing a -> Decision (p @@ a))   -- ^ predicate on value
+        -> (Sing as -> Decision (All f p @@ as))                         -- ^ predicate on collection
+
+    allProd
+        :: forall p g. ()
+        => (forall a. Sing a -> p @@ a -> g a)
+        -> All f p --> TyPred (Prod f g)
+    prodAll
+        :: forall p g as. ()
+        => (forall a. g a -> p @@ a)
+        -> Prod f g as
+        -> All f p @@ as
+
+-- | Predicate that a given @as :: f k@ is empty and has no items in it.
+type Null    f = (None f Evident :: Predicate (f k))
+
+-- | Predicate that a given @as :: f k@ is not empty, and has at least one
+-- item in it.
+type NotNull f = (Any f Evident :: Predicate (f k))
+
+-- | A @'None' f p@ is a predicate on a collection @as@ that no @a@ in @as@
+-- satisfies predicate @p@.
+type None f p = (Not (Any f p) :: Predicate (f k))
+
+-- | A @'NotAll' f p@ is a predicate on a collection @as@ that at least one
+-- @a@ in @as@ does not satisfy predicate @p@.
+type NotAll f p = (Not (All f p) :: Predicate (f k))
+
+imapProd
+    :: HasProd f
+    => (forall a. Elem f as a -> g a -> h a)
+    -> Prod f g as
+    -> Prod f h as
+imapProd f = runIdentity . itraverseProd (\i -> Identity . f i)
+
+-- | Extract the item from the container witnessed by the 'Elem'
+index
+    :: forall f as a. HasProd f
+    => Elem f as a        -- ^ Witness
+    -> Sing as            -- ^ Collection
+    -> Sing a
+index i = indexProd i . singProd
+
+-- | Lifts a predicate @p@ on an individual @a@ into a predicate that on
+-- a collection @as@ that is true if and only if /any/ item in @as@
+-- satisfies the original predicate.
+--
+-- That is, it turns a predicate of kind @k ~> Type@ into a predicate
+-- of kind @f k ~> Type@.
+--
+-- Essentially tests existential quantification.
+decideAny
+    :: forall f k (p :: k ~> Type). Universe f
+    => Decide p                                 -- ^ predicate on value
+    -> Decide (Any f p)                -- ^ predicate on collection
+decideAny f = idecideAny (const f)
+
+-- | Lifts a predicate @p@ on an individual @a@ into a predicate that on
+-- a collection @as@ that is true if and only if /all/ items in @as@
+-- satisfies the original predicate.
+--
+-- That is, it turns a predicate of kind @k ~> Type@ into a predicate
+-- of kind @f k ~> Type@.
+--
+-- Essentially tests universal quantification.
+decideAll
+    :: forall f k (p :: k ~> Type). Universe f
+    => Decide p                                 -- ^ predicate on value
+    -> Decide (All f p)                -- ^ predicate on collection
+decideAll f = idecideAll (const f)
 
 ------ | If @p a@ is true for all values @a@ in @as@ under some
 ------ (Applicative) context @h@, then you can create an @'All' p as@ under
@@ -219,36 +300,36 @@ import qualified Data.Singletons.Prelude.List.NonEmpty as NE
 ----    -> (Sing as -> h (All f p @@ as))               -- ^ predicate on collection in context
 ----genAllA f = igenAllA (const f)
 
--- | 'genAll', but providing an 'Elem'.
-igenAll
-    :: forall f k (p :: k ~> Type) (as :: f k). Universe f
-    => (forall a. Elem f as a -> Sing a -> p @@ a)            -- ^ always-true predicate on value
-    -> (Sing as -> All f p @@ as)                                  -- ^ always-true predicate on collection
-igenAll f = prodAll (\(i :*: x) -> f i x) . imapProd (:*:) . singProd
+---- | 'genAll', but providing an 'Elem'.
+--igenAll
+--    :: forall f k (p :: k ~> Type) (as :: f k). Universe f
+--    => (forall a. Elem f as a -> Sing a -> p @@ a)            -- ^ always-true predicate on value
+--    -> (Sing as -> All f p @@ as)                                  -- ^ always-true predicate on collection
+--igenAll f = prodAll (\(i :*: x) -> f i x) . imapProd (:*:) . singProd
 
--- | If @p a@ is true for all values @a@ in @as@, then we have @'All'
--- p as@.  Basically witnesses the definition of 'All'.
-genAll
-    :: forall f k (p :: k ~> Type). Universe f
-    => Prove p                 -- ^ always-true predicate on value
-    -> Prove (All f p)         -- ^ always-true predicate on collection
-genAll f = prodAll f . singProd
+---- | If @p a@ is true for all values @a@ in @as@, then we have @'All'
+---- p as@.  Basically witnesses the definition of 'All'.
+--genAll
+--    :: forall f k (p :: k ~> Type). Universe f
+--    => Prove p                 -- ^ always-true predicate on value
+--    -> Prove (All f p)         -- ^ always-true predicate on collection
+--genAll f = prodAll f . singProd
 
--- | Split a @'Sing' as@ into a proof that all @a@ in @as@ exist.
-singAll
-    :: forall f k (as :: f k). Universe f
-    => Sing as
-    -> All f Evident @@ as
-singAll = prodAll id . singProd
+---- | Split a @'Sing' as@ into a proof that all @a@ in @as@ exist.
+--splitSing
+--    :: forall f k (as :: f k). Universe f
+--    => Sing as
+--    -> All f (TyPred Sing) @@ as
+--splitSing = prodAll id . singProd
 
----- | Automatically generate a witness for a member, if possible
---pickElem
---    :: forall f k (as :: f k) a. (Universe f, SingI as, SingI a, SDecide k)
---    => Decision (Elem f as a)
---pickElem = mapDecision (\case WitAny i Refl -> i)
---                       (\case i -> WitAny i Refl)
---         . decide @(Any f (TyPred ((:~:) a)))
---         $ sing
+-- | Automatically generate a witness for a member, if possible
+pickElem
+    :: forall f k (as :: f k) a. (Universe f, SingI as, SingI a, SDecide k)
+    => Decision (Elem f as a)
+pickElem = mapDecision (\case WitAny i Refl -> i)
+                       (\case i -> WitAny i Refl)
+         . decide @(Any f (TyPred ((:~:) a)))
+         $ sing
 
 --instance (SingI (as :: [k]), SDecide k) => Decidable (TyPred (Index as)) where
 --    decide x = withSingI x $ pickElem
@@ -314,15 +395,15 @@ singAll = prodAll id . singProd
 --instance (SingI (as :: Maybe k), SDecide k) => Decidable (TyPred (IJust as)) where
 --    decide x = withSingI x $ pickElem
 
--- | Test that a 'Maybe' is 'Just'.
---
--- @since 0.1.2.0
-type IsJust    = (NotNull Maybe :: Predicate (Maybe k))
+---- | Test that a 'Maybe' is 'Just'.
+----
+---- @since 0.1.2.0
+--type IsJust    = (NotNull Maybe :: Predicate (Maybe k))
 
--- | Test that a 'Maybe' is 'Nothing'.
---
--- @since 0.1.2.0
-type IsNothing = (Null    Maybe :: Predicate (Maybe k))
+---- | Test that a 'Maybe' is 'Nothing'.
+----
+---- @since 0.1.2.0
+--type IsNothing = (Null    Maybe :: Predicate (Maybe k))
 
 --instance Universe Maybe where
 --    idecideAny f = \case
@@ -341,15 +422,15 @@ type IsNothing = (Null    Maybe :: Predicate (Maybe k))
 --instance (SingI (as :: Either j k), SDecide k) => Decidable (TyPred (IRight as)) where
 --    decide x = withSingI x $ pickElem
 
--- | Test that an 'Either' is 'Right'
---
--- @since 0.1.2.0
-type IsRight = (NotNull (Either j) :: Predicate (Either j k))
+---- | Test that an 'Either' is 'Right'
+----
+---- @since 0.1.2.0
+--type IsRight = (NotNull (Either j) :: Predicate (Either j k))
 
--- | Test that an 'Either' is 'Left'
---
--- @since 0.1.2.0
-type IsLeft  = (Null    (Either j) :: Predicate (Either j k))
+---- | Test that an 'Either' is 'Left'
+----
+---- @since 0.1.2.0
+--type IsLeft  = (Null    (Either j) :: Predicate (Either j k))
 
 --instance Universe (Either j) where
 --    idecideAny f = \case
@@ -499,29 +580,29 @@ type IsLeft  = (Null    (Either j) :: Predicate (Either j k))
 --    --         -> h (All g p @@ as)
 --    --     go i = igenAllA $ \j -> f (i :? j)
 
--- | Turn a composition of 'Any' into an 'Any' of a composition.
---
--- @since 0.1.2.0
-anyComp :: Any f (Any g p) @@ as -> Any (f :.: g) p @@ 'Comp as
-anyComp (WitAny i (WitAny j p)) = WitAny (i :? j) p
+---- | Turn a composition of 'Any' into an 'Any' of a composition.
+----
+---- @since 0.1.2.0
+--anyComp :: Any f (Any g p) @@ as -> Any (f :.: g) p @@ 'Comp as
+--anyComp (WitAny i (WitAny j p)) = WitAny (i :? j) p
 
--- | Turn an 'Any' of a composition into a composition of 'Any'.
---
--- @since 0.1.2.0
-compAny :: Any (f :.: g) p @@ 'Comp as -> Any f (Any g p) @@ as
-compAny (WitAny (i :? j) p) = WitAny i (WitAny j p)
+---- | Turn an 'Any' of a composition into a composition of 'Any'.
+----
+---- @since 0.1.2.0
+--compAny :: Any (f :.: g) p @@ 'Comp as -> Any f (Any g p) @@ as
+--compAny (WitAny (i :? j) p) = WitAny i (WitAny j p)
 
--- | Turn a composition of 'All' into an 'All' of a composition.
---
--- @since 0.1.2.0
-allComp :: All f (All g p) @@ as -> All (f :.: g) p @@ 'Comp as
-allComp a = WitAll $ \(i :? j) -> runWitAll (runWitAll a i) j
+---- | Turn a composition of 'All' into an 'All' of a composition.
+----
+---- @since 0.1.2.0
+--allComp :: All f (All g p) @@ as -> All (f :.: g) p @@ 'Comp as
+--allComp a = WitAll $ \(i :? j) -> runWitAll (runWitAll a i) j
 
--- | Turn an 'All' of a composition into a composition of 'All'.
---
--- @since 0.1.2.0
-compAll :: All (f :.: g) p @@ 'Comp as -> All f (All g p) @@ as
-compAll a = WitAll $ \i -> WitAll $ \j -> runWitAll a (i :? j)
+---- | Turn an 'All' of a composition into a composition of 'All'.
+----
+---- @since 0.1.2.0
+--compAll :: All (f :.: g) p @@ 'Comp as -> All f (All g p) @@ as
+--compAll a = WitAll $ \i -> WitAll $ \j -> runWitAll a (i :? j)
 
 --instance (Universe f, Universe g) => Universe (f :+: g) where
 --    idecideAny
@@ -555,34 +636,34 @@ compAll a = WitAll $ \i -> WitAll $ \j -> runWitAll a (i :? j)
 --    --   SInL xs -> allSumL <$> igenAllA @f @_ @p (f . IInL) xs
 --    --   SInR xs -> allSumR <$> igenAllA @g @_ @p (f . IInR) xs
 
--- | Turn an 'Any' of @f@ into an 'Any' of @f ':+:' g@.
-anySumL :: Any f p @@ as -> Any (f :+: g) p @@ 'InL as
-anySumL (WitAny i x) = WitAny (IInL i) x
+---- | Turn an 'Any' of @f@ into an 'Any' of @f ':+:' g@.
+--anySumL :: Any f p @@ as -> Any (f :+: g) p @@ 'InL as
+--anySumL (WitAny i x) = WitAny (IInL i) x
 
--- | Turn an 'Any' of @g@ into an 'Any' of @f ':+:' g@.
-anySumR :: Any g p @@ bs -> Any (f :+: g) p @@ 'InR bs
-anySumR (WitAny j y) = WitAny (IInR j) y
+---- | Turn an 'Any' of @g@ into an 'Any' of @f ':+:' g@.
+--anySumR :: Any g p @@ bs -> Any (f :+: g) p @@ 'InR bs
+--anySumR (WitAny j y) = WitAny (IInR j) y
 
--- | Turn an 'Any' of @f ':+:' g@ into an 'Any' of @f@.
-sumLAny :: Any (f :+: g) p @@ 'InL as -> Any f p @@ as
-sumLAny (WitAny (IInL i) x) = WitAny i x
+---- | Turn an 'Any' of @f ':+:' g@ into an 'Any' of @f@.
+--sumLAny :: Any (f :+: g) p @@ 'InL as -> Any f p @@ as
+--sumLAny (WitAny (IInL i) x) = WitAny i x
 
--- | Turn an 'Any' of @f ':+:' g@ into an 'Any' of @g@.
-sumRAny :: Any (f :+: g) p @@ 'InR bs -> Any g p @@ bs
-sumRAny (WitAny (IInR j) y) = WitAny j y
+---- | Turn an 'Any' of @f ':+:' g@ into an 'Any' of @g@.
+--sumRAny :: Any (f :+: g) p @@ 'InR bs -> Any g p @@ bs
+--sumRAny (WitAny (IInR j) y) = WitAny j y
 
--- | Turn an 'All' of @f@ into an 'All' of @f ':+:' g@.
-allSumL :: All f p @@ as -> All (f :+: g) p @@ 'InL as
-allSumL a = WitAll $ \case IInL i -> runWitAll a i
+---- | Turn an 'All' of @f@ into an 'All' of @f ':+:' g@.
+--allSumL :: All f p @@ as -> All (f :+: g) p @@ 'InL as
+--allSumL a = WitAll $ \case IInL i -> runWitAll a i
 
--- | Turn an 'All' of @g@ into an 'All' of @f ':+:' g@.
-allSumR :: All g p @@ bs -> All (f :+: g) p @@ 'InR bs
-allSumR a = WitAll $ \case IInR j -> runWitAll a j
+---- | Turn an 'All' of @g@ into an 'All' of @f ':+:' g@.
+--allSumR :: All g p @@ bs -> All (f :+: g) p @@ 'InR bs
+--allSumR a = WitAll $ \case IInR j -> runWitAll a j
 
--- | Turn an 'All' of @f ':+:' g@ into an 'All' of @f@.
-sumLAll :: All (f :+: g) p @@ 'InL as -> All f p @@ as
-sumLAll a = WitAll $ runWitAll a . IInL
+---- | Turn an 'All' of @f ':+:' g@ into an 'All' of @f@.
+--sumLAll :: All (f :+: g) p @@ 'InL as -> All f p @@ as
+--sumLAll a = WitAll $ runWitAll a . IInL
 
--- | Turn an 'All' of @f ':+:' g@ into an 'All' of @g@.
-sumRAll :: All (f :+: g) p @@ 'InR bs -> All g p @@ bs
-sumRAll a = WitAll $ runWitAll a . IInR
+---- | Turn an 'All' of @f ':+:' g@ into an 'All' of @g@.
+--sumRAll :: All (f :+: g) p @@ 'InR bs -> All g p @@ bs
+--sumRAll a = WitAll $ runWitAll a . IInR

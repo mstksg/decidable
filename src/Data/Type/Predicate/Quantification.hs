@@ -132,7 +132,8 @@ ientailAllF
     => (forall a. Elem f as a -> p @@ a -> h (q @@ a))    -- ^ implication in context
     -> All f p @@ as
     -> h (All f q @@ as)
-ientailAllF f a = igenAllA (\i _ -> f i (runWitAll a i)) sing
+-- ientailAllF f a = igenAllA (\i _ -> f i (runWitAll a i)) sing
+ientailAllF f a = undefined
 
 -- | If @p@ implies @q@ under some context @h@, and if we have @p a@ for
 -- all @a@, then we must have @q a@ for all @a@ under context @h@.
