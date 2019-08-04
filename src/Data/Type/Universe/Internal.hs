@@ -20,8 +20,7 @@
 module Data.Type.Universe.Internal (
   -- * Universe
     Elem, In, Prod, HasProd(..), Universe(..)
-  -- , mapProd
-  , imapProd
+  , mapProd, imapProd, indexProd
   -- , foldMapProd, ifoldMapProd
   -- , splitSing
   -- -- ** Instances
@@ -71,6 +70,8 @@ import           Data.Type.Predicate.Logic
 import           Data.Typeable                         (Typeable)
 import           Data.Vinyl                            (Rec(..))
 import           GHC.Generics                          (Generic, (:*:)(..))
+import           Lens.Micro
+import           Lens.Micro.Extras
 import           Prelude hiding                        (any, all)
 import qualified Data.Singletons.Prelude.List.NonEmpty as NE
 
@@ -124,18 +125,15 @@ class HasProd (f :: Type -> Type) where
     singProd :: Sing as -> Prod f Sing as
     prodSing :: Prod f Sing as -> Sing as
 
-    itraverseProd
-        :: Applicative m
-        => (forall a. Elem f as a -> g a -> m (h a))
-        -> Prod f g as
-        -> m (Prod f h as)
+    withIndices
+        :: Prod f g as
+        -> Prod f (Elem f as :*: g) as
 
     traverseProd
         :: Applicative m
         => (forall a. g a -> m (h a))
         -> Prod f g as
         -> m (Prod f h as)
-    traverseProd f = itraverseProd (const f)
 
     zipWithProd
         :: (forall a. g a -> h a -> j a)
@@ -144,10 +142,20 @@ class HasProd (f :: Type -> Type) where
         -> Prod f j as
     zipWithProd f xs ys = imapProd (\i x -> f x (indexProd i ys)) xs
 
-    indexProd
+    ixProd
         :: Elem f as a
+        -> Lens' (Prod f g as) (g a)
+
+    allProd
+        :: forall p g. ()
+        => (forall a. Sing a -> p @@ a -> g a)
+        -> All f p --> TyPred (Prod f g)
+
+    prodAll
+        :: forall p g as. ()
+        => (forall a. g a -> p @@ a)
         -> Prod f g as
-        -> g a
+        -> All f p @@ as
 
 
 -- | A @'WitAny' p as@ is a witness that, for at least one item @a@ in the
@@ -216,16 +224,6 @@ class HasProd f => Universe (f :: Type -> Type) where
         => (forall a. Elem f as a -> Sing a -> Decision (p @@ a))   -- ^ predicate on value
         -> (Sing as -> Decision (All f p @@ as))                         -- ^ predicate on collection
 
-    allProd
-        :: forall p g. ()
-        => (forall a. Sing a -> p @@ a -> g a)
-        -> All f p --> TyPred (Prod f g)
-    prodAll
-        :: forall p g as. ()
-        => (forall a. g a -> p @@ a)
-        -> Prod f g as
-        -> All f p @@ as
-
 -- | Predicate that a given @as :: f k@ is empty and has no items in it.
 type Null    f = (None f Evident :: Predicate (f k))
 
@@ -241,12 +239,20 @@ type None f p = (Not (Any f p) :: Predicate (f k))
 -- @a@ in @as@ does not satisfy predicate @p@.
 type NotAll f p = (Not (All f p) :: Predicate (f k))
 
+mapProd
+    :: HasProd f
+    => (forall a. g a -> h a)
+    -> Prod f g as
+    -> Prod f h as
+mapProd f = runIdentity . traverseProd (Identity . f)
+
+
 imapProd
     :: HasProd f
     => (forall a. Elem f as a -> g a -> h a)
     -> Prod f g as
     -> Prod f h as
-imapProd f = runIdentity . itraverseProd (\i -> Identity . f i)
+imapProd f = mapProd (\(i :*: x) -> f i x) . withIndices
 
 -- | Extract the item from the container witnessed by the 'Elem'
 index
@@ -255,6 +261,13 @@ index
     -> Sing as            -- ^ Collection
     -> Sing a
 index i = indexProd i . singProd
+
+indexProd
+    :: HasProd f
+    => Elem f as a
+    -> Prod f g as
+    -> g a
+indexProd i = view (ixProd i)
 
 -- | Lifts a predicate @p@ on an individual @a@ into a predicate that on
 -- a collection @as@ that is true if and only if /any/ item in @as@

@@ -21,7 +21,7 @@ module Data.Type.Universe.Prod (
 
   -- * Universe
     Elem, In, Prod, HasProd(..)
-  , mapProd, imapProd, foldMapProd, ifoldMapProd
+  , mapProd, imapProd, foldMapProd, ifoldMapProd, itraverseProd
   -- ** Instances
   , Index(..), IJust(..), IRight(..), NEIndex(..), ISnd(..), IProxy, IIdentity(..)
   , CompElem(..), SumElem(..)
@@ -75,15 +75,16 @@ import           Data.Type.Universe.Internal
 import           Data.Typeable                         (Typeable)
 import           Data.Vinyl                            (Rec(..))
 import           GHC.Generics                          (Generic, (:*:)(..))
+import           Lens.Micro                            (Lens')
 import           Prelude hiding                        (any, all)
 import qualified Data.Singletons.Prelude.List.NonEmpty as NE
 
-mapProd
-    :: HasProd f
-    => (forall a. g a -> h a)
+itraverseProd
+    :: (HasProd f, Applicative m)
+    => (forall a. Elem f as a -> g a -> m (h a))
     -> Prod f g as
-    -> Prod f h as
-mapProd f = runIdentity . traverseProd (Identity . f)
+    -> m (Prod f h as)
+itraverseProd f = traverseProd (\(i :*: x) -> f i x) . withIndices
 
 ifoldMapProd
     :: (HasProd f, Monoid m)
@@ -204,10 +205,6 @@ instance HasProd [] where
       RNil    -> SNil
       x :& xs -> x `SCons` prodSing xs
 
-    itraverseProd f = \case
-      RNil    -> pure RNil
-      x :& xs -> (:&) <$> f IZ x <*> itraverseProd (f . IS) xs
-
     traverseProd
         :: forall g h m as. Applicative m
         => (forall a. g a -> m (h a))
@@ -235,7 +232,83 @@ instance HasProd [] where
           x :& xs -> \case
             y :& ys -> f x y :& go xs ys
 
+    withIndices = \case
+        RNil    -> RNil
+        x :& xs -> (IZ :*: x) :& mapProd (\(i :*: y) -> IS i :*: y) (withIndices xs)
+
+    ixProd
+        :: forall g as a. ()
+        => Elem [] as a
+        -> Lens' (Prod [] g as) (g a)
+    ixProd i0 (f :: g a -> h (g a)) = go i0
+      where
+        go :: Elem [] bs a -> Prod [] g bs -> h (Prod [] g bs)
+        go = \case
+          IZ -> \case
+            x :& xs -> (:& xs) <$> f x
+          IS i -> \case
+            x :& xs -> (x :&) <$> go i xs
+
+    allProd
+        :: forall p g. ()
+        => (forall a. Sing a -> p @@ a -> g a)
+        -> All [] p --> TyPred (Prod [] g)
+    allProd f = go
+      where
+        go :: Sing as -> WitAll [] p as -> Prod [] g as
+        go = \case
+          SNil         -> \_ -> RNil
+          x `SCons` xs -> \a -> f x (runWitAll a IZ)
+                             :& go xs (WitAll (runWitAll a . IS))
+
+    prodAll
+        :: forall p g as. ()
+        => (forall a. g a -> p @@ a)
+        -> Prod [] g as
+        -> All [] p @@ as
+    prodAll f = go
+      where
+        go :: Prod [] g bs -> All [] p @@ bs
+        go = \case
+          RNil    -> WitAll $ \case {}
+          x :& xs -> WitAll $ \case
+            IZ   -> f x
+            IS i -> runWitAll (go xs) i
+
+
 instance Universe [] where
+    idecideAny
+        :: forall k (p :: k ~> Type) (as :: [k]). ()
+        => (forall a. Elem [] as a -> Sing a -> Decision (p @@ a))
+        -> Sing as
+        -> Decision (Any [] p @@ as)
+    idecideAny f = \case
+      SNil -> Disproved $ \case
+        WitAny i _ -> case i of {}
+      x `SCons` xs -> case f IZ x of
+        Proved p    -> Proved $ WitAny IZ p
+        Disproved v -> case idecideAny @[] @_ @p (f . IS) xs of
+          Proved (WitAny i p) -> Proved $ WitAny (IS i) p
+          Disproved vs -> Disproved $ \case
+            WitAny IZ     p -> v p
+            WitAny (IS i) p -> vs (WitAny i p)
+
+    idecideAll
+        :: forall k (p :: k ~> Type) (as :: [k]). ()
+        => (forall a. Elem [] as a -> Sing a -> Decision (p @@ a))
+        -> Sing as
+        -> Decision (All [] p @@ as)
+    idecideAll f = \case
+      SNil -> Proved $ WitAll $ \case {}
+      x `SCons` xs -> case f IZ x of
+        Proved p -> case idecideAll @[] @_ @p (f . IS) xs of
+          Proved a -> Proved $ WitAll $ \case
+            IZ   -> p
+            IS i -> runWitAll a i
+          Disproved v -> Disproved $ \a -> v $ WitAll (runWitAll a . IS)
+        Disproved v -> Disproved $ \a -> v $ runWitAll a IZ
+
+
 
 -- | Test if two indices point to the same item in a list.
 --
@@ -310,20 +383,6 @@ type instance Prod Maybe = PMaybe
 --type IsNothing = (Null    Maybe :: Predicate (Maybe k))
 
 instance HasProd Maybe where
-
-    -- idecideAny f = \case
-    --   SNothing -> Disproved $ \case WitAny i _ -> case i of {}
-    --   SJust x  -> case f IJust x of
-    --     Proved p    -> Proved $ WitAny IJust p
-    --     Disproved v -> Disproved $ \case
-    --       WitAny IJust p -> v p
-
-    -- idecideAll f = \case
-    --   SNothing -> Proved $ WitAll $ \case {}
-    --   SJust x  -> case f IJust x of
-    --     Proved p    -> Proved $ WitAll $ \case IJust -> p
-    --     Disproved v -> Disproved $ \a -> v $ runWitAll a IJust
-
     singProd = \case
       SNothing -> PNothing
       SJust x  -> PJust x
@@ -331,15 +390,45 @@ instance HasProd Maybe where
       PNothing -> SNothing
       PJust x -> SJust x
 
-    itraverseProd f = \case
-      PNothing -> pure PNothing
-      PJust x  -> PJust <$> f IJust x
+    withIndices = \case
+      PNothing -> PNothing
+      PJust x  -> PJust (IJust :*: x)
 
-    -- zipWithProd f = \case
-    --   PNothing -> \case
-    --     PNothing -> \case
+    traverseProd f = \case
+      PNothing -> pure PNothing
+      PJust x  -> PJust <$> f x
+
+    zipWithProd f = \case
+      PNothing -> \case
+        PNothing -> PNothing
+      PJust x -> \case
+        PJust y -> PJust (f x y)
+
+    ixProd = \case
+      IJust -> \f -> \case
+        PJust x -> PJust <$> f x
+
+    allProd f = \case
+      SNothing -> \_ -> PNothing
+      SJust x  -> \a -> PJust (f x (runWitAll a IJust))
+    prodAll f = \case
+      PNothing -> WitAll $ \case {}
+      PJust x  -> WitAll $ \case IJust -> f x
 
 instance Universe Maybe where
+    idecideAny f = \case
+      SNothing -> Disproved $ \case WitAny i _ -> case i of {}
+      SJust x  -> case f IJust x of
+        Proved p    -> Proved $ WitAny IJust p
+        Disproved v -> Disproved $ \case
+          WitAny IJust p -> v p
+
+    idecideAll f = \case
+      SNothing -> Proved $ WitAll $ \case {}
+      SJust x  -> case f IJust x of
+        Proved p    -> Proved $ WitAll $ \case IJust -> p
+        Disproved v -> Disproved $ \a -> v $ runWitAll a IJust
+
 
 -- | Witness an item in a type-level @'Either' j@ by proving the 'Either'
 -- is 'Right'.
@@ -466,8 +555,8 @@ instance SDecide (NEIndex as a) where
 type instance Elem NonEmpty = NEIndex
 
 instance HasProd NonEmpty where
-instance Universe NonEmpty where
 
+instance Universe NonEmpty where
     -- idecideAny
     --     :: forall k (p :: k ~> Type) (as :: NonEmpty k). ()
     --     => (forall a. Elem NonEmpty as a -> Sing a -> Decision (p @@ a))

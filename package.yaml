@@ -32,6 +32,7 @@ dependencies:
 - base >= 4.11 && < 5
 - singletons >= 2.5
 - vinyl
+- microlens
 
 library:
   source-dirs: src
