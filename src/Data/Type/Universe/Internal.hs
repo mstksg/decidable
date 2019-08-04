@@ -98,32 +98,8 @@ type instance Apply (ProdSym1 f g) as = Prod f g as
 -- collection @as@.
 type In (f :: Type -> Type) (as :: f k) = ElemSym1 f as
 
--- instance (Universe f, Decidable p) => Decidable (Any f p) where
---     decide = decideAny @f @_ @p $ decide @p
-
--- instance (Universe f, Decidable p) => Decidable (All f p) where
---     decide = decideAll @f @_ @p $ decide @p
-
--- instance (Universe f, Provable p) => Decidable (NotNull f ==> Any f p) where
-
--- instance Provable p => Provable (NotNull f ==> Any f p) where
---     prove _ (WitAny i s) = WitAny i (prove @p s)
-
--- instance (Universe f, Provable p) => Provable (All f p) where
---     prove xs = WitAll $ \i -> prove @p (index i xs)
-
--- instance Universe f => TFunctor (Any f) where
---     tmap f xs (WitAny i x) = WitAny i (f (index i xs) x)
-
--- instance Universe f => TFunctor (All f) where
---     tmap f xs a = WitAll $ \i -> f (index i xs) (runWitAll a i)
-
--- instance Universe f => DFunctor (All f) where
---     dmap f xs a = idecideAll (\i x -> f x (runWitAll a i)) xs
-
 class HasProd (f :: Type -> Type) where
     singProd :: Sing as -> Prod f Sing as
-    prodSing :: Prod f Sing as -> Sing as
 
     withIndices
         :: Prod f g as

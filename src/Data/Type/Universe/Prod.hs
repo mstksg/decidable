@@ -201,10 +201,6 @@ instance HasProd [] where
       SNil         -> RNil
       x `SCons` xs -> x :& singProd xs
 
-    prodSing = \case
-      RNil    -> SNil
-      x :& xs -> x `SCons` prodSing xs
-
     traverseProd
         :: forall g h m as. Applicative m
         => (forall a. g a -> m (h a))
@@ -372,42 +368,24 @@ data PMaybe :: (k -> Type) -> Maybe k -> Type where
 type instance Elem Maybe = IJust
 type instance Prod Maybe = PMaybe
 
----- | Test that a 'Maybe' is 'Just'.
-----
----- @since 0.1.2.0
---type IsJust    = (NotNull Maybe :: Predicate (Maybe k))
-
----- | Test that a 'Maybe' is 'Nothing'.
-----
----- @since 0.1.2.0
---type IsNothing = (Null    Maybe :: Predicate (Maybe k))
-
 instance HasProd Maybe where
     singProd = \case
       SNothing -> PNothing
       SJust x  -> PJust x
-    prodSing = \case
-      PNothing -> SNothing
-      PJust x -> SJust x
-
     withIndices = \case
       PNothing -> PNothing
       PJust x  -> PJust (IJust :*: x)
-
     traverseProd f = \case
       PNothing -> pure PNothing
       PJust x  -> PJust <$> f x
-
     zipWithProd f = \case
       PNothing -> \case
         PNothing -> PNothing
       PJust x -> \case
         PJust y -> PJust (f x y)
-
     ixProd = \case
       IJust -> \f -> \case
         PJust x -> PJust <$> f x
-
     allProd f = \case
       SNothing -> \_ -> PNothing
       SJust x  -> \a -> PJust (f x (runWitAll a IJust))
@@ -465,38 +443,51 @@ instance SingKind (IRight as a) where
 instance SDecide (IRight as a) where
     SIRight' SIRight %~ SIRight' SIRight = Proved Refl
 
+data PEither :: (k -> Type) -> Either j k -> Type where
+    PLeft  :: PEither f ('Left e)
+    PRight :: f a -> PEither f ('Right a)
+
 type instance Elem (Either j) = IRight
-
----- | Test that an 'Either' is 'Right'
-----
----- @since 0.1.2.0
---type IsRight = (NotNull (Either j) :: Predicate (Either j k))
-
----- | Test that an 'Either' is 'Left'
-----
----- @since 0.1.2.0
---type IsLeft  = (Null    (Either j) :: Predicate (Either j k))
+type instance Prod (Either j) = PEither
 
 instance HasProd (Either j) where
+    singProd = \case
+      SLeft  _ -> PLeft
+      SRight x -> PRight x
+    withIndices = \case
+      PLeft    -> PLeft
+      PRight x -> PRight (IRight :*: x)
+    traverseProd f = \case
+      PLeft    -> pure PLeft
+      PRight x -> PRight <$> f x
+    zipWithProd f = \case
+      PLeft -> \case
+        PLeft -> PLeft
+      PRight x -> \case
+        PRight y -> PRight (f x y)
+    ixProd = \case
+      IRight -> \f -> \case
+        PRight x -> PRight <$> f x
+    allProd f = \case
+      SLeft  _ -> \_ -> PLeft
+      SRight x -> \a -> PRight (f x (runWitAll a IRight))
+    prodAll f = \case
+      PLeft    -> WitAll $ \case {}
+      PRight x -> WitAll $ \case IRight -> f x
 
 instance Universe (Either j) where
+    idecideAny f = \case
+      SLeft  _ -> Disproved $ \case WitAny i _ -> case i of {}
+      SRight x -> case f IRight x of
+        Proved p    -> Proved $ WitAny IRight p
+        Disproved v -> Disproved $ \case
+          WitAny IRight p -> v p
 
-    -- idecideAny f = \case
-    --   SLeft  _ -> Disproved $ \case WitAny i _ -> case i of {}
-    --   SRight x -> case f IRight x of
-    --     Proved p    -> Proved $ WitAny IRight p
-    --     Disproved v -> Disproved $ \case
-    --       WitAny IRight p -> v p
-
-    -- idecideAll f = \case
-    --   SLeft  _ -> Proved $ WitAll $ \case {}
-    --   SRight x -> case f IRight x of
-    --     Proved p    -> Proved $ WitAll $ \case IRight -> p
-    --     Disproved v -> Disproved $ \a -> v $ runWitAll a IRight
-
-    -- igenAllA f = \case
-    --   SLeft  _ -> pure $ WitAll $ \case {}
-    --   SRight x -> (\p -> WitAll $ \case IRight -> p) <$> f IRight x
+    idecideAll f = \case
+      SLeft  _ -> Proved $ WitAll $ \case {}
+      SRight x -> case f IRight x of
+        Proved p    -> Proved $ WitAll $ \case IRight -> p
+        Disproved v -> Disproved $ \a -> v $ runWitAll a IRight
 
 -- | Witness an item in a type-level 'NonEmpty' by either indicating that
 -- it is the "head", or by providing an index in the "tail".
@@ -552,49 +543,73 @@ instance SDecide (NEIndex as a) where
           Proved Refl -> Proved Refl
           Disproved v -> Disproved $ \case Refl -> v Refl
 
+data NERec :: (k -> Type) -> NonEmpty k -> Type where
+    (:&|) :: f a -> Rec f as -> NERec f (a ':| as)
+infixr 5 :&|
+
 type instance Elem NonEmpty = NEIndex
+type instance Prod NonEmpty = NERec
 
 instance HasProd NonEmpty where
+    singProd = \case
+      x NE.:%| xs -> x :&| singProd xs
+    withIndices = \case
+      x :&| xs -> (NEHead :*: x)
+              :&| mapProd (\(i :*: y) -> NETail i :*: y) (withIndices xs)
+    traverseProd f = \case
+      x :&| xs -> (:&|) <$> f x <*> traverseProd f xs
+    zipWithProd f = \case
+      x :&| xs -> \case
+        y :&| ys -> f x y :&| zipWithProd f xs ys
+    ixProd = \case
+      NEHead -> \f -> \case
+        x :&| xs -> (:&| xs) <$> f x
+      NETail i -> \f -> \case
+        x :&| xs -> (x :&|) <$> ixProd i f xs
+    allProd
+        :: forall p g. ()
+        => (forall a. Sing a -> p @@ a -> g a)
+        -> All NonEmpty p --> TyPred (Prod NonEmpty g)
+    allProd f = \case
+      x NE.:%| xs -> \a -> f x (runWitAll a NEHead)
+                       :&| allProd @[] @p f xs (WitAll (runWitAll a . NETail))
+    prodAll
+        :: forall p g as. ()
+        => (forall a. g a -> p @@ a)
+        -> Prod NonEmpty g as
+        -> All NonEmpty p @@ as
+    prodAll f = \case
+      x :&| xs -> WitAll $ \case
+        NEHead   -> f x
+        NETail i -> runWitAll (prodAll @[] @p f xs) i
 
 instance Universe NonEmpty where
-    -- idecideAny
-    --     :: forall k (p :: k ~> Type) (as :: NonEmpty k). ()
-    --     => (forall a. Elem NonEmpty as a -> Sing a -> Decision (p @@ a))
-    --     -> Sing as
-    --     -> Decision (Any NonEmpty p @@ as)
-    -- idecideAny f (x NE.:%| xs) = case f NEHead x of
-    --   Proved p    -> Proved $ WitAny NEHead p
-    --   Disproved v -> case idecideAny @[] @_ @p (f . NETail) xs of
-    --     Proved (WitAny i p) -> Proved $ WitAny (NETail i) p
-    --     Disproved vs     -> Disproved $ \case
-    --       WitAny i p -> case i of
-    --         NEHead    -> v p
-    --         NETail i' -> vs (WitAny i' p)
+    idecideAny
+        :: forall k (p :: k ~> Type) (as :: NonEmpty k). ()
+        => (forall a. Elem NonEmpty as a -> Sing a -> Decision (p @@ a))
+        -> Sing as
+        -> Decision (Any NonEmpty p @@ as)
+    idecideAny f (x NE.:%| xs) = case f NEHead x of
+      Proved p    -> Proved $ WitAny NEHead p
+      Disproved v -> case idecideAny @[] @_ @p (f . NETail) xs of
+        Proved (WitAny i p) -> Proved $ WitAny (NETail i) p
+        Disproved vs     -> Disproved $ \case
+          WitAny i p -> case i of
+            NEHead    -> v p
+            NETail i' -> vs (WitAny i' p)
 
-    -- idecideAll
-    --     :: forall k (p :: k ~> Type) (as :: NonEmpty k). ()
-    --     => (forall a. Elem NonEmpty as a -> Sing a -> Decision (p @@ a))
-    --     -> Sing as
-    --     -> Decision (All NonEmpty p @@ as)
-    -- idecideAll f (x NE.:%| xs) = case f NEHead x of
-    --   Proved p -> case idecideAll @[] @_ @p (f . NETail) xs of
-    --     Proved ps -> Proved $ WitAll $ \case
-    --       NEHead   -> p
-    --       NETail i -> runWitAll ps i
-    --     Disproved v -> Disproved $ \a -> v $ WitAll (runWitAll a . NETail)
-    --   Disproved v -> Disproved $ \a -> v $ runWitAll a NEHead
-
-    -- igenAllA
-    --     :: forall k (p :: k ~> Type) (as :: NonEmpty k) h. Applicative h
-    --     => (forall a. Elem NonEmpty as a -> Sing a -> h (p @@ a))
-    --     -> Sing as
-    --     -> h (All NonEmpty p @@ as)
-    -- igenAllA f (x NE.:%| xs) = go <$> f NEHead x <*> igenAllA @[] @_ @p (f . NETail) xs
-    --   where
-    --     go :: p @@ b -> All [] p @@ bs -> All NonEmpty p @@ (b ':| bs)
-    --     go p ps = WitAll $ \case
-    --       NEHead   -> p
-    --       NETail i -> runWitAll ps i
+    idecideAll
+        :: forall k (p :: k ~> Type) (as :: NonEmpty k). ()
+        => (forall a. Elem NonEmpty as a -> Sing a -> Decision (p @@ a))
+        -> Sing as
+        -> Decision (All NonEmpty p @@ as)
+    idecideAll f (x NE.:%| xs) = case f NEHead x of
+      Proved p -> case idecideAll @[] @_ @p (f . NETail) xs of
+        Proved ps -> Proved $ WitAll $ \case
+          NEHead   -> p
+          NETail i -> runWitAll ps i
+        Disproved v -> Disproved $ \a -> v $ WitAll (runWitAll a . NETail)
+      Disproved v -> Disproved $ \a -> v $ runWitAll a NEHead
 
 -- | Test if two indices point to the same item in a non-empty list.
 --
