@@ -31,8 +31,7 @@
 --
 module Data.Type.Universe (
   -- * Universe
-    Elem, In, Prod, Universe(..)
-  , mapProd, imapProd, foldMapProd, ifoldMapProd, singAll
+    Elem, In, Universe(..), singAll
   -- ** Instances
   , Index(..), IJust(..), IRight(..), NEIndex(..), ISnd(..), IProxy, IIdentity(..)
   , CompElem(..), SumElem(..)
@@ -64,25 +63,13 @@ module Data.Type.Universe (
   , Sing (SComp, SInL, SIndex', SIJust', SIRight', SNEIndex', SISnd', SIProxy', SIIdentity')
   ) where
 
-import           Control.Applicative
-import           Data.Functor
-import           Data.Functor.Identity
 import           Data.Kind
-import           Data.List.NonEmpty                    (NonEmpty(..))
-import           Data.Proxy
 import           Data.Singletons
-import           Data.Singletons.Decide
-import           Data.Singletons.Prelude hiding        (Elem, ElemSym0, ElemSym1, ElemSym2, Any, All, Null, Not)
-import           Data.Singletons.Prelude.Identity
 import           Data.Type.Predicate
-import           Data.Type.Predicate.Logic
 import           Data.Type.Universe.Internal
 import           Data.Type.Universe.Prod
-import           Data.Typeable                         (Typeable)
-import           Data.Vinyl                            (Rec(..))
-import           GHC.Generics                          (Generic, (:*:)(..))
-import           Prelude hiding                        (any, all)
-import qualified Data.Singletons.Prelude.List.NonEmpty as NE
+import           GHC.Generics                ((:*:)(..))
+import           Prelude hiding              (any, all)
 
 ---- | A @'WitAny' p as@ is a witness that, for at least one item @a@ in the
 ---- type-level collection @as@, the predicate @p a@ is true.
@@ -254,37 +241,6 @@ singAll = prodAll id . singProd
 --    decide x = withSingI x $ pickElem
 
 --instance Universe [] where
---    idecideAny
---        :: forall k (p :: k ~> Type) (as :: [k]). ()
---        => (forall a. Elem [] as a -> Sing a -> Decision (p @@ a))
---        -> Sing as
---        -> Decision (Any [] p @@ as)
---    idecideAny f = \case
---      SNil -> Disproved $ \case
---        WitAny i _ -> case i of {}
---      x `SCons` xs -> case f IZ x of
---        Proved p    -> Proved $ WitAny IZ p
---        Disproved v -> case idecideAny @[] @_ @p (f . IS) xs of
---          Proved (WitAny i p) -> Proved $ WitAny (IS i) p
---          Disproved vs -> Disproved $ \case
---            WitAny IZ     p -> v p
---            WitAny (IS i) p -> vs (WitAny i p)
-
---    idecideAll
---        :: forall k (p :: k ~> Type) (as :: [k]). ()
---        => (forall a. Elem [] as a -> Sing a -> Decision (p @@ a))
---        -> Sing as
---        -> Decision (All [] p @@ as)
---    idecideAll f = \case
---      SNil -> Proved $ WitAll $ \case {}
---      x `SCons` xs -> case f IZ x of
---        Proved p -> case idecideAll @[] @_ @p (f . IS) xs of
---          Proved a -> Proved $ WitAll $ \case
---            IZ   -> p
---            IS i -> runWitAll a i
---          Disproved v -> Disproved $ \a -> v $ WitAll (runWitAll a . IS)
---        Disproved v -> Disproved $ \a -> v $ runWitAll a IZ
-
 --    allProd
 --        :: forall p g. ()
 --        => (forall a. Sing a -> p @@ a -> g a)
@@ -456,133 +412,3 @@ type IsLeft  = (Null    (Either j) :: Predicate (Either j k))
 ---- deriving instance ((forall as. Show (Elem f ass as)), (forall as. Show (Elem g as a)))
 ----     => Show (CompElem ('Comp ass :: (f :.: g) k) a)
 
---instance (Universe f, Universe g) => Universe (f :.: g) where
---    idecideAny
---        :: forall k (p :: k ~> Type) (ass :: (f :.: g) k). ()
---        => (forall a. Elem (f :.: g) ass a -> Sing a -> Decision (p @@ a))
---        -> Sing ass
---        -> Decision (Any (f :.: g) p @@ ass)
---    idecideAny f (SComp xss)
---        = mapDecision anyComp compAny
---        . idecideAny @f @_ @(Any g p) go
---        $ xss
---      where
---        go  :: Elem f (GetComp ass) as
---            -> Sing as
---            -> Decision (Any g p @@ as)
---        go i = idecideAny $ \j -> f (i :? j)
-
---    idecideAll
---        :: forall k (p :: k ~> Type) (ass :: (f :.: g) k). ()
---        => (forall a. Elem (f :.: g) ass a -> Sing a -> Decision (p @@ a))
---        -> Sing ass
---        -> Decision (All (f :.: g) p @@ ass)
---    idecideAll f (SComp xss)
---        = mapDecision allComp compAll
---        . idecideAll @f @_ @(All g p) go
---        $ xss
---      where
---        go  :: Elem f (GetComp ass) as
---            -> Sing as
---            -> Decision (All g p @@ as)
---        go i = idecideAll $ \j -> f (i :? j)
-
---    -- igenAllA
---    --     :: forall k (p :: k ~> Type) (ass :: (f :.: g) k) h. Applicative h
---    --     => (forall a. Elem (f :.: g) ass a -> Sing a -> h (p @@ a))
---    --     -> Sing ass
---    --     -> h (All (f :.: g) p @@ ass)
---    -- igenAllA f (SComp ass) = allComp <$> igenAllA @f @_ @(All g p) go ass
---    --   where
---    --     go  :: Elem f (GetComp ass) (as :: g k)
---    --         -> Sing as
---    --         -> h (All g p @@ as)
---    --     go i = igenAllA $ \j -> f (i :? j)
-
--- | Turn a composition of 'Any' into an 'Any' of a composition.
---
--- @since 0.1.2.0
-anyComp :: Any f (Any g p) @@ as -> Any (f :.: g) p @@ 'Comp as
-anyComp (WitAny i (WitAny j p)) = WitAny (i :? j) p
-
--- | Turn an 'Any' of a composition into a composition of 'Any'.
---
--- @since 0.1.2.0
-compAny :: Any (f :.: g) p @@ 'Comp as -> Any f (Any g p) @@ as
-compAny (WitAny (i :? j) p) = WitAny i (WitAny j p)
-
--- | Turn a composition of 'All' into an 'All' of a composition.
---
--- @since 0.1.2.0
-allComp :: All f (All g p) @@ as -> All (f :.: g) p @@ 'Comp as
-allComp a = WitAll $ \(i :? j) -> runWitAll (runWitAll a i) j
-
--- | Turn an 'All' of a composition into a composition of 'All'.
---
--- @since 0.1.2.0
-compAll :: All (f :.: g) p @@ 'Comp as -> All f (All g p) @@ as
-compAll a = WitAll $ \i -> WitAll $ \j -> runWitAll a (i :? j)
-
---instance (Universe f, Universe g) => Universe (f :+: g) where
---    idecideAny
---        :: forall k (p :: k ~> Type) (abs :: (f :+: g) k). ()
---        => (forall ab. Elem (f :+: g) abs ab -> Sing ab -> Decision (p @@ ab))
---        -> Sing abs
---        -> Decision (Any (f :+: g) p @@ abs)
---    idecideAny f = \case
---      SInL xs -> mapDecision anySumL sumLAny
---               $ idecideAny @f @_ @p (f . IInL) xs
---      SInR ys -> mapDecision anySumR sumRAny
---               $ idecideAny @g @_ @p (f . IInR) ys
-
---    idecideAll
---        :: forall k (p :: k ~> Type) (abs :: (f :+: g) k). ()
---        => (forall ab. Elem (f :+: g) abs ab -> Sing ab -> Decision (p @@ ab))
---        -> Sing abs
---        -> Decision (All (f :+: g) p @@ abs)
---    idecideAll f = \case
---      SInL xs -> mapDecision allSumL sumLAll
---               $ idecideAll @f @_ @p (f . IInL) xs
---      SInR xs -> mapDecision allSumR sumRAll
---               $ idecideAll @g @_ @p (f . IInR) xs
-
---    -- igenAllA
---    --     :: forall k (p :: k ~> Type) (abs :: (f :+: g) k) h. Applicative h
---    --     => (forall ab. Elem (f :+: g) abs ab -> Sing ab -> h (p @@ ab))
---    --     -> Sing abs
---    --     -> h (All (f :+: g) p @@ abs)
---    -- igenAllA f = \case
---    --   SInL xs -> allSumL <$> igenAllA @f @_ @p (f . IInL) xs
---    --   SInR xs -> allSumR <$> igenAllA @g @_ @p (f . IInR) xs
-
--- | Turn an 'Any' of @f@ into an 'Any' of @f ':+:' g@.
-anySumL :: Any f p @@ as -> Any (f :+: g) p @@ 'InL as
-anySumL (WitAny i x) = WitAny (IInL i) x
-
--- | Turn an 'Any' of @g@ into an 'Any' of @f ':+:' g@.
-anySumR :: Any g p @@ bs -> Any (f :+: g) p @@ 'InR bs
-anySumR (WitAny j y) = WitAny (IInR j) y
-
--- | Turn an 'Any' of @f ':+:' g@ into an 'Any' of @f@.
-sumLAny :: Any (f :+: g) p @@ 'InL as -> Any f p @@ as
-sumLAny (WitAny (IInL i) x) = WitAny i x
-
--- | Turn an 'Any' of @f ':+:' g@ into an 'Any' of @g@.
-sumRAny :: Any (f :+: g) p @@ 'InR bs -> Any g p @@ bs
-sumRAny (WitAny (IInR j) y) = WitAny j y
-
--- | Turn an 'All' of @f@ into an 'All' of @f ':+:' g@.
-allSumL :: All f p @@ as -> All (f :+: g) p @@ 'InL as
-allSumL a = WitAll $ \case IInL i -> runWitAll a i
-
--- | Turn an 'All' of @g@ into an 'All' of @f ':+:' g@.
-allSumR :: All g p @@ bs -> All (f :+: g) p @@ 'InR bs
-allSumR a = WitAll $ \case IInR j -> runWitAll a j
-
--- | Turn an 'All' of @f ':+:' g@ into an 'All' of @f@.
-sumLAll :: All (f :+: g) p @@ 'InL as -> All f p @@ as
-sumLAll a = WitAll $ runWitAll a . IInL
-
--- | Turn an 'All' of @f ':+:' g@ into an 'All' of @g@.
-sumRAll :: All (f :+: g) p @@ 'InR bs -> All g p @@ bs
-sumRAll a = WitAll $ runWitAll a . IInR

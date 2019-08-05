@@ -2,8 +2,10 @@
 {-# LANGUAGE DeriveDataTypeable     #-}
 {-# LANGUAGE DeriveFunctor          #-}
 {-# LANGUAGE DeriveGeneric          #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 {-# LANGUAGE DeriveTraversable      #-}
 {-# LANGUAGE EmptyCase              #-}
+{-# LANGUAGE FlexibleContexts       #-}
 {-# LANGUAGE FlexibleInstances      #-}
 {-# LANGUAGE GADTs                  #-}
 {-# LANGUAGE InstanceSigs           #-}
@@ -16,38 +18,37 @@
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE TypeInType             #-}
 {-# LANGUAGE TypeOperators          #-}
+{-# LANGUAGE UndecidableInstances   #-}
 
 module Data.Type.Universe.Prod (
 
-  -- * Universe
+  -- * Prod
     Elem, In, Prod, HasProd(..)
   , mapProd, imapProd, foldMapProd, ifoldMapProd, itraverseProd
   -- ** Instances
-  , Index(..), IJust(..), IRight(..), NEIndex(..), ISnd(..), IProxy, IIdentity(..)
-  , CompElem(..), SumElem(..)
+  , Rec(..), Index(..)
+  , PMaybe(..), IJust(..)
+  , PEither(..), IRight(..)
+  , NERec(..), NEIndex(..)
+  , PTup(..), ISnd(..)
+  , PProxy(..), IProxy
+  , PIdentity(..), IIdentity(..)
+  , CompProd(..), CompElem(..)
+  , PSum(..), SumElem(..)
   , sameIndexVal, sameNEIndexVal
-  -- -- ** Predicates
-  -- , All, WitAll(..), NotAll
-  -- , Any, WitAny(..), None
-  -- , Null, NotNull
-  -- -- *** Specialized
-  -- , IsJust, IsNothing, IsRight, IsLeft
-
-  -- * Decisions and manipulations
-  -- , decideAny, decideAll
-  -- , genAll, igenAll
+  -- * Manipulations
   , foldMapUni, ifoldMapUni, index, indexProd
-  -- , pickElem
+  , pickElem
   -- * Universe Combination
 
   -- ** Universe Composition
   , (:.:)(..), sGetComp, GetComp
-  -- , allComp, compAll, anyComp, compAny
+  , allComp, compAll, anyComp, compAny
 
   -- ** Universe Disjunction
   , (:+:)(..)
-  -- , anySumL, anySumR, sumLAny, sumRAny
-  -- , allSumL, allSumR, sumLAll, sumRAll
+  , anySumL, anySumR, sumLAny, sumRAny
+  , allSumL, allSumR, sumLAll, sumRAll
 
   -- * Defunctionalization symbols
   , ElemSym0, ElemSym1, ElemSym2
@@ -70,14 +71,15 @@ import           Data.Singletons.Decide
 import           Data.Singletons.Prelude hiding        (Elem, ElemSym0, ElemSym1, ElemSym2, Any, All, Null, Not)
 import           Data.Singletons.Prelude.Identity
 import           Data.Type.Predicate
-import           Data.Type.Predicate.Logic
 import           Data.Type.Universe.Internal
 import           Data.Typeable                         (Typeable)
 import           Data.Vinyl                            (Rec(..))
 import           GHC.Generics                          (Generic, (:*:)(..))
-import           Lens.Micro                            (Lens')
+import           Lens.Micro                            (Lens', Lens, lens)
 import           Prelude hiding                        (any, all)
+import           Unsafe.Coerce
 import qualified Data.Singletons.Prelude.List.NonEmpty as NE
+import qualified Data.Vinyl                            as V
 
 itraverseProd
     :: (HasProd f, Applicative m)
@@ -368,6 +370,9 @@ data PMaybe :: (k -> Type) -> Maybe k -> Type where
 type instance Elem Maybe = IJust
 type instance Prod Maybe = PMaybe
 
+instance Provable (TyPred (PMaybe Sing)) where
+    prove = singProd
+
 instance HasProd Maybe where
     singProd = \case
       SNothing -> PNothing
@@ -449,6 +454,9 @@ data PEither :: (k -> Type) -> Either j k -> Type where
 
 type instance Elem (Either j) = IRight
 type instance Prod (Either j) = PEither
+
+instance Provable (TyPred (PEither Sing)) where
+    prove = singProd
 
 instance HasProd (Either j) where
     singProd = \case
@@ -547,20 +555,22 @@ data NERec :: (k -> Type) -> NonEmpty k -> Type where
     (:&|) :: f a -> Rec f as -> NERec f (a ':| as)
 infixr 5 :&|
 
+deriving instance (Show (f a), V.RMap as, V.ReifyConstraint Show f as, V.RecordToList as) => Show (NERec f (a ':| as))
+
 type instance Elem NonEmpty = NEIndex
 type instance Prod NonEmpty = NERec
 
+instance Provable (TyPred (NERec Sing)) where
+    prove = singProd
+
 instance HasProd NonEmpty where
-    singProd = \case
-      x NE.:%| xs -> x :&| singProd xs
-    withIndices = \case
-      x :&| xs -> (NEHead :*: x)
-              :&| mapProd (\(i :*: y) -> NETail i :*: y) (withIndices xs)
-    traverseProd f = \case
-      x :&| xs -> (:&|) <$> f x <*> traverseProd f xs
-    zipWithProd f = \case
-      x :&| xs -> \case
-        y :&| ys -> f x y :&| zipWithProd f xs ys
+    singProd (x NE.:%| xs) = x :&| singProd xs
+    withIndices (x :&| xs) =
+          (NEHead :*: x)
+      :&| mapProd (\(i :*: y) -> NETail i :*: y) (withIndices xs)
+    traverseProd f (x :&| xs) =
+        (:&|) <$> f x <*> traverseProd f xs
+    zipWithProd f (x :&| xs) (y :&| ys) = f x y :&| zipWithProd f xs ys
     ixProd = \case
       NEHead -> \f -> \case
         x :&| xs -> (:&| xs) <$> f x
@@ -570,16 +580,15 @@ instance HasProd NonEmpty where
         :: forall p g. ()
         => (forall a. Sing a -> p @@ a -> g a)
         -> All NonEmpty p --> TyPred (Prod NonEmpty g)
-    allProd f = \case
-      x NE.:%| xs -> \a -> f x (runWitAll a NEHead)
-                       :&| allProd @[] @p f xs (WitAll (runWitAll a . NETail))
+    allProd f (x NE.:%| xs) a =
+          f x (runWitAll a NEHead)
+      :&| allProd @[] @p f xs (WitAll (runWitAll a . NETail))
     prodAll
         :: forall p g as. ()
         => (forall a. g a -> p @@ a)
         -> Prod NonEmpty g as
         -> All NonEmpty p @@ as
-    prodAll f = \case
-      x :&| xs -> WitAll $ \case
+    prodAll f (x :&| xs) = WitAll $ \case
         NEHead   -> f x
         NETail i -> runWitAll (prodAll @[] @p f xs) i
 
@@ -666,20 +675,34 @@ instance SingKind (ISnd as a) where
 instance SDecide (ISnd as a) where
     SISnd' SISnd %~ SISnd' SISnd = Proved Refl
 
+data PTup :: (k -> Type) -> (j, k) -> Type where
+    PSnd :: f a -> PTup f '(w, a)
+
+deriving instance Show (f a) => Show (PTup f '(w, a))
+
+instance Provable (TyPred (PTup Sing)) where
+    prove = singProd
+
 type instance Elem ((,) j) = ISnd
+type instance Prod ((,) j) = PTup
 
 instance HasProd ((,) j) where
+    singProd (STuple2 _ x) = PSnd x
+    withIndices (PSnd x) = PSnd (ISnd :*: x)
+    traverseProd f (PSnd x) = PSnd <$> f x
+    zipWithProd f (PSnd x) (PSnd y) = PSnd (f x y)
+    ixProd ISnd f (PSnd x) = PSnd <$> f x
+    allProd f (STuple2 _ x) a = PSnd $ f x (runWitAll a ISnd)
+    prodAll f (PSnd x) = WitAll $ \case ISnd -> f x
+
 instance Universe ((,) j) where
+    idecideAny f (STuple2 _ x) = case f ISnd x of
+      Proved p    -> Proved $ WitAny ISnd p
+      Disproved v -> Disproved $ \case WitAny ISnd p -> v p
 
-    -- idecideAny f (STuple2 _ x) = case f ISnd x of
-    --   Proved p    -> Proved $ WitAny ISnd p
-    --   Disproved v -> Disproved $ \case WitAny ISnd p -> v p
-
-    -- idecideAll f (STuple2 _ x) = case f ISnd x of
-    --   Proved p    -> Proved $ WitAll $ \case ISnd -> p
-    --   Disproved v -> Disproved $ \a -> v $ runWitAll a ISnd
-
-    -- igenAllA f (STuple2 _ x) = (\p -> WitAll $ \case ISnd -> p) <$> f ISnd x
+    idecideAll f (STuple2 _ x) = case f ISnd x of
+      Proved p    -> Proved $ WitAll $ \case ISnd -> p
+      Disproved v -> Disproved $ \a -> v $ runWitAll a ISnd
 
 -- | There are no items of type @a@ in a @'Proxy' a@.
 --
@@ -687,6 +710,12 @@ instance Universe ((,) j) where
 data IProxy :: Proxy k -> k -> Type
 
 deriving instance Show (IProxy 'Proxy a)
+
+instance (SingI (as :: Proxy k), SDecide k) => Decidable (TyPred (IProxy as)) where
+    decide x = withSingI x $ pickElem
+
+instance Provable (TyPred (PProxy Sing)) where
+    prove = singProd
 
 instance Provable (Not (TyPred (IProxy 'Proxy))) where
     prove _ = \case {}
@@ -712,16 +741,28 @@ instance SingKind (IProxy as a) where
 instance SDecide (IProxy as a) where
     SIProxy' i %~ SIProxy' _ = Proved $ case i of {}
 
+data PProxy :: (k -> Type) -> Proxy k -> Type where
+    PProxy :: PProxy f 'Proxy
+
+deriving instance Show (PProxy f 'Proxy)
+
 type instance Elem Proxy = IProxy
+type instance Prod Proxy = PProxy
+
+instance HasProd Proxy where
+    singProd _ = unsafeCoerce PProxy    -- no SProxy yet in singletons
+    withIndices PProxy = PProxy
+    traverseProd _ PProxy = pure PProxy
+    zipWithProd _ PProxy PProxy = PProxy
+    ixProd i = lens (case i of {}) (case i of {})
+    allProd _ _ _ = unsafeCoerce PProxy     -- no SProxy yet
+    prodAll _ PProxy = WitAll $ \case {}
 
 -- | The null universe
-instance HasProd Proxy where
-
-    -- idecideAny _ _ = Disproved $ \case
-    --     WitAny i _ -> case i of {}
-    -- idecideAll _ _ = Proved $ WitAll $ \case {}
-
-    -- igenAllA   _ _ = pure $ WitAll $ \case {}
+instance Universe Proxy where
+    idecideAny _ _ = Disproved $ \case
+        WitAny i _ -> case i of {}
+    idecideAll _ _ = Proved $ WitAll $ \case {}
 
 -- | Trivially witness the item held in an 'Identity'.
 --
@@ -731,8 +772,8 @@ data IIdentity :: Identity k -> k -> Type where
 
 deriving instance Show (IIdentity as a)
 
--- instance (SingI (as :: Identity k), SDecide k) => Decidable (TyPred (IIdentity as)) where
---     decide x = withSingI x $ pickElem
+instance (SingI (as :: Identity k), SDecide k) => Decidable (TyPred (IIdentity as)) where
+    decide x = withSingI x $ pickElem
 
 -- | Kind-indexed singleton for 'IIdentity'.  Provided as a separate data
 -- declaration to allow you to use these at the type level.  However, the
@@ -759,20 +800,34 @@ instance SingKind (IIdentity as a) where
 instance SDecide (IIdentity as a) where
     SIIdentity' SIId %~ SIIdentity' SIId = Proved Refl
 
+instance Provable (TyPred (PIdentity Sing)) where
+    prove = singProd
+
+data PIdentity :: (k -> Type) -> Identity k -> Type where
+    PId :: f a -> PIdentity f ('Identity a)
+
+deriving instance Show (f a) => Show (PIdentity f ('Identity a))
+
 type instance Elem Identity = IIdentity
+type instance Prod Identity = PIdentity
 
--- | The single-pointed universe.  Note that this instance is really only
--- usable in /singletons-2.5/ and higher (so GHC 8.6).
 instance HasProd Identity where
+    singProd (SIdentity x) = PId x
+    withIndices (PId x) = PId (IId :*: x)
+    traverseProd f (PId x) = PId <$> f x
+    zipWithProd f (PId x) (PId y) = PId (f x y)
+    ixProd IId f (PId x) = PId <$> f x
+    allProd f (SIdentity x) a = PId $ f x (runWitAll a IId)
+    prodAll f (PId x) = WitAll $ \case IId -> f x
 
-    -- idecideAny f (SIdentity x) = mapDecision (WitAny IId)
-    --                                          (\case WitAny IId p -> p)
-    --                            $ f IId x
-    -- idecideAll f (SIdentity x) = mapDecision (\p -> WitAll $ \case IId -> p)
-    --                                          (`runWitAll` IId)
-    --                            $ f IId x
-
-    -- igenAllA f (SIdentity x) = (\p -> WitAll $ \case IId -> p) <$> f IId x
+-- | The single-pointed universe.
+instance Universe Identity where
+    idecideAny f (SIdentity x) = mapDecision (WitAny IId)
+                                             (\case WitAny IId p -> p)
+                               $ f IId x
+    idecideAll f (SIdentity x) = mapDecision (\p -> WitAll $ \case IId -> p)
+                                             (`runWitAll` IId)
+                               $ f IId x
 
 -- | Compose two Functors.  Is the same as 'Data.Functor.Compose.Compose'
 -- and 'GHC.Generics.:.:', except with a singleton and meant to be used at
@@ -826,45 +881,84 @@ data CompElem :: (f :.: g) k -> k -> Type where
 -- deriving instance ((forall as. Show (Elem f ass as)), (forall as. Show (Elem g as a)))
 --     => Show (CompElem ('Comp ass :: (f :.: g) k) a)
 
+data CompProd :: (k -> Type) -> (p :.: q) k -> Type where
+    CompProd :: Prod p (Prod q f) as -> CompProd f ('Comp as)
+
+deriving instance Show (Prod p (Prod q f) as) => Show (CompProd f ('Comp as))
+
+_CompProd :: Lens (CompProd f ('Comp as)) (CompProd f' ('Comp as'))
+                  (Prod p (Prod q f) as)  (Prod p' (Prod q' f') as')
+_CompProd f (CompProd xs) = CompProd <$> f xs
+
 type instance Elem (f :.: g) = CompElem
+type instance Prod (f :.: g) = CompProd
 
 instance (HasProd f, HasProd g) => HasProd (f :.: g) where
+    singProd (SComp x) = CompProd . mapProd singProd $ singProd x
+    withIndices (CompProd xs) = CompProd
+                              . imapProd (\i -> imapProd (\j x -> ((i :? j) :*: x)))
+                              $ xs
+    traverseProd f (CompProd xs) = CompProd <$> traverseProd (traverseProd f) xs
+    zipWithProd f (CompProd xs) (CompProd ys) =
+      CompProd $ zipWithProd (zipWithProd f) xs ys
+    ixProd (i :? j) = _CompProd . ixProd i . ixProd j
+    prodAll _ = error "Unimplemented"
+    allProd _ = error "Unimplemented"
 
-    -- igenAllA
-    --     :: forall k (p :: k ~> Type) (ass :: (f :.: g) k) h. Applicative h
-    --     => (forall a. Elem (f :.: g) ass a -> Sing a -> h (p @@ a))
-    --     -> Sing ass
-    --     -> h (All (f :.: g) p @@ ass)
-    -- igenAllA f (SComp ass) = allComp <$> igenAllA @f @_ @(All g p) go ass
-    --   where
-    --     go  :: Elem f (GetComp ass) (as :: g k)
-    --         -> Sing as
-    --         -> h (All g p @@ as)
-    --     go i = igenAllA $ \j -> f (i :? j)
+instance (Universe f, Universe g) => Universe (f :.: g) where
+    idecideAny
+        :: forall k (p :: k ~> Type) (ass :: (f :.: g) k). ()
+        => (forall a. Elem (f :.: g) ass a -> Sing a -> Decision (p @@ a))
+        -> Sing ass
+        -> Decision (Any (f :.: g) p @@ ass)
+    idecideAny f (SComp xss)
+        = mapDecision anyComp compAny
+        . idecideAny @f @_ @(Any g p) go
+        $ xss
+      where
+        go  :: Elem f (GetComp ass) as
+            -> Sing as
+            -> Decision (Any g p @@ as)
+        go i = idecideAny $ \j -> f (i :? j)
 
----- | Turn a composition of 'Any' into an 'Any' of a composition.
-----
----- @since 0.1.2.0
---anyComp :: Any f (Any g p) @@ as -> Any (f :.: g) p @@ 'Comp as
---anyComp (WitAny i (WitAny j p)) = WitAny (i :? j) p
+    idecideAll
+        :: forall k (p :: k ~> Type) (ass :: (f :.: g) k). ()
+        => (forall a. Elem (f :.: g) ass a -> Sing a -> Decision (p @@ a))
+        -> Sing ass
+        -> Decision (All (f :.: g) p @@ ass)
+    idecideAll f (SComp xss)
+        = mapDecision allComp compAll
+        . idecideAll @f @_ @(All g p) go
+        $ xss
+      where
+        go  :: Elem f (GetComp ass) as
+            -> Sing as
+            -> Decision (All g p @@ as)
+        go i = idecideAll $ \j -> f (i :? j)
 
----- | Turn an 'Any' of a composition into a composition of 'Any'.
-----
----- @since 0.1.2.0
---compAny :: Any (f :.: g) p @@ 'Comp as -> Any f (Any g p) @@ as
---compAny (WitAny (i :? j) p) = WitAny i (WitAny j p)
+-- | Turn a composition of 'Any' into an 'Any' of a composition.
+--
+-- @since 0.1.2.0
+anyComp :: Any f (Any g p) @@ as -> Any (f :.: g) p @@ 'Comp as
+anyComp (WitAny i (WitAny j p)) = WitAny (i :? j) p
 
----- | Turn a composition of 'All' into an 'All' of a composition.
-----
----- @since 0.1.2.0
---allComp :: All f (All g p) @@ as -> All (f :.: g) p @@ 'Comp as
---allComp a = WitAll $ \(i :? j) -> runWitAll (runWitAll a i) j
+-- | Turn an 'Any' of a composition into a composition of 'Any'.
+--
+-- @since 0.1.2.0
+compAny :: Any (f :.: g) p @@ 'Comp as -> Any f (Any g p) @@ as
+compAny (WitAny (i :? j) p) = WitAny i (WitAny j p)
 
----- | Turn an 'All' of a composition into a composition of 'All'.
-----
----- @since 0.1.2.0
---compAll :: All (f :.: g) p @@ 'Comp as -> All f (All g p) @@ as
---compAll a = WitAll $ \i -> WitAll $ \j -> runWitAll a (i :? j)
+-- | Turn a composition of 'All' into an 'All' of a composition.
+--
+-- @since 0.1.2.0
+allComp :: All f (All g p) @@ as -> All (f :.: g) p @@ 'Comp as
+allComp a = WitAll $ \(i :? j) -> runWitAll (runWitAll a i) j
+
+-- | Turn an 'All' of a composition into a composition of 'All'.
+--
+-- @since 0.1.2.0
+compAll :: All (f :.: g) p @@ 'Comp as -> All f (All g p) @@ as
+compAll a = WitAll $ \i -> WitAll $ \j -> runWitAll a (i :? j)
 
 -- | Disjoint union of two Functors.  Is the same as 'Data.Functor.Sum.Sum'
 -- and 'GHC.Generics.:+:', except with a singleton and meant to be used at
@@ -898,48 +992,94 @@ data SumElem :: (f :+: g) k -> k -> Type where
     IInL :: Elem f as a -> SumElem ('InL as) a
     IInR :: Elem f bs b -> SumElem ('InR bs) b
 
+data PSum :: (k -> Type) -> (p :+: q) k -> Type where
+    PInL :: Prod p f a -> PSum f ('InL a)
+    PInR :: Prod q f a -> PSum f ('InR a)
+
+_PInL :: Lens (PSum f ('InL a)) (PSum f ('InL a'))
+              (Prod p f a)      (Prod p' f a')
+_PInL f (PInL x) = PInL <$> f x
+
+_PInR :: Lens (PSum f ('InR b)) (PSum f ('InR b'))
+              (Prod q f b)      (Prod q' f b')
+_PInR f (PInR y) = PInR <$> f y
+
 type instance Elem (f :+: g) = SumElem
+type instance Prod (f :+: g) = PSum
 
 instance (HasProd f, HasProd g) => HasProd (f :+: g) where
+    singProd = \case
+      SInL xs -> PInL $ singProd xs
+      SInR ys -> PInR $ singProd ys
+    withIndices = \case
+      PInL xs -> PInL $ imapProd (\i x -> (IInL i :*: x)) xs
+      PInR ys -> PInR $ imapProd (\i y -> (IInR i :*: y)) ys
+    traverseProd f = \case
+      PInL xs -> PInL <$> traverseProd f xs
+      PInR ys -> PInR <$> traverseProd f ys
+    zipWithProd f = \case
+      PInL xs -> \case
+        PInL xs' -> PInL (zipWithProd f xs xs')
+      PInR ys -> \case
+        PInR ys' -> PInR (zipWithProd f ys ys')
+    ixProd = \case
+      IInL i -> _PInL . ixProd i
+      IInR j -> _PInR . ixProd j
+    allProd _ = error "Unimplemented"
+    prodAll _ = error "Unimplemented"
 
-    -- igenAllA
-    --     :: forall k (p :: k ~> Type) (abs :: (f :+: g) k) h. Applicative h
-    --     => (forall ab. Elem (f :+: g) abs ab -> Sing ab -> h (p @@ ab))
-    --     -> Sing abs
-    --     -> h (All (f :+: g) p @@ abs)
-    -- igenAllA f = \case
-    --   SInL xs -> allSumL <$> igenAllA @f @_ @p (f . IInL) xs
-    --   SInR xs -> allSumR <$> igenAllA @g @_ @p (f . IInR) xs
+instance (Universe f, Universe g) => Universe (f :+: g) where
+    idecideAny
+        :: forall k (p :: k ~> Type) (abs :: (f :+: g) k). ()
+        => (forall ab. Elem (f :+: g) abs ab -> Sing ab -> Decision (p @@ ab))
+        -> Sing abs
+        -> Decision (Any (f :+: g) p @@ abs)
+    idecideAny f = \case
+      SInL xs -> mapDecision anySumL sumLAny
+               $ idecideAny @f @_ @p (f . IInL) xs
+      SInR ys -> mapDecision anySumR sumRAny
+               $ idecideAny @g @_ @p (f . IInR) ys
 
--- -- | Turn an 'Any' of @f@ into an 'Any' of @f ':+:' g@.
--- anySumL :: Any f p @@ as -> Any (f :+: g) p @@ 'InL as
--- anySumL (WitAny i x) = WitAny (IInL i) x
+    idecideAll
+        :: forall k (p :: k ~> Type) (abs :: (f :+: g) k). ()
+        => (forall ab. Elem (f :+: g) abs ab -> Sing ab -> Decision (p @@ ab))
+        -> Sing abs
+        -> Decision (All (f :+: g) p @@ abs)
+    idecideAll f = \case
+      SInL xs -> mapDecision allSumL sumLAll
+               $ idecideAll @f @_ @p (f . IInL) xs
+      SInR xs -> mapDecision allSumR sumRAll
+               $ idecideAll @g @_ @p (f . IInR) xs
 
--- -- | Turn an 'Any' of @g@ into an 'Any' of @f ':+:' g@.
--- anySumR :: Any g p @@ bs -> Any (f :+: g) p @@ 'InR bs
--- anySumR (WitAny j y) = WitAny (IInR j) y
+-- | Turn an 'Any' of @f@ into an 'Any' of @f ':+:' g@.
+anySumL :: Any f p @@ as -> Any (f :+: g) p @@ 'InL as
+anySumL (WitAny i x) = WitAny (IInL i) x
 
--- -- | Turn an 'Any' of @f ':+:' g@ into an 'Any' of @f@.
--- sumLAny :: Any (f :+: g) p @@ 'InL as -> Any f p @@ as
--- sumLAny (WitAny (IInL i) x) = WitAny i x
+-- | Turn an 'Any' of @g@ into an 'Any' of @f ':+:' g@.
+anySumR :: Any g p @@ bs -> Any (f :+: g) p @@ 'InR bs
+anySumR (WitAny j y) = WitAny (IInR j) y
 
--- -- | Turn an 'Any' of @f ':+:' g@ into an 'Any' of @g@.
--- sumRAny :: Any (f :+: g) p @@ 'InR bs -> Any g p @@ bs
--- sumRAny (WitAny (IInR j) y) = WitAny j y
+-- | Turn an 'Any' of @f ':+:' g@ into an 'Any' of @f@.
+sumLAny :: Any (f :+: g) p @@ 'InL as -> Any f p @@ as
+sumLAny (WitAny (IInL i) x) = WitAny i x
 
--- -- | Turn an 'All' of @f@ into an 'All' of @f ':+:' g@.
--- allSumL :: All f p @@ as -> All (f :+: g) p @@ 'InL as
--- allSumL a = WitAll $ \case IInL i -> runWitAll a i
+-- | Turn an 'Any' of @f ':+:' g@ into an 'Any' of @g@.
+sumRAny :: Any (f :+: g) p @@ 'InR bs -> Any g p @@ bs
+sumRAny (WitAny (IInR j) y) = WitAny j y
 
--- -- | Turn an 'All' of @g@ into an 'All' of @f ':+:' g@.
--- allSumR :: All g p @@ bs -> All (f :+: g) p @@ 'InR bs
--- allSumR a = WitAll $ \case IInR j -> runWitAll a j
+-- | Turn an 'All' of @f@ into an 'All' of @f ':+:' g@.
+allSumL :: All f p @@ as -> All (f :+: g) p @@ 'InL as
+allSumL a = WitAll $ \case IInL i -> runWitAll a i
 
--- -- | Turn an 'All' of @f ':+:' g@ into an 'All' of @f@.
--- sumLAll :: All (f :+: g) p @@ 'InL as -> All f p @@ as
--- sumLAll a = WitAll $ runWitAll a . IInL
+-- | Turn an 'All' of @g@ into an 'All' of @f ':+:' g@.
+allSumR :: All g p @@ bs -> All (f :+: g) p @@ 'InR bs
+allSumR a = WitAll $ \case IInR j -> runWitAll a j
 
--- -- | Turn an 'All' of @f ':+:' g@ into an 'All' of @g@.
--- sumRAll :: All (f :+: g) p @@ 'InR bs -> All g p @@ bs
--- sumRAll a = WitAll $ runWitAll a . IInR
+-- | Turn an 'All' of @f ':+:' g@ into an 'All' of @f@.
+sumLAll :: All (f :+: g) p @@ 'InL as -> All f p @@ as
+sumLAll a = WitAll $ runWitAll a . IInL
+
+-- | Turn an 'All' of @f ':+:' g@ into an 'All' of @g@.
+sumRAll :: All (f :+: g) p @@ 'InR bs -> All g p @@ bs
+sumRAll a = WitAll $ runWitAll a . IInR
 

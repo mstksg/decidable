@@ -21,59 +21,29 @@ module Data.Type.Universe.Internal (
   -- * Universe
     Elem, In, Prod, HasProd(..), Universe(..)
   , mapProd, imapProd, indexProd
-  -- , foldMapProd, ifoldMapProd
-  -- , splitSing
-  -- -- ** Instances
-  -- , Index(..), IJust(..), IRight(..), NEIndex(..), ISnd(..), IProxy, IIdentity(..)
-  -- , CompElem(..), SumElem(..)
-  -- , sameIndexVal, sameNEIndexVal
   -- ** Predicates
   , All, WitAll(..), NotAll
   , Any, WitAny(..), None
   , Null, NotNull
-  -- -- *** Specialized
-  -- , IsJust, IsNothing, IsRight, IsLeft
   -- * Decisions and manipulations
   , decideAny, decideAll
-  -- , genAll, igenAll
-  -- , foldMapUni, ifoldMapUni
   , index, pickElem
-  -- -- * Universe Combination
-  -- -- ** Universe Composition
-  -- , (:.:)(..), sGetComp, GetComp
-  -- , allComp, compAll, anyComp, compAny
-  -- -- ** Universe Disjunction
-  -- , (:+:)(..)
-  -- , anySumL, anySumR, sumLAny, sumRAny
-  -- , allSumL, allSumR, sumLAll, sumRAll
   -- * Defunctionalization symbols
   , ElemSym0, ElemSym1, ElemSym2
   , ProdSym0, ProdSym1, ProdSym2
-  -- , GetCompSym0, GetCompSym1
-  -- -- * Singletons
-  -- , SIndex(..), SIJust(..), SIRight(..), SNEIndex(..), SISnd(..), SIProxy, SIIdentity(..)
-  -- , Sing (SComp, SInL, SIndex', SIJust', SIRight', SNEIndex', SISnd', SIProxy', SIIdentity')
   ) where
 
 import           Control.Applicative
-import           Data.Functor
 import           Data.Functor.Identity
 import           Data.Kind
-import           Data.List.NonEmpty                    (NonEmpty(..))
-import           Data.Proxy
 import           Data.Singletons
 import           Data.Singletons.Decide
-import           Data.Singletons.Prelude hiding        (Elem, ElemSym0, ElemSym1, ElemSym2, Any, All, Null, Not)
-import           Data.Singletons.Prelude.Identity
 import           Data.Type.Predicate
 import           Data.Type.Predicate.Logic
-import           Data.Typeable                         (Typeable)
-import           Data.Vinyl                            (Rec(..))
-import           GHC.Generics                          (Generic, (:*:)(..))
+import           GHC.Generics              ((:*:)(..))
 import           Lens.Micro
 import           Lens.Micro.Extras
-import           Prelude hiding                        (any, all)
-import qualified Data.Singletons.Prelude.List.NonEmpty as NE
+import           Prelude hiding            (any, all)
 
 -- | A witness for membership of a given item in a type-level collection
 type family Elem (f :: Type -> Type) = (i :: f k -> k -> Type) | i -> f

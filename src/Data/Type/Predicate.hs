@@ -55,6 +55,7 @@ import           Data.Maybe
 import           Data.Singletons
 import           Data.Singletons.Decide
 import           Data.Singletons.Prelude hiding (Not)
+import           Data.Vinyl (Rec(..))
 import           Data.Void
 
 -- | A type-level predicate in Haskell.  We say that the predicate @P ::
@@ -353,6 +354,14 @@ instance (SDecide k, SingI (a :: k)) => Decidable (EqualTo a) where
 instance Decidable Evident
 instance Provable Evident where
     prove = id
+
+-- | @since 2.0.0
+instance Provable (TyPred (Rec Sing)) where
+    prove = \case
+      SNil         -> RNil
+      x `SCons` xs -> x :& prove @(TyPred (Rec Sing)) xs
+
+instance Decidable (TyPred (Rec Sing))
 
 instance (Decidable p, SingI f) => Decidable (PMap f p) where
     decide = decide @p . applySing (sing :: Sing f)

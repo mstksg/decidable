@@ -48,6 +48,7 @@ import           Data.Singletons.Decide
 import           Data.Type.Predicate
 import           Data.Type.Predicate.Logic
 import           Data.Type.Universe
+import           Data.Type.Universe.Prod
 
 -- | 'decideNone', but providing an 'Elem'.
 idecideNone
@@ -132,8 +133,9 @@ ientailAllF
     => (forall a. Elem f as a -> p @@ a -> h (q @@ a))    -- ^ implication in context
     -> All f p @@ as
     -> h (All f q @@ as)
--- ientailAllF f a = igenAllA (\i _ -> f i (runWitAll a i)) sing
-ientailAllF f a = undefined
+ientailAllF f a = fmap (prodAll getWit)
+                . itraverseProd (\i _ -> Wit @q <$> f i (runWitAll a i))
+                $ singProd (sing @as)
 
 -- | If @p@ implies @q@ under some context @h@, and if we have @p a@ for
 -- all @a@, then we must have @q a@ for all @a@ under context @h@.
