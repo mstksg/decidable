@@ -33,8 +33,8 @@ module Data.Type.Universe.Prod (
   , PTup(..), ISnd(..)
   , PProxy(..), IProxy
   , PIdentity(..), IIdentity(..)
-  , CompProd(..), CompElem(..)
-  , PSum(..), SumElem(..)
+  , CompProd(..), CompElem(..), _CompProd
+  , PSum(..), SumElem(..), _PInL, _PInR
   , sameIndexVal, sameNEIndexVal
   -- * Manipulations
   , foldMapUni, ifoldMapUni, index, indexProd
@@ -62,6 +62,7 @@ module Data.Type.Universe.Prod (
 
 import           Control.Applicative
 import           Data.Functor
+import           Data.Functor.Classes
 import           Data.Functor.Identity
 import           Data.Kind
 import           Data.List.NonEmpty                    (NonEmpty(..))
@@ -78,8 +79,11 @@ import           GHC.Generics                          (Generic, (:*:)(..))
 import           Lens.Micro                            (Lens', Lens, lens)
 import           Prelude hiding                        (any, all)
 import           Unsafe.Coerce
+import qualified Data.Singletons.Prelude.Either        as S
 import qualified Data.Singletons.Prelude.List.NonEmpty as NE
+import qualified Data.Singletons.Prelude.Maybe         as S
 import qualified Data.Vinyl                            as V
+import qualified Data.Vinyl.Functor                    as V
 
 itraverseProd
     :: (HasProd f, Applicative m)
@@ -367,6 +371,12 @@ data PMaybe :: (k -> Type) -> Maybe k -> Type where
     PNothing :: PMaybe f 'Nothing
     PJust    :: f a -> PMaybe f ('Just a)
 
+instance (V.ReifyConstraint Show f (S.MaybeToList as)) => Show (PMaybe f as) where
+    showsPrec d = \case
+      PNothing -> showString "PNothing"
+      PJust x  -> case V.reifyConstraint @Show (x :& RNil) of
+        V.Compose (V.Dict y) :& RNil -> showsUnaryWith showsPrec "PJust" d y
+
 type instance Elem Maybe = IJust
 type instance Prod Maybe = PMaybe
 
@@ -454,6 +464,12 @@ data PEither :: (k -> Type) -> Either j k -> Type where
 
 type instance Elem (Either j) = IRight
 type instance Prod (Either j) = PEither
+
+instance (V.ReifyConstraint Show f (S.Rights '[as])) => Show (PEither f as) where
+    showsPrec d = \case
+      PLeft    -> showString "PNothing"
+      PRight x -> case V.reifyConstraint @Show (x :& RNil) of
+        V.Compose (V.Dict y) :& RNil -> showsUnaryWith showsPrec "PRight" d y
 
 instance Provable (TyPred (PEither Sing)) where
     prove = singProd
@@ -890,6 +906,9 @@ _CompProd :: Lens (CompProd f ('Comp as)) (CompProd f' ('Comp as'))
                   (Prod p (Prod q f) as)  (Prod p' (Prod q' f') as')
 _CompProd f (CompProd xs) = CompProd <$> f xs
 
+instance (HasProd p, HasProd q) => Provable (TyPred (CompProd Sing :: (p :.: q) Type -> Type)) where
+    prove = singProd
+
 type instance Elem (f :.: g) = CompElem
 type instance Prod (f :.: g) = CompProd
 
@@ -1003,6 +1022,9 @@ _PInL f (PInL x) = PInL <$> f x
 _PInR :: Lens (PSum f ('InR b)) (PSum f ('InR b'))
               (Prod q f b)      (Prod q' f b')
 _PInR f (PInR y) = PInR <$> f y
+
+instance (HasProd p, HasProd q) => Provable (TyPred (PSum Sing :: (p :+: q) Type -> Type)) where
+    prove = singProd
 
 type instance Elem (f :+: g) = SumElem
 type instance Prod (f :+: g) = PSum
