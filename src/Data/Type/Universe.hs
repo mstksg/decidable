@@ -35,8 +35,6 @@ module Data.Type.Universe (
   , singAll
   -- ** Instances
   , Index(..), IJust(..), IRight(..), NEIndex(..), ISnd(..), IIdentity(..)
-  -- , CompElem(..), SumElem(..)
-  -- , sameIndexVal, sameNEIndexVal
   -- ** Predicates
   , All, WitAll(..), NotAll
   , Any, WitAny(..), None

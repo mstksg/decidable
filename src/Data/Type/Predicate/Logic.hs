@@ -208,7 +208,7 @@ atom = const
 
 -- | We cannot have both @p@ and @'Not' p@.
 --
--- (Renamed in v0.1.4.0; used to be 'excludedMiddle')
+-- (Renamed in v0.1.4.0; used to be @excludedMiddle@)
 --
 -- @since 0.1.4.0
 complementation :: forall p. (p &&& Not p) --> Impossible

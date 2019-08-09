@@ -43,6 +43,7 @@ import           Data.List.NonEmpty                 (NonEmpty(..))
 import           Data.Singletons
 import           Data.Singletons.Sigma
 import           Data.Type.Equality
+import           Data.Type.Functor.Product
 import           Data.Type.Predicate
 import           Data.Type.Predicate.Logic
 import           Data.Type.Predicate.Param
@@ -311,4 +312,3 @@ autoNotAll = anyNotNotAll sing . autoAny
 instance (SingI as, AutoAll f (Not (Found p)) as) => Auto (Not (Found (AnyMatch f p))) as where
     auto = mapRefuted (\(s :&: WitAny i p) -> WitAny i (s :&: p))
          $ auto @_ @(Not (Any f (Found p))) @as
-
