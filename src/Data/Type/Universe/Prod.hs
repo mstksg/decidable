@@ -375,7 +375,7 @@ instance (V.ReifyConstraint Show f (S.MaybeToList as)) => Show (PMaybe f as) whe
     showsPrec d = \case
       PNothing -> showString "PNothing"
       PJust x  -> case V.reifyConstraint @Show (x :& RNil) of
-        V.Compose (V.Dict y) :& RNil -> showsUnaryWith showsPrec "PJust" d y
+        V.Compose (V.Dict _) :& RNil -> showsUnaryWith showsPrec "PJust" d x
 
 type instance Elem Maybe = IJust
 type instance Prod Maybe = PMaybe
@@ -469,7 +469,7 @@ instance (V.ReifyConstraint Show f (S.Rights '[as])) => Show (PEither f as) wher
     showsPrec d = \case
       PLeft    -> showString "PNothing"
       PRight x -> case V.reifyConstraint @Show (x :& RNil) of
-        V.Compose (V.Dict y) :& RNil -> showsUnaryWith showsPrec "PRight" d y
+        V.Compose (V.Dict _) :& RNil -> showsUnaryWith showsPrec "PRight" d x
 
 instance Provable (TyPred (PEither Sing)) where
     prove = singProd

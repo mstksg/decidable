@@ -339,3 +339,4 @@ autoNotAll = anyNotNotAll sing . autoAny
 instance (SingI as, AutoAll f (Not (Found p)) as) => Auto (Not (Found (AnyMatch f p))) as where
     auto = mapRefuted (\(s :&: WitAny i p) -> WitAny i (s :&: p))
          $ auto @_ @(Not (Any f (Found p))) @as
+
