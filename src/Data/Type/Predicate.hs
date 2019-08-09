@@ -1,8 +1,10 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE ConstraintKinds     #-}
 {-# LANGUAGE DefaultSignatures   #-}
+{-# LANGUAGE EmptyCase           #-}
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE FlexibleInstances   #-}
+{-# LANGUAGE InstanceSigs        #-}
 {-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE RankNTypes          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -27,7 +29,7 @@ module Data.Type.Predicate (
     -- * Predicates
     Predicate, Wit(..)
     -- ** Construct Predicates
-  , TyPred, Evident, EqualTo, BoolPred, Impossible
+  , TyPred, Evident, EqualTo, BoolPred, Impossible, In
     -- ** Manipulate predicates
   , PMap, type Not, decideNot
     -- * Provable Predicates
@@ -50,13 +52,17 @@ module Data.Type.Predicate (
   , mapRefuted
   ) where
 
+import           Data.Functor.Identity
 import           Data.Kind
+import           Data.List.NonEmpty                    (NonEmpty(..))
 import           Data.Maybe
 import           Data.Singletons
 import           Data.Singletons.Decide
-import           Data.Singletons.Prelude hiding (Not)
-import           Data.Vinyl (Rec(..))
+import           Data.Singletons.Prelude hiding        (Not, ElemSym1)
+import           Data.Singletons.Prelude.Identity
+import           Data.Type.Functor.Product
 import           Data.Void
+import qualified Data.Singletons.Prelude.List.NonEmpty as NE
 
 -- | A type-level predicate in Haskell.  We say that the predicate @P ::
 -- 'Predicate' k@ is true/satisfied by input @x :: k@ if there exists
@@ -357,11 +363,34 @@ instance Provable Evident where
 
 -- | @since 2.0.0
 instance Provable (TyPred (Rec Sing)) where
-    prove = \case
-      SNil         -> RNil
-      x `SCons` xs -> x :& prove @(TyPred (Rec Sing)) xs
-
+    prove = singProd
+-- | @since 2.0.0
 instance Decidable (TyPred (Rec Sing))
+-- | @since 2.0.0
+instance Provable (TyPred (PMaybe Sing)) where
+    prove = singProd
+-- | @since 2.0.0
+instance Decidable (TyPred (PMaybe Sing))
+-- | @since 2.0.0
+instance Provable (TyPred (NERec Sing)) where
+    prove = singProd
+-- | @since 2.0.0
+instance Decidable (TyPred (NERec Sing))
+-- | @since 2.0.0
+instance Provable (TyPred (PIdentity Sing)) where
+    prove = singProd
+-- | @since 2.0.0
+instance Decidable (TyPred (PIdentity Sing))
+-- | @since 2.0.0
+instance Provable (TyPred (PEither Sing)) where
+    prove = singProd
+-- | @since 2.0.0
+instance Decidable (TyPred (PEither Sing))
+-- | @since 2.0.0
+instance Provable (TyPred (PTup Sing)) where
+    prove = singProd
+-- | @since 2.0.0
+instance Decidable (TyPred (PTup Sing))
 
 instance (Decidable p, SingI f) => Decidable (PMap f p) where
     decide = decide @p . applySing (sing :: Sing f)
@@ -472,3 +501,58 @@ mapRefuted
     -> Refuted b
     -> Refuted a
 mapRefuted = flip (.)
+
+-- | @'In' f as@ is a predicate that a given input @a@ is a member of
+-- collection @as@.
+type In (f :: Type -> Type) (as :: f k) = ElemSym1 f as
+
+instance (SDecide k, SingI (as :: [k])) => Decidable (In [] as) where
+    decide :: forall a. Sing a -> Decision (Index as a)
+    decide x = go (sing @as)
+      where
+        go :: Sing bs -> Decision (Index bs a)
+        go = \case
+          SNil         -> Disproved $ \case {}
+          y `SCons` ys -> case x %~ y of
+            Proved Refl -> Proved IZ
+            Disproved v -> case go ys of
+              Proved i    -> Proved (IS i)
+              Disproved u -> Disproved $ \case
+                IZ   -> v Refl
+                IS i -> u i
+
+instance (SDecide k, SingI (as :: Maybe k)) => Decidable (In Maybe as) where
+    decide x = case sing @as of
+      SNothing -> Disproved $ \case {}
+      SJust y  -> case x %~ y of
+        Proved Refl -> Proved IJust
+        Disproved v -> Disproved $ \case IJust -> v Refl
+
+instance (SDecide k, SingI (as :: Either j k)) => Decidable (In (Either j) as) where
+    decide x = case sing @as of
+      SLeft _  -> Disproved $ \case {}
+      SRight y -> case x %~ y of
+        Proved Refl -> Proved IRight
+        Disproved v -> Disproved $ \case IRight -> v Refl
+
+instance (SDecide k, SingI (as :: NonEmpty k)) => Decidable (In NonEmpty as) where
+    decide x = case sing @as of
+      y NE.:%| (Sing :: Sing bs) -> case x %~ y of
+        Proved Refl -> Proved NEHead
+        Disproved v -> case decide @(In [] bs) x of
+          Proved i    -> Proved $ NETail i
+          Disproved u -> Disproved $ \case
+            NEHead   -> v Refl
+            NETail i -> u i
+
+instance (SDecide k, SingI (as :: (j, k))) => Decidable (In ((,) j) as) where
+    decide x = case sing @as of
+      STuple2 _ y -> case x %~ y of
+        Proved Refl -> Proved ISnd
+        Disproved v -> Disproved $ \case ISnd -> v Refl
+
+instance (SDecide k, SingI (as :: Identity k)) => Decidable (In Identity as) where
+    decide x = case sing @as of
+      SIdentity y -> case x %~ y of
+        Proved Refl -> Proved IId
+        Disproved v -> Disproved $ \case IId -> v Refl
