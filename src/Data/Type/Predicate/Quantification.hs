@@ -25,8 +25,6 @@ module Data.Type.Predicate.Quantification (
   , decideAny, idecideAny, decideNone, idecideNone
   -- ** Entailment
   , entailAny, ientailAny, entailAnyF, ientailAnyF
-  -- ** Composition
-  , allComp, compAll
   -- * All
   , All, WitAll(..), NotAll
   -- ** Decision
@@ -34,8 +32,6 @@ module Data.Type.Predicate.Quantification (
   -- ** Entailment
   , entailAll, ientailAll, entailAllF, ientailAllF
   , decideEntailAll, idecideEntailAll
-  -- ** Composition
-  , anyComp, compAny
   -- * Logical interplay
   , allToAny
   , allNotNone, noneAllNot
@@ -45,10 +41,10 @@ module Data.Type.Predicate.Quantification (
 import           Data.Kind
 import           Data.Singletons
 import           Data.Singletons.Decide
+import           Data.Type.Functor.Product
 import           Data.Type.Predicate
 import           Data.Type.Predicate.Logic
 import           Data.Type.Universe
-import           Data.Type.Universe.Prod
 
 -- | 'decideNone', but providing an 'Elem'.
 idecideNone
@@ -75,7 +71,7 @@ ientailAny
     => (forall a. Elem f as a -> Sing a -> p @@ a -> q @@ a)        -- ^ implication
     -> Any f p @@ as
     -> Any f q @@ as
-ientailAny f (WitAny i x) = WitAny i (f i (index i sing) x)
+ientailAny f (WitAny i x) = WitAny i (f i (indexSing i sing) x)
 
 -- | If there exists an @a@ s.t. @p a@, and if @p@ implies @q@, then there
 -- must exist an @a@ s.t. @q a@.
@@ -91,7 +87,7 @@ ientailAll
     => (forall a. Elem f as a -> Sing a -> p @@ a -> q @@ a)      -- ^ implication
     -> All f p @@ as
     -> All f q @@ as
-ientailAll f a = WitAll $ \i -> f i (index i sing) (runWitAll a i)
+ientailAll f a = WitAll $ \i -> f i (indexSing i sing) (runWitAll a i)
 
 -- | If for all @a@ we have @p a@, and if @p@ implies @q@, then for all @a@
 -- we must also have @p a@.
@@ -125,7 +121,7 @@ entailAnyF
     => (p --># q) h                                     -- ^ implication in context
     -> (Any f p --># Any f q) h
 entailAnyF f x a = withSingI x $
-    ientailAnyF @f @p @q (\i -> f (index i x)) a
+    ientailAnyF @f @p @q (\i -> f (indexSing i x)) a
 
 -- | 'entailAllF', but providing an 'Elem'.
 ientailAllF
@@ -144,7 +140,7 @@ entailAllF
     => (p --># q) h                                     -- ^ implication in context
     -> (All f p --># All f q) h
 entailAllF f x a = withSingI x $
-    ientailAllF @f @p @q (\i -> f (index i x)) a
+    ientailAllF @f @p @q (\i -> f (indexSing i x)) a
 
 -- | 'entailAllF', but providing an 'Elem'.
 idecideEntailAll
@@ -166,7 +162,7 @@ decideEntailAll = dmap @(All f)
 --
 -- @since 0.1.2.0
 anyImpossible :: Universe f => Any f Impossible --> Impossible
-anyImpossible _ (WitAny i p) = p . index i
+anyImpossible _ (WitAny i p) = p . indexSing i
 
 -- | If any @a@ in @as@ does not satisfy @p@, then not all @a@ in @as@
 -- satisfy @p@.
@@ -185,7 +181,7 @@ notAllAnyNot
     => NotAll f p --> Any f (Not p)
 notAllAnyNot xs vAll = elimDisproof (decide @(Any f (Not p)) xs) $ \vAny ->
     vAll $ WitAll $ \i ->
-      elimDisproof (decide @p (index i xs)) $ \vP ->
+      elimDisproof (decide @p (indexSing i xs)) $ \vP ->
         vAny $ WitAny i vP
 
 -- | If @p@ is false for all @a@ in @as@, then no @a@ in @as@ satisfies

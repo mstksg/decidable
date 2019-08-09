@@ -37,6 +37,7 @@ import           Data.Kind
 import           Data.Monoid                        (Alt(..))
 import           Data.Singletons
 import           Data.Singletons.Decide
+import           Data.Type.Functor.Product
 import           Data.Type.Predicate
 import           Data.Type.Predicate.Logic
 import           Data.Type.Predicate.Quantification
@@ -63,7 +64,7 @@ makeSubset
     => (forall a. Elem f as a -> Sing a -> Decision (p @@ a))
     -> Sing as
     -> Subset f p @@ as
-makeSubset f xs = WitSubset $ \i -> f i (index i xs)
+makeSubset f xs = WitSubset $ \i -> f i (indexSing i xs)
 
 -- | Turn a 'Subset' into a list (or any 'Alternative') of satisfied
 -- predicates.
@@ -72,7 +73,7 @@ makeSubset f xs = WitSubset $ \i -> f i (index i xs)
 subsetToList
     :: forall f p t. (Universe f, Alternative t)
     => (Subset f p --># Any f p) t
-subsetToList xs s = getAlt $ (`ifoldMapUni` xs) $ \i _ -> Alt $ case runWitSubset s i of
+subsetToList xs s = getAlt $ (`ifoldMapSing` xs) $ \i _ -> Alt $ case runWitSubset s i of
     Proved p    -> pure $ WitAny i p
     Disproved _ -> empty
 
@@ -158,5 +159,5 @@ mapSubset
     -> (q --> p)
     -> (Subset f p --> Subset f q)
 mapSubset f g xs = withSingI xs $
-    imapSubset (\i -> f (index i xs))
-               (\i -> g (index i xs))
+    imapSubset (\i -> f (indexSing i xs))
+               (\i -> g (indexSing i xs))

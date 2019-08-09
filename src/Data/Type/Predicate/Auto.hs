@@ -167,17 +167,8 @@ instance AutoElem [] as a => AutoElem NonEmpty (b ':| as) a where
 instance AutoElem ((,) j) '(w, a) a where
     autoElem = ISnd
 
--- TODO: ???
--- instance AutoElem (f :.: g) p ('Comp ass) where
-
 instance AutoElem Identity ('Identity a) a where
     autoElem = IId
-
-instance AutoElem f as a => AutoElem (f :+: g) ('InL as) a where
-    autoElem = IInL autoElem
-
-instance AutoElem g bs b => AutoElem (f :+: g) ('InR bs) b where
-    autoElem = IInR autoElem
 
 instance AutoElem f as a => Auto (In f as) a where
     auto = autoElem @f @as @a
@@ -219,24 +210,11 @@ instance (Auto p a, AutoAll [] p as) => AutoAll NonEmpty p (a ':| as) where
         NEHead   -> auto @_ @p @a
         NETail i -> runWitAll (autoAll @[] @p @as) i
 
-instance AutoAll f (All g p) ass => AutoAll (f :.: g) p ('Comp ass) where
-    autoAll = WitAll $ \(i :? j) ->
-      runWitAll (runWitAll (autoAll @f @(All g p) @ass) i) j
-
 instance Auto p a => AutoAll ((,) j) p '(w, a) where
     autoAll = WitAll $ \case ISnd -> auto @_ @p @a
 
-instance AutoAll Proxy p 'Proxy where
-    autoAll = WitAll $ \case {}
-
 instance Auto p a => AutoAll Identity p ('Identity a) where
     autoAll = WitAll $ \case IId -> auto @_ @p @a
-
-instance AutoAll f p as => AutoAll (f :+: g) p ('InL as) where
-    autoAll = allSumL $ autoAll @f @p @as
-
-instance AutoAll g p bs => AutoAll (f :+: g) p ('InR bs) where
-    autoAll = allSumR $ autoAll @g @p @bs
 
 -- | @since 0.1.2.0
 instance AutoAll f p as => Auto (All f p) as where
@@ -264,12 +242,6 @@ instance SingI a => Auto (NotNull ((,) j)) '(w, a) where
 
 instance SingI a => Auto (NotNull Identity) ('Identity a) where
     auto = WitAny IId sing
-
-instance Auto (NotNull f) as => Auto (NotNull (f :+: g)) ('InL as) where
-    auto = anySumL $ auto @_ @(NotNull f) @as
-
-instance Auto (NotNull g) bs => Auto (NotNull (f :+: g)) ('InR bs) where
-    auto = anySumR $ auto @_ @(NotNull g) @bs
 
 -- | An @'AutoNot' p a@ constraint means that @p \@\@ a@ can be proven to
 -- not be true at compiletime.

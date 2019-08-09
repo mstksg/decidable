@@ -33,8 +33,7 @@ dependencies:
 - singletons >= 2.5
 - vinyl
 - microlens
+- functor-products
 
 library:
   source-dirs: src
-  other-modules:
-  - Data.Type.Universe.Internal

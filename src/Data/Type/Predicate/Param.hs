@@ -44,6 +44,7 @@ import           Data.Singletons
 import           Data.Singletons.Decide
 import           Data.Singletons.Prelude.Tuple
 import           Data.Singletons.Sigma
+import           Data.Type.Functor.Product
 import           Data.Type.Predicate
 import           Data.Type.Predicate.Logic
 import           Data.Type.Universe
