@@ -406,3 +406,21 @@ instance Universe Identity where
       $ f IId x
     allProd f (SIdentity x) a = PIdentity $ f x (runWitAll a IId)
     prodAll f (PIdentity x) = WitAll $ \case IId -> f x
+
+instance (SDecide k, SingI (as :: [k])) => Decidable (In [] as) where
+    decide x = withSingI x $ pickElem
+
+instance (SDecide k, SingI (as :: Maybe k)) => Decidable (In Maybe as) where
+    decide x = withSingI x $ pickElem
+
+instance (SDecide k, SingI (as :: Either j k)) => Decidable (In (Either j) as) where
+    decide x = withSingI x $ pickElem
+
+instance (SDecide k, SingI (as :: NonEmpty k)) => Decidable (In NonEmpty as) where
+    decide x = withSingI x $ pickElem
+
+instance (SDecide k, SingI (as :: (j, k))) => Decidable (In ((,) j) as) where
+    decide x = withSingI x $ pickElem
+
+instance (SDecide k, SingI (as :: Identity k)) => Decidable (In Identity as) where
+    decide x = withSingI x $ pickElem
