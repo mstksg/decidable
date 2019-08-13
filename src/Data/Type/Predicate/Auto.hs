@@ -312,3 +312,22 @@ autoNotAll = anyNotNotAll sing . autoAny
 instance (SingI as, AutoAll f (Not (Found p)) as) => Auto (Not (Found (AnyMatch f p))) as where
     auto = mapRefuted (\(s :&: WitAny i p) -> WitAny i (s :&: p))
          $ auto @_ @(Not (Any f (Found p))) @as
+
+-- | @since 2.0.0
+instance SingI as => Auto (TyPred (Rec Sing)) as where
+    auto = singProd sing
+-- | @since 2.0.0
+instance SingI as => Auto (TyPred (PMaybe Sing)) as where
+    auto = singProd sing
+-- | @since 2.0.0
+instance SingI as => Auto (TyPred (NERec Sing)) as where
+    auto = singProd sing
+-- | @since 2.0.0
+instance SingI as => Auto (TyPred (PEither Sing)) as where
+    auto = singProd sing
+-- | @since 2.0.0
+instance SingI as => Auto (TyPred (PTup Sing)) as where
+    auto = singProd sing
+-- | @since 2.0.0
+instance SingI as => Auto (TyPred (PIdentity Sing)) as where
+    auto = singProd sing

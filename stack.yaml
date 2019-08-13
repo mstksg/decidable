@@ -48,8 +48,9 @@ packages:
 # using the same syntax as the packages field.
 # (e.g., acme-missiles-0.3)
 extra-deps:
-- github: mstksg/functor-products
-  commit: 476b961bb007d7ee9aa0e60500c1473bc4a34e73
+- functor-products-0.1.0.0
+# - github: mstksg/functor-products
+#   commit: 476b961bb007d7ee9aa0e60500c1473bc4a34e73
 
 # Override default flag values for local packages and extra-deps
 # flags: {}

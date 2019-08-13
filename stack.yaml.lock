@@ -5,19 +5,12 @@
 
 packages:
 - completed:
-    size: 8366
-    url: https://github.com/mstksg/functor-products/archive/476b961bb007d7ee9aa0e60500c1473bc4a34e73.tar.gz
-    cabal-file:
-      size: 1140
-      sha256: de5ef87f6154dfdb5e8ca9d609e12959e93b28c2467a0e655dea1e9f67b33818
-    name: functor-products
-    version: 0.1.0.0
-    sha256: 6d271ac81804a3cca1eb4f92acbb93092bce292809d62061340268fe4d09976e
+    hackage: functor-products-0.1.0.0@sha256:cc5e526b5f3694d33a89044578e4fe74e4e05dd01d5d96bc57be06d6d98a1883,1455
     pantry-tree:
-      size: 477
-      sha256: 479ea6650a95cb50e909ef1df9534228a255a1b49b1b167193eac1b3fcbaedc8
+      size: 408
+      sha256: 33712b9ee5c4491bcf320dc53618dba0f765a1ece19e26336fa9ed2aa3809365
   original:
-    url: https://github.com/mstksg/functor-products/archive/476b961bb007d7ee9aa0e60500c1473bc4a34e73.tar.gz
+    hackage: functor-products-0.1.0.0
 snapshots:
 - completed:
     size: 523441

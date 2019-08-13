@@ -332,10 +332,10 @@ instance Universe (Either j) where
         Proved p    -> Proved $ WitAll $ \case IRight -> p
         Disproved v -> Disproved $ \a -> v $ runWitAll a IRight
     allProd f = \case
-      SLeft  _ -> \_ -> PLeft
+      SLeft  w -> \_ -> PLeft w
       SRight x -> \a -> PRight (f x (runWitAll a IRight))
     prodAll f = \case
-      PLeft    -> WitAll $ \case {}
+      PLeft _  -> WitAll $ \case {}
       PRight x -> WitAll $ \case IRight -> f x
 
 instance Universe NonEmpty where
@@ -389,8 +389,8 @@ instance Universe ((,) j) where
     idecideAll f (STuple2 _ x) = case f ISnd x of
       Proved p    -> Proved $ WitAll $ \case ISnd -> p
       Disproved v -> Disproved $ \a -> v $ runWitAll a ISnd
-    allProd f (STuple2 _ x) a = PSnd $ f x (runWitAll a ISnd)
-    prodAll f (PSnd x) = WitAll $ \case ISnd -> f x
+    allProd f (STuple2 w x) a = PTup w $ f x (runWitAll a ISnd)
+    prodAll f (PTup _ x) = WitAll $ \case ISnd -> f x
 
 -- | The single-pointed universe.
 instance Universe Identity where

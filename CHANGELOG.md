@@ -1,14 +1,15 @@
 Changelog
 =========
 
-Version 0.1.5.1
+Version 0.2.0.0
 ---------------
 
-*Unreleased*
+*August 12, 2019*
 
-<https://github.com/mstksg/decidable/releases/tag/v0.1.5.1>
+<https://github.com/mstksg/decidable/releases/tag/v0.2.0.0>
 
-*   Add `sameIndexVal`, `sameNEIndexVal`.
+*   Full restructuring of the Universe system, pulling it all out into a new
+    package, *functor-products*.
 
 Version 0.1.5.0
 ---------------
