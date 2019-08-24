@@ -1,6 +1,15 @@
 Changelog
 =========
 
+Version 0.2.1.0
+---------------
+
+*August 24, 2019*
+
+<https://github.com/mstksg/decidable/releases/tag/v0.2.1.0>
+
+*   Add `autoTC` for convenient usage of `auto` with type constructors.
+
 Version 0.2.0.0
 ---------------
 

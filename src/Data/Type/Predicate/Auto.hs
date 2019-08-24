@@ -29,13 +29,14 @@
 module Data.Type.Predicate.Auto (
   -- * Automatically generate witnesses at compile-time
     Auto(..)
-  , AutoNot, autoNot
+  , autoTC
+  , AutoNot
+  , autoNot
+  , autoAny, autoNotAll
   , AutoProvable
   -- ** Helper classes
   , AutoElem(..)
   , AutoAll(..)
-  -- * Auto with help
-  , autoAny, autoNotAll
   ) where
 
 import           Data.Functor.Identity
@@ -83,6 +84,13 @@ class Auto (p :: Predicate k) (a :: k) where
     -- 'auto' @_ @p @a
     -- @
     auto :: p @@ a
+
+-- | A version of 'auto' that "just works" with type inference, if the
+-- predicate is a type constructor.
+--
+-- @since 0.2.1.0
+autoTC :: forall t a. Auto (TyPred t) a => t a
+autoTC = auto @_ @(TyPred t) @a
 
 instance SingI a => Auto Evident a where
     auto = sing
