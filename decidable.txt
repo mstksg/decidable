@@ -11,7 +11,7 @@
 --   starting point, and the documentation for <a>Predicate</a> on how to
 --   define predicates.
 @package decidable
-@version 0.2.0.0
+@version 0.2.1.0
 
 
 -- | Combinators for working with type-level predicates, along with
@@ -1212,6 +1212,10 @@ class Auto (p :: Predicate k) (a :: k)
 --   </pre>
 auto :: Auto p a => p @@ a
 
+-- | A version of <a>auto</a> that "just works" with type inference, if the
+--   predicate is a type constructor.
+autoTC :: forall t a. Auto (TyPred t) a => t a
+
 -- | An <tt><a>AutoNot</a> p a</tt> constraint means that <tt>p @@ a</tt>
 --   can be proven to not be true at compiletime.
 type AutoNot (p :: Predicate k) = Auto (Not p)
@@ -1222,6 +1226,22 @@ type AutoNot (p :: Predicate k) = Auto (Not p)
 --   <a>autoNot</a> @_ @p @a :: <a>Not</a> p <a>@@</a> a
 --   </pre>
 autoNot :: forall k (p :: Predicate k) (a :: k). AutoNot p a => Not p @@ a
+
+-- | Helper function to generate an <tt><a>Any</a> f p</tt> if you can pick
+--   out a specific <tt>a</tt> in <tt>as</tt> where the predicate is
+--   provable at compile-time.
+--   
+--   This is used to get around a fundamental limitation of <a>Auto</a> as
+--   a Haskell typeclass.
+autoAny :: forall f p as a. Auto p a => Elem f as a -> Any f p @@ as
+
+-- | Helper function to generate a <tt><a>Not</a> (<a>All</a> f p)</tt> if
+--   you can pick out a specific <tt>a</tt> in <tt>as</tt> where the
+--   predicate is disprovable at compile-time.
+--   
+--   This is used to get around a fundamental limitation of <a>Auto</a> as
+--   a Haskell typeclass.
+autoNotAll :: forall p f as a. (AutoNot p a, SingI as) => Elem f as a -> Not (All f p) @@ as
 
 -- | Helper "predicate transformer" that gives you an instant <a>auto</a>
 --   for any <a>Provable</a> instance.
@@ -1280,22 +1300,6 @@ class AutoAll f (p :: Predicate k) (as :: f k)
 -- | Generate an <a>All</a> for a given predicate over all items in
 --   <tt>as</tt>.
 autoAll :: AutoAll f p as => All f p @@ as
-
--- | Helper function to generate an <tt><a>Any</a> f p</tt> if you can pick
---   out a specific <tt>a</tt> in <tt>as</tt> where the predicate is
---   provable at compile-time.
---   
---   This is used to get around a fundamental limitation of <a>Auto</a> as
---   a Haskell typeclass.
-autoAny :: forall f p as a. Auto p a => Elem f as a -> Any f p @@ as
-
--- | Helper function to generate a <tt><a>Not</a> (<a>All</a> f p)</tt> if
---   you can pick out a specific <tt>a</tt> in <tt>as</tt> where the
---   predicate is disprovable at compile-time.
---   
---   This is used to get around a fundamental limitation of <a>Auto</a> as
---   a Haskell typeclass.
-autoNotAll :: forall p f as a. (AutoNot p a, SingI as) => Elem f as a -> Not (All f p) @@ as
 instance forall k j (p :: Data.Type.Predicate.Predicate j) (f :: k Data.Singletons.Internal.~> j) (a :: k). Data.Type.Predicate.Auto.AutoNot p (f Data.Singletons.Internal.@@ a) => Data.Type.Predicate.Auto.Auto (Data.Type.Predicate.Not (Data.Type.Predicate.PMap f p)) a
 instance forall k (p :: Data.Type.Predicate.Predicate k). Data.Type.Predicate.Auto.AutoAll [] p '[]
 instance forall a1 (p :: Data.Type.Predicate.Predicate a1) (a2 :: a1) (as :: [a1]). (Data.Type.Predicate.Auto.Auto p a2, Data.Type.Predicate.Auto.AutoAll [] p as) => Data.Type.Predicate.Auto.AutoAll [] p (a2 : as)
