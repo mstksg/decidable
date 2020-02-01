@@ -29,11 +29,11 @@ ghc-options:
 - -Werror=incomplete-patterns
 
 dependencies:
-- base >= 4.11 && < 5
-- singletons >= 2.5
+- base >= 4.13 && < 5
+- singletons >= 2.6
 - vinyl
 - microlens
-- functor-products
+- functor-products >= 0.1.1
 
 library:
   source-dirs: src

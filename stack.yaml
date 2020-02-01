@@ -18,7 +18,7 @@
 #
 # resolver: ./custom-snapshot.yaml
 # resolver: https://example.com/snapshots/2018-01-01.yaml
-resolver: nightly-2019-08-03
+resolver: nightly-2020-01-31
 
 # User packages to be built.
 # Various formats can be used as shown in the example below.
@@ -35,20 +35,14 @@ resolver: nightly-2019-08-03
 #  - wai
 packages:
 - .
-# - location:
-#     git: https://github.com/goldfirere/singletons.git
-#     commit: c776637d11055ac1c47ddf7e96c7ed9067687041
-#   extra-dep: true
-# - location:
-#     git: https://github.com/goldfirere/th-desugar.git
-#     commit: 6dfdb7aa076b79d2595e4338c5e8192b1782de87
-#   extra-dep: true
 
 # Dependency packages to be pulled from upstream that are not in the resolver
 # using the same syntax as the packages field.
 # (e.g., acme-missiles-0.3)
 extra-deps:
-- functor-products-0.1.0.0
+- functor-products-0.1.1.0
+- singletons-2.6
+- vinyl-0.12.0
 # - github: mstksg/functor-products
 #   commit: 476b961bb007d7ee9aa0e60500c1473bc4a34e73
 
