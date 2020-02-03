@@ -1,6 +1,20 @@
 Changelog
 =========
 
+Version 0.3.0.0
+---------------
+
+*Feburary 2, 2020*
+
+<https://github.com/mstksg/decidable/releases/tag/v0.3.0.0>
+
+*   Update to work with *singletons-2.6*, the type family update
+*   Change `Evident` to now be a defunctionalization symbol for `Sing`, instead
+    of a type synonym with `TyPred`, to match with *singletons-2.6*.  Most code
+    in practice should be the same.
+*   Fix instances for `FProd`s: now can prove and decide any `FProd f (Wit p)`,
+    and can prove and decide and auto any `FProd f WrappedSing`.
+
 Version 0.2.1.0
 ---------------
 

@@ -134,7 +134,8 @@ type TyPred = (TyCon1 :: (k -> Type) -> Predicate k)
 -- @
 -- 'Evident' :: 'Predicate' k
 -- @
-type Evident = (TyPred Sing :: Predicate k)
+data Evident :: Predicate k
+type instance Apply Evident a = Sing a
 
 -- | The always-false predicate
 --
@@ -361,36 +362,118 @@ instance Decidable Evident
 instance Provable Evident where
     prove = id
 
--- | @since 2.0.0
-instance Provable (TyPred (Rec Sing)) where
-    prove = singProd
--- | @since 2.0.0
-instance Decidable (TyPred (Rec Sing))
--- | @since 2.0.0
-instance Provable (TyPred (PMaybe Sing)) where
-    prove = singProd
--- | @since 2.0.0
-instance Decidable (TyPred (PMaybe Sing))
--- | @since 2.0.0
-instance Provable (TyPred (NERec Sing)) where
-    prove = singProd
--- | @since 2.0.0
-instance Decidable (TyPred (NERec Sing))
--- | @since 2.0.0
-instance Provable (TyPred (PIdentity Sing)) where
-    prove = singProd
--- | @since 2.0.0
-instance Decidable (TyPred (PIdentity Sing))
--- | @since 2.0.0
-instance Provable (TyPred (PEither Sing)) where
-    prove = singProd
--- | @since 2.0.0
-instance Decidable (TyPred (PEither Sing))
--- | @since 2.0.0
-instance Provable (TyPred (PTup Sing)) where
-    prove = singProd
--- | @since 2.0.0
-instance Decidable (TyPred (PTup Sing))
+-- | @since 3.0.0
+instance Decidable (TyPred WrappedSing)
+-- | @since 3.0.0
+instance Provable (TyPred WrappedSing) where
+    prove = WrapSing
+    
+
+-- | @since 3.0.0
+instance Provable p => Provable (TyPred (Rec (Wit p))) where
+    prove = mapProd (Wit . prove @p) . singProd
+-- | @since 3.0.0
+instance Decidable p => Decidable (TyPred (Rec (Wit p))) where
+    decide = \case
+      SNil         -> Proved RNil
+      x `SCons` xs -> case decide @p x of
+        Proved p -> case decideTC xs of
+          Proved ps -> Proved $ Wit p :& ps
+          Disproved vs -> Disproved $ \case
+            _ :& ps -> vs ps
+        Disproved v -> Disproved $ \case
+          Wit p :& _ -> v p
+
+-- | @since 3.0.0
+instance Provable (TyPred (Rec WrappedSing)) where
+    prove = mapProd WrapSing . singProd
+-- | @since 3.0.0
+instance Decidable (TyPred (Rec WrappedSing))
+
+-- | @since 3.0.0
+instance Provable p => Provable (TyPred (PMaybe (Wit p))) where
+    prove = mapProd (Wit . prove @p) . singProd
+-- | @since 3.0.0
+instance Decidable p => Decidable (TyPred (PMaybe (Wit p))) where
+    decide = \case
+      SNothing -> Proved PNothing
+      SJust x  -> mapDecision (PJust . Wit) (\case PJust (Wit p) -> p)
+                . decide @p
+                $ x
+
+-- | @since 3.0.0
+instance Provable (TyPred (PMaybe WrappedSing)) where
+    prove = mapProd WrapSing . singProd
+-- | @since 3.0.0
+instance Decidable (TyPred (PMaybe WrappedSing))
+
+-- | @since 3.0.0
+instance Provable p => Provable (TyPred (NERec (Wit p))) where
+    prove = mapProd (Wit . prove @p) . singProd
+-- | @since 3.0.0
+instance Decidable p => Decidable (TyPred (NERec (Wit p))) where
+    decide = \case
+      x NE.:%| xs -> case decide @p x of
+        Proved p -> case decideTC xs of
+          Proved ps -> Proved $ Wit p :&| ps
+          Disproved vs -> Disproved $ \case
+            _ :&| ps -> vs ps
+        Disproved v -> Disproved $ \case
+          Wit p :&| _ -> v p
+
+-- | @since 3.0.0
+instance Provable (TyPred (NERec WrappedSing)) where
+    prove = mapProd WrapSing . singProd
+-- | @since 3.0.0
+instance Decidable (TyPred (NERec WrappedSing))
+
+-- | @since 3.0.0
+instance Provable p => Provable (TyPred (PIdentity (Wit p))) where
+    prove = mapProd (Wit . prove @p) . singProd
+-- | @since 3.0.0
+instance Decidable p => Decidable (TyPred (PIdentity (Wit p))) where
+    decide = \case
+      SIdentity x -> mapDecision (PIdentity . Wit) (\case PIdentity (Wit p) -> p)
+                   . decide @p
+                   $ x
+
+-- | @since 3.0.0
+instance Provable (TyPred (PIdentity WrappedSing)) where
+    prove = mapProd WrapSing . singProd
+-- | @since 3.0.0
+instance Decidable (TyPred (PIdentity WrappedSing))
+
+-- | @since 3.0.0
+instance Provable p => Provable (TyPred (PEither (Wit p))) where
+    prove = mapProd (Wit . prove @p) . singProd
+-- | @since 3.0.0
+instance Decidable p => Decidable (TyPred (PEither (Wit p))) where
+    decide = \case
+      SLeft  x -> Proved $ PLeft x
+      SRight y -> mapDecision (PRight . Wit) (\case PRight (Wit p) -> p)
+                . decide @p
+                $ y
+
+-- | @since 3.0.0
+instance Provable (TyPred (PEither WrappedSing)) where
+    prove = mapProd WrapSing . singProd
+-- | @since 3.0.0
+instance Decidable (TyPred (PEither WrappedSing))
+
+-- | @since 3.0.0
+instance Provable p => Provable (TyPred (PTup (Wit p))) where
+    prove = mapProd (Wit . prove @p) . singProd
+-- | @since 3.0.0
+instance Decidable p => Decidable (TyPred (PTup (Wit p))) where
+    decide (STuple2 x y) = mapDecision (PTup x . Wit) (\case PTup _ (Wit p) -> p)
+                         . decide @p
+                         $ y
+
+-- | @since 3.0.0
+instance Provable (TyPred (PTup WrappedSing)) where
+    prove = mapProd WrapSing . singProd
+-- | @since 3.0.0
+instance Decidable (TyPred (PTup WrappedSing))
 
 instance (Decidable p, SingI f) => Decidable (PMap f p) where
     decide = decide @p . applySing (sing :: Sing f)

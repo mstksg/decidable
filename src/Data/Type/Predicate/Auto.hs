@@ -180,7 +180,7 @@ instance AutoElem Identity ('Identity a) a where
     autoElem = IId
 
 instance AutoElem f as a => Auto (In f as) a where
-    auto = autoElem @f @as @a
+    auto = autoElem @_ @f @as @a
 
 -- | Helper class for deriving 'Auto' instances for 'All' predicates; each
 -- 'Universe' instance is expected to implement these if possible, to get
@@ -200,7 +200,7 @@ instance AutoAll [] p '[] where
 instance (Auto p a, AutoAll [] p as) => AutoAll [] p (a ': as) where
     autoAll = WitAll $ \case
         IZ   -> auto @_ @p @a
-        IS i -> runWitAll (autoAll @[] @p @as) i
+        IS i -> runWitAll (autoAll @_ @[] @p @as) i
 
 instance AutoAll Maybe p 'Nothing where
     autoAll = WitAll $ \case {}
@@ -217,7 +217,7 @@ instance Auto p a => AutoAll (Either j) p ('Right a) where
 instance (Auto p a, AutoAll [] p as) => AutoAll NonEmpty p (a ':| as) where
     autoAll = WitAll $ \case
         NEHead   -> auto @_ @p @a
-        NETail i -> runWitAll (autoAll @[] @p @as) i
+        NETail i -> runWitAll (autoAll @_ @[] @p @as) i
 
 instance Auto p a => AutoAll ((,) j) p '(w, a) where
     autoAll = WitAll $ \case ISnd -> auto @_ @p @a
@@ -227,7 +227,7 @@ instance Auto p a => AutoAll Identity p ('Identity a) where
 
 -- | @since 0.1.2.0
 instance AutoAll f p as => Auto (All f p) as where
-    auto = autoAll @f @p @as
+    auto = autoAll @_ @f @p @as
 
 -- | @since 0.1.2.0
 instance SingI a => Auto (NotNull []) (a ': as) where
@@ -301,7 +301,7 @@ autoAny i = WitAny i (auto @_ @p @a)
 
 -- | @since 0.1.2.0
 instance (SingI as, AutoAll f (Not p) as) => Auto (Not (Any f p)) as where
-    auto = allNotNone sing $ autoAll @f @(Not p) @as
+    auto = allNotNone sing $ autoAll @_ @f @(Not p) @as
 
 -- | Helper function to generate a @'Not' ('All' f p)@ if you can pick out
 -- a specific @a@ in @as@ where the predicate is disprovable at compile-time.
@@ -321,21 +321,40 @@ instance (SingI as, AutoAll f (Not (Found p)) as) => Auto (Not (Found (AnyMatch 
     auto = mapRefuted (\(s :&: WitAny i p) -> WitAny i (s :&: p))
          $ auto @_ @(Not (Any f (Found p))) @as
 
--- | @since 2.0.0
-instance SingI as => Auto (TyPred (Rec Sing)) as where
-    auto = singProd sing
--- | @since 2.0.0
-instance SingI as => Auto (TyPred (PMaybe Sing)) as where
-    auto = singProd sing
--- | @since 2.0.0
-instance SingI as => Auto (TyPred (NERec Sing)) as where
-    auto = singProd sing
--- | @since 2.0.0
-instance SingI as => Auto (TyPred (PEither Sing)) as where
-    auto = singProd sing
--- | @since 2.0.0
-instance SingI as => Auto (TyPred (PTup Sing)) as where
-    auto = singProd sing
--- | @since 2.0.0
-instance SingI as => Auto (TyPred (PIdentity Sing)) as where
-    auto = singProd sing
+-- | @since 3.0.0
+instance SingI as => Auto (TyPred (Rec WrappedSing)) as where
+    auto = proveTC sing
+-- | @since 3.0.0
+instance SingI as => Auto (TyPred (PMaybe WrappedSing)) as where
+    auto = proveTC sing
+-- | @since 3.0.0
+instance SingI as => Auto (TyPred (NERec WrappedSing)) as where
+    auto = proveTC sing
+-- | @since 3.0.0
+instance SingI as => Auto (TyPred (PEither WrappedSing)) as where
+    auto = proveTC sing
+-- | @since 3.0.0
+instance SingI as => Auto (TyPred (PTup WrappedSing)) as where
+    auto = proveTC sing
+-- | @since 3.0.0
+instance SingI as => Auto (TyPred (PIdentity WrappedSing)) as where
+    auto = proveTC sing
+
+-- | @since 3.0.0
+instance (SingI as, Provable p) => Auto (TyPred (Rec (Wit p))) as where
+    auto = proveTC sing
+-- | @since 3.0.0
+instance (SingI as, Provable p) => Auto (TyPred (PMaybe (Wit p))) as where
+    auto = proveTC sing
+-- | @since 3.0.0
+instance (SingI as, Provable p) => Auto (TyPred (NERec (Wit p))) as where
+    auto = proveTC sing
+-- | @since 3.0.0
+instance (SingI as, Provable p) => Auto (TyPred (PEither (Wit p))) as where
+    auto = proveTC sing
+-- | @since 3.0.0
+instance (SingI as, Provable p) => Auto (TyPred (PTup (Wit p))) as where
+    auto = proveTC sing
+-- | @since 3.0.0
+instance (SingI as, Provable p) => Auto (TyPred (PIdentity (Wit p))) as where
+    auto = proveTC sing
