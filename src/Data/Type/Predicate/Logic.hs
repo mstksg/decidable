@@ -42,7 +42,6 @@ module Data.Type.Predicate.Logic (
 
 import           Data.Singletons
 import           Data.Singletons.Decide
-import           Data.Singletons.Prelude.Bool (Sing(..))
 import           Data.Type.Predicate
 import           Data.Void
 
