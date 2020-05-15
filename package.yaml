@@ -34,6 +34,7 @@ dependencies:
 - vinyl
 - microlens
 - functor-products >= 0.1.1
+- template-haskell >= 2.15
 
 library:
   source-dirs: src
