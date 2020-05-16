@@ -88,6 +88,10 @@ class Auto (p :: Predicate k) (a :: k) where
 -- | A version of 'auto' that "just works" with type inference, if the
 -- predicate is a type constructor.
 --
+-- You still need to have the instances of Auto typeclass defined - it can be
+-- done manually or using 'Data.Type.Predicate.TH.autoI' or
+-- 'Data.Type.Predicate.TH.getAutoI' templates from "Data.Type.Predicate.TH".
+--
 -- @since 0.2.1.0
 autoTC :: forall t a. Auto (TyPred t) a => t a
 autoTC = auto @_ @(TyPred t) @a

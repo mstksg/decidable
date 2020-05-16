@@ -40,7 +40,7 @@ import Language.Haskell.TH
 -- > instance Auto (TyPred T) 'A where auto = TA
 -- > instance Auto (TyPred T) 'B where auto = TB
 --
--- These instances are only needed for contexts, 'autoTC' will work without them.
+-- These instances can be used in contexts and needed for 'autoTC' to work.
 autoI :: Q [Dec] -> Q [Dec]
 autoI decls = concat <$> (decls >>= mapM addInstances)
   where

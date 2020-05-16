@@ -44,6 +44,8 @@ $(autoI [d|
     T1B :: T1 'B
   |])
 
+deriving instance Show (T1 a)
+
 f :: Auto (TyPred T1) p => T p -> String
 f = show
 
@@ -59,6 +61,15 @@ f = show
 -- ...
 -- ... No instance for (Auto (TyPred T1) 'C) arising from a use of ‘f’
 -- ... In the expression: f TC
+-- ...
+-- >>> show (autoTC @T1 @A)
+-- "T1A"
+-- >>> show (autoTC @T1 @B)
+-- "T1B"
+-- >>> show (autoTC @T1 @C)
+-- ...
+-- ... No instance for (Auto (TyPred T1) 'C)
+-- ... arising from a use of ‘autoTC’
 -- ...
 
 data T2 (a :: P) where
