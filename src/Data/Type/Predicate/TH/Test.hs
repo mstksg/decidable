@@ -12,7 +12,7 @@
 {-# LANGUAGE TemplateHaskell       #-}
 
 -- |
--- Module      : Data.Type.Predicate.TH.Example
+-- Module      : Data.Type.Predicate.TH.Test
 -- License     : BSD3
 -- Copyright   : (c) Evgeny Poberezkin 2020
 --
@@ -59,4 +59,26 @@ f = show
 -- ...
 -- ... No instance for (Auto (TyPred T1) 'C) arising from a use of ‘f’
 -- ... In the expression: f TC
+-- ...
+
+data T2 (a :: P) where
+  T2A :: T2 'A
+
+$(getAutoI [''T2])
+
+g :: Auto (TyPred T2) p => T p -> String
+g = show
+
+-- |
+-- >>> g TA
+-- "TA"
+-- >>> g TB
+-- ...
+-- ... No instance for (Auto (TyPred T2) 'B) arising from a use of ‘g’
+-- ... In the expression: g TB
+-- ...
+-- >>> g TC
+-- ...
+-- ... No instance for (Auto (TyPred T2) 'C) arising from a use of ‘g’
+-- ... In the expression: g TC
 -- ...

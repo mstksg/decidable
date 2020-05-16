@@ -43,7 +43,6 @@ tests:
   decidable-doctests:
     source-dirs: tests
     main: doctest-driver.hs
-    ghc-options: -threaded
     dependencies:
       - doctest
       - doctest-driver-gen
