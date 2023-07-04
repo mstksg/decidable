@@ -52,17 +52,21 @@ module Data.Type.Predicate (
   , mapRefuted
   ) where
 
+import           Data.Either.Singletons
+import           Data.Function.Singletons
 import           Data.Functor.Identity
+import           Data.Functor.Identity.Singletons
 import           Data.Kind
-import           Data.List.NonEmpty                    (NonEmpty(..))
+import           Data.List.NonEmpty               (NonEmpty(..))
+import           Data.List.Singletons hiding      (ElemSym1)
 import           Data.Maybe
+import           Data.Maybe.Singletons
 import           Data.Singletons
 import           Data.Singletons.Decide
-import           Data.Singletons.Prelude hiding        (Not, ElemSym1)
-import           Data.Singletons.Prelude.Identity
+import           Data.Tuple.Singletons
 import           Data.Type.Functor.Product
 import           Data.Void
-import qualified Data.Singletons.Prelude.List.NonEmpty as NE
+import qualified Data.List.NonEmpty.Singletons    as NE
 
 -- | A type-level predicate in Haskell.  We say that the predicate @P ::
 -- 'Predicate' k@ is true/satisfied by input @x :: k@ if there exists
@@ -367,7 +371,7 @@ instance Decidable (TyPred WrappedSing)
 -- | @since 3.0.0
 instance Provable (TyPred WrappedSing) where
     prove = WrapSing
-    
+
 
 -- | @since 3.0.0
 instance Provable p => Provable (TyPred (Rec (Wit p))) where

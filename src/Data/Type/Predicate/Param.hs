@@ -42,8 +42,8 @@ module Data.Type.Predicate.Param (
 import           Data.Kind
 import           Data.Singletons
 import           Data.Singletons.Decide
-import           Data.Singletons.Prelude.Tuple
 import           Data.Singletons.Sigma
+import           Data.Tuple.Singletons
 import           Data.Type.Functor.Product
 import           Data.Type.Predicate
 import           Data.Type.Predicate.Logic
@@ -140,7 +140,7 @@ type instance Apply (EqBy f x) y = x :~: (f @@ y)
 -- @
 --
 -- Applied to specific things:
--- 
+--
 -- @
 -- 'IsTC' ''Just' :: 'ParamPred' (Maybe v) v
 -- 'Found' ('IsTC' ''Just'') :: 'Predicate' (Maybe v)

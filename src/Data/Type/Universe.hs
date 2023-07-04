@@ -48,19 +48,22 @@ module Data.Type.Universe (
   , pickElem
   ) where
 
+import           Data.Either.Singletons hiding    (IsLeft, IsRight)
 import           Data.Functor.Identity
+import           Data.Functor.Identity.Singletons
 import           Data.Kind
-import           Data.List.NonEmpty                    (NonEmpty(..))
+import           Data.List.NonEmpty               (NonEmpty(..))
+import           Data.List.Singletons hiding      (Elem, ElemSym0, ElemSym1, ElemSym2, All, Any, Null)
+import           Data.Maybe.Singletons hiding     (IsJust, IsNothing)
 import           Data.Singletons
 import           Data.Singletons.Decide
-import           Data.Singletons.Prelude hiding        (Elem, ElemSym0, ElemSym1, ElemSym2, Any, All, Null, Not)
-import           Data.Singletons.Prelude.Identity
+import           Data.Tuple.Singletons
 import           Data.Type.Functor.Product
 import           Data.Type.Predicate
 import           Data.Type.Predicate.Logic
-import           GHC.Generics                          ((:*:)(..))
-import           Prelude hiding                        (any, all)
-import qualified Data.Singletons.Prelude.List.NonEmpty as NE
+import           GHC.Generics                     ((:*:)(..))
+import           Prelude hiding                   (any, all)
+import qualified Data.List.NonEmpty.Singletons    as NE
 
 -- | A @'WitAny' p as@ is a witness that, for at least one item @a@ in the
 -- type-level collection @as@, the predicate @p a@ is true.
@@ -400,7 +403,7 @@ instance Universe Identity where
       $ f IId x
     idecideAll f (SIdentity x) =
         mapDecision (\p -> WitAll $ \case IId -> p)
-                    (`runWitAll` IId)
+                    (\y -> runWitAll y IId)
       $ f IId x
     allProd f (SIdentity x) a = PIdentity $ f x (runWitAll a IId)
     prodAll f (PIdentity x) = WitAll $ \case IId -> f x

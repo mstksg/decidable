@@ -1,6 +1,15 @@
 Changelog
 =========
 
+Version 0.3.1.0
+---------------
+
+*July 4, 2023*
+
+<https://github.com/mstksg/functor-products/releases/tag/v0.3.1.0>
+
+*   Now requires singletons-3.0 and above, and GHC 9.2 and above
+
 Version 0.3.0.0
 ---------------
 

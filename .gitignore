@@ -1,5 +1,4 @@
 .stack-work/
-decidable.cabal
 *~
 .ghc.environment*
 dist-newstyle/
