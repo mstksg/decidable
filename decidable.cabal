@@ -47,9 +47,9 @@ library
   ghc-options: -Wall -Wredundant-constraints -Wcompat -Werror=incomplete-patterns
   build-depends:
       base >=4.16 && <5
-    , functor-products >=0.1.2 && <0.2
-    , microlens <0.5
-    , singletons >=3.0 && <3.1
-    , singletons-base <3.2
-    , vinyl <0.15
+    , functor-products >=0.1.2
+    , microlens
+    , singletons >=3.0
+    , singletons-base
+    , vinyl
   default-language: Haskell2010
