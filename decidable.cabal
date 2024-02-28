@@ -5,7 +5,7 @@ cabal-version: 1.12
 -- see: https://github.com/sol/hpack
 
 name:           decidable
-version:        0.3.1.0
+version:        0.3.1.1
 synopsis:       Combinators for manipulating dependently-typed predicates.
 description:    This library provides combinators and typeclasses for working and manipulating
                 type-level predicates in Haskell, which are represented as matchable type-level

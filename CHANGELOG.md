@@ -1,6 +1,15 @@
 Changelog
 =========
 
+Version 0.3.1.1
+---------------
+
+*February 27, 2024*
+
+<https://github.com/mstksg/functor-products/releases/tag/v0.3.1.1>
+
+*   Remove upper bounds and deprecated pragmas
+
 Version 0.3.1.0
 ---------------
 
