@@ -1,17 +1,17 @@
-{-# LANGUAGE AllowAmbiguousTypes   #-}
-{-# LANGUAGE ConstraintKinds       #-}
-{-# LANGUAGE DataKinds             #-}
-{-# LANGUAGE EmptyCase             #-}
-{-# LANGUAGE FlexibleContexts      #-}
-{-# LANGUAGE FlexibleInstances     #-}
-{-# LANGUAGE LambdaCase            #-}
+{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE EmptyCase #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE PolyKinds             #-}
-{-# LANGUAGE ScopedTypeVariables   #-}
-{-# LANGUAGE TypeApplications      #-}
-{-# LANGUAGE TypeFamilies          #-}
-{-# LANGUAGE TypeOperators         #-}
-{-# LANGUAGE UndecidableInstances  #-}
+{-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 -- |
 -- Module      : Data.Type.Predicate.Auto
@@ -28,28 +28,30 @@
 -- @since 0.1.1.0
 module Data.Type.Predicate.Auto (
   -- * Automatically generate witnesses at compile-time
-    Auto(..)
-  , autoTC
-  , AutoNot
-  , autoNot
-  , autoAny, autoNotAll
-  , AutoProvable
-  -- ** Helper classes
-  , AutoElem(..)
-  , AutoAll(..)
-  ) where
+  Auto (..),
+  autoTC,
+  AutoNot,
+  autoNot,
+  autoAny,
+  autoNotAll,
+  AutoProvable,
 
-import           Data.Functor.Identity
-import           Data.List.NonEmpty                 (NonEmpty(..))
-import           Data.Singletons
-import           Data.Singletons.Sigma
-import           Data.Type.Equality
-import           Data.Type.Functor.Product
-import           Data.Type.Predicate
-import           Data.Type.Predicate.Logic
-import           Data.Type.Predicate.Param
-import           Data.Type.Predicate.Quantification
-import           Data.Type.Universe
+  -- ** Helper classes
+  AutoElem (..),
+  AutoAll (..),
+) where
+
+import Data.Functor.Identity
+import Data.List.NonEmpty (NonEmpty (..))
+import Data.Singletons
+import Data.Singletons.Sigma
+import Data.Type.Equality
+import Data.Type.Functor.Product
+import Data.Type.Predicate
+import Data.Type.Predicate.Logic
+import Data.Type.Predicate.Param
+import Data.Type.Predicate.Quantification
+import Data.Type.Universe
 
 -- | Automatically generate a witness for predicate @p@ applied to input
 -- @a@.
@@ -76,14 +78,14 @@ import           Data.Type.Universe
 -- For these, the compiler needs help; you can use 'autoAny' and
 -- 'autoNotAll' for these situations.
 class Auto (p :: Predicate k) (a :: k) where
-    -- | Have the compiler generate a witness for @p \@\@ a@.
-    --
-    -- Must be called using type application syntax:
-    --
-    -- @
-    -- 'auto' @_ @p @a
-    -- @
-    auto :: p @@ a
+  -- | Have the compiler generate a witness for @p \@\@ a@.
+  --
+  -- Must be called using type application syntax:
+  --
+  -- @
+  -- 'auto' @_ @p @a
+  -- @
+  auto :: p @@ a
 
 -- | A version of 'auto' that "just works" with type inference, if the
 -- predicate is a type constructor.
@@ -93,20 +95,20 @@ autoTC :: forall t a. Auto (TyPred t) a => t a
 autoTC = auto @_ @(TyPred t) @a
 
 instance SingI a => Auto Evident a where
-    auto = sing
+  auto = sing
 
 -- | @since 0.1.2.0
 instance SingI a => Auto (Not Impossible) a where
-    auto = ($ sing)
+  auto = ($ sing)
 
 instance Auto (EqualTo a) a where
-    auto = Refl
+  auto = Refl
 
 instance (Auto p a, Auto q a) => Auto (p &&& q) a where
-    auto = (auto @_ @p @a, auto @_ @q @a)
+  auto = (auto @_ @p @a, auto @_ @q @a)
 
 instance Auto q a => Auto (p ==> q) a where
-    auto _ = auto @_ @q @a
+  auto _ = auto @_ @q @a
 
 -- | Helper "predicate transformer" that gives you an instant 'auto' for
 -- any 'Provable' instance.
@@ -123,10 +125,11 @@ instance Auto q a => Auto (p ==> q) a where
 --
 -- 'AutoProvable' is essentially the identity function.
 data AutoProvable :: Predicate k -> Predicate k
+
 type instance Apply (AutoProvable p) a = p @@ a
 
 instance (Provable p, SingI a) => Auto (AutoProvable p) a where
-    auto = prove @p @a sing
+  auto = prove @p @a sing
 
 -- | Typeclass representing 'Elem's pointing to an @a :: k@ that can be
 -- generated automatically from type-level collection @as :: f k@.
@@ -150,37 +153,37 @@ instance (Provable p, SingI a) => Auto (AutoProvable p) a where
 -- -- IS (IS IZ)
 -- @
 class AutoElem f (as :: f k) (a :: k) where
-    -- | Generate the 'Elem' pointing to the @a :: @ in a type-level
-    -- collection @as :: f k@.
-    autoElem :: Elem f as a
+  -- | Generate the 'Elem' pointing to the @a :: @ in a type-level
+  -- collection @as :: f k@.
+  autoElem :: Elem f as a
 
 instance {-# OVERLAPPING #-} AutoElem [] (a ': as) a where
-    autoElem = IZ
+  autoElem = IZ
 
 instance {-# OVERLAPPING #-} AutoElem [] as a => AutoElem [] (b ': as) a where
-    autoElem = IS autoElem
+  autoElem = IS autoElem
 
 instance AutoElem Maybe ('Just a) a where
-    autoElem = IJust
+  autoElem = IJust
 
 instance AutoElem (Either j) ('Right a) a where
-    autoElem = IRight
+  autoElem = IRight
 
 instance AutoElem NonEmpty (a ':| as) a where
-    autoElem = NEHead
+  autoElem = NEHead
 
 instance AutoElem [] as a => AutoElem NonEmpty (b ':| as) a where
-    autoElem = NETail autoElem
+  autoElem = NETail autoElem
 
 -- | @since 0.1.2.0
 instance AutoElem ((,) j) '(w, a) a where
-    autoElem = ISnd
+  autoElem = ISnd
 
 instance AutoElem Identity ('Identity a) a where
-    autoElem = IId
+  autoElem = IId
 
 instance AutoElem f as a => Auto (In f as) a where
-    auto = autoElem @_ @f @as @a
+  auto = autoElem @_ @f @as @a
 
 -- | Helper class for deriving 'Auto' instances for 'All' predicates; each
 -- 'Universe' instance is expected to implement these if possible, to get
@@ -191,66 +194,66 @@ instance AutoElem f as a => Auto (In f as) a where
 --
 -- @since 0.1.2.0
 class AutoAll f (p :: Predicate k) (as :: f k) where
-    -- | Generate an 'All' for a given predicate over all items in @as@.
-    autoAll :: All f p @@ as
+  -- | Generate an 'All' for a given predicate over all items in @as@.
+  autoAll :: All f p @@ as
 
 instance AutoAll [] p '[] where
-    autoAll = WitAll $ \case {}
+  autoAll = WitAll $ \case {}
 
 instance (Auto p a, AutoAll [] p as) => AutoAll [] p (a ': as) where
-    autoAll = WitAll $ \case
-        IZ   -> auto @_ @p @a
-        IS i -> runWitAll (autoAll @_ @[] @p @as) i
+  autoAll = WitAll $ \case
+    IZ -> auto @_ @p @a
+    IS i -> runWitAll (autoAll @_ @[] @p @as) i
 
 instance AutoAll Maybe p 'Nothing where
-    autoAll = WitAll $ \case {}
+  autoAll = WitAll $ \case {}
 
 instance Auto p a => AutoAll Maybe p ('Just a) where
-    autoAll = WitAll $ \case IJust -> auto @_ @p @a
+  autoAll = WitAll $ \case IJust -> auto @_ @p @a
 
 instance AutoAll (Either j) p ('Left e) where
-    autoAll = WitAll $ \case {}
+  autoAll = WitAll $ \case {}
 
 instance Auto p a => AutoAll (Either j) p ('Right a) where
-    autoAll = WitAll $ \case IRight -> auto @_ @p @a
+  autoAll = WitAll $ \case IRight -> auto @_ @p @a
 
 instance (Auto p a, AutoAll [] p as) => AutoAll NonEmpty p (a ':| as) where
-    autoAll = WitAll $ \case
-        NEHead   -> auto @_ @p @a
-        NETail i -> runWitAll (autoAll @_ @[] @p @as) i
+  autoAll = WitAll $ \case
+    NEHead -> auto @_ @p @a
+    NETail i -> runWitAll (autoAll @_ @[] @p @as) i
 
 instance Auto p a => AutoAll ((,) j) p '(w, a) where
-    autoAll = WitAll $ \case ISnd -> auto @_ @p @a
+  autoAll = WitAll $ \case ISnd -> auto @_ @p @a
 
 instance Auto p a => AutoAll Identity p ('Identity a) where
-    autoAll = WitAll $ \case IId -> auto @_ @p @a
+  autoAll = WitAll $ \case IId -> auto @_ @p @a
 
 -- | @since 0.1.2.0
 instance AutoAll f p as => Auto (All f p) as where
-    auto = autoAll @_ @f @p @as
+  auto = autoAll @_ @f @p @as
 
 -- | @since 0.1.2.0
 instance SingI a => Auto (NotNull []) (a ': as) where
-    auto = WitAny IZ sing
+  auto = WitAny IZ sing
 
 -- | @since 0.1.2.0
 instance SingI a => Auto IsJust ('Just a) where
-    auto = WitAny IJust sing
+  auto = WitAny IJust sing
 
 -- | @since 0.1.2.0
 instance SingI a => Auto IsRight ('Right a) where
-    auto = WitAny IRight sing
+  auto = WitAny IRight sing
 
 -- | @since 0.1.2.0
 instance SingI a => Auto (NotNull NonEmpty) (a ':| as) where
-    auto = WitAny NEHead sing
+  auto = WitAny NEHead sing
 
 -- | @since 0.1.2.0
 instance SingI a => Auto (NotNull ((,) j)) '(w, a) where
-    auto = WitAny ISnd sing
+  auto = WitAny ISnd sing
 
 instance SingI a => Auto (NotNull Identity) ('Identity a) where
-    auto = WitAny IId sing
+  auto = WitAny IId sing
 
 -- | An @'AutoNot' p a@ constraint means that @p \@\@ a@ can be proven to
 -- not be true at compiletime.
@@ -270,21 +273,22 @@ autoNot = auto @k @(Not p) @a
 
 -- | @since 0.1.2.0
 instance Auto (Found p) (f @@ a) => Auto (Found (PPMap f p)) a where
-    auto = case auto @_ @(Found p) @(f @@ a) of
-        i :&: p -> i :&: p
+  auto = case auto @_ @(Found p) @(f @@ a) of
+    i :&: p -> i :&: p
 
 -- | @since 0.1.2.0
 instance Auto (NotFound p) (f @@ a) => Auto (NotFound (PPMap f p)) a where
-    auto = mapRefuted (\(i :&: p) -> i :&: p)
-         $ autoNot @_ @(Found p) @(f @@ a)
+  auto =
+    mapRefuted (\(i :&: p) -> i :&: p) $
+      autoNot @_ @(Found p) @(f @@ a)
 
 -- | @since 0.1.2.0
 instance Auto p (f @@ a) => Auto (PMap f p) a where
-    auto = auto @_ @p @(f @@ a)
+  auto = auto @_ @p @(f @@ a)
 
 -- | @since 0.1.2.0
 instance AutoNot p (f @@ a) => Auto (Not (PMap f p)) a where
-    auto = autoNot @_ @p @(f @@ a)
+  auto = autoNot @_ @p @(f @@ a)
 
 -- | Helper function to generate an @'Any' f p@ if you can pick out
 -- a specific @a@ in @as@ where the predicate is provable at compile-time.
@@ -293,15 +297,16 @@ instance AutoNot p (f @@ a) => Auto (Not (PMap f p)) a where
 -- a Haskell typeclass.
 --
 -- @since 0.1.2.0
-autoAny
-    :: forall f p as a. Auto p a
-    => Elem f as a
-    -> Any f p @@ as
+autoAny ::
+  forall f p as a.
+  Auto p a =>
+  Elem f as a ->
+  Any f p @@ as
 autoAny i = WitAny i (auto @_ @p @a)
 
 -- | @since 0.1.2.0
 instance (SingI as, AutoAll f (Not p) as) => Auto (Not (Any f p)) as where
-    auto = allNotNone sing $ autoAll @_ @f @(Not p) @as
+  auto = allNotNone sing $ autoAll @_ @f @(Not p) @as
 
 -- | Helper function to generate a @'Not' ('All' f p)@ if you can pick out
 -- a specific @a@ in @as@ where the predicate is disprovable at compile-time.
@@ -310,51 +315,63 @@ instance (SingI as, AutoAll f (Not p) as) => Auto (Not (Any f p)) as where
 -- a Haskell typeclass.
 --
 -- @since 0.1.2.0
-autoNotAll
-    :: forall p f as a. (AutoNot p a, SingI as)
-    => Elem f as a
-    -> Not (All f p) @@ as
+autoNotAll ::
+  forall p f as a.
+  (AutoNot p a, SingI as) =>
+  Elem f as a ->
+  Not (All f p) @@ as
 autoNotAll = anyNotNotAll sing . autoAny
 
 -- | @since 0.1.2.0
 instance (SingI as, AutoAll f (Not (Found p)) as) => Auto (Not (Found (AnyMatch f p))) as where
-    auto = mapRefuted (\(s :&: WitAny i p) -> WitAny i (s :&: p))
-         $ auto @_ @(Not (Any f (Found p))) @as
+  auto =
+    mapRefuted (\(s :&: WitAny i p) -> WitAny i (s :&: p)) $
+      auto @_ @(Not (Any f (Found p))) @as
 
 -- | @since 3.0.0
 instance SingI as => Auto (TyPred (Rec WrappedSing)) as where
-    auto = proveTC sing
+  auto = proveTC sing
+
 -- | @since 3.0.0
 instance SingI as => Auto (TyPred (PMaybe WrappedSing)) as where
-    auto = proveTC sing
+  auto = proveTC sing
+
 -- | @since 3.0.0
 instance SingI as => Auto (TyPred (NERec WrappedSing)) as where
-    auto = proveTC sing
+  auto = proveTC sing
+
 -- | @since 3.0.0
 instance SingI as => Auto (TyPred (PEither WrappedSing)) as where
-    auto = proveTC sing
+  auto = proveTC sing
+
 -- | @since 3.0.0
 instance SingI as => Auto (TyPred (PTup WrappedSing)) as where
-    auto = proveTC sing
+  auto = proveTC sing
+
 -- | @since 3.0.0
 instance SingI as => Auto (TyPred (PIdentity WrappedSing)) as where
-    auto = proveTC sing
+  auto = proveTC sing
 
 -- | @since 3.0.0
 instance (SingI as, Provable p) => Auto (TyPred (Rec (Wit p))) as where
-    auto = proveTC sing
+  auto = proveTC sing
+
 -- | @since 3.0.0
 instance (SingI as, Provable p) => Auto (TyPred (PMaybe (Wit p))) as where
-    auto = proveTC sing
+  auto = proveTC sing
+
 -- | @since 3.0.0
 instance (SingI as, Provable p) => Auto (TyPred (NERec (Wit p))) as where
-    auto = proveTC sing
+  auto = proveTC sing
+
 -- | @since 3.0.0
 instance (SingI as, Provable p) => Auto (TyPred (PEither (Wit p))) as where
-    auto = proveTC sing
+  auto = proveTC sing
+
 -- | @since 3.0.0
 instance (SingI as, Provable p) => Auto (TyPred (PTup (Wit p))) as where
-    auto = proveTC sing
+  auto = proveTC sing
+
 -- | @since 3.0.0
 instance (SingI as, Provable p) => Auto (TyPred (PIdentity (Wit p))) as where
-    auto = proveTC sing
+  auto = proveTC sing
