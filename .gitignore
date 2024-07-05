@@ -2,3 +2,5 @@
 *~
 .ghc.environment*
 dist-newstyle/
+/result
+/.direnv
